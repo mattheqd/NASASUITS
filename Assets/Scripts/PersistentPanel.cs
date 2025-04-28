@@ -1,0 +1,29 @@
+using UnityEngine;
+using UnityEngine.UI;
+
+public class PersistentPanel : MonoBehaviour
+{
+    [SerializeField]
+    private Canvas canvas;
+    
+    [SerializeField]
+    private float panelDistance = 2f;
+    
+    void Start()
+    {
+        if (canvas != null)
+        {
+            // Set up the canvas for XR
+            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.worldCamera = Camera.main;
+            
+            // Set the panel's initial position
+            transform.localPosition = new Vector3(0, 0, panelDistance);
+            transform.localRotation = Quaternion.identity;
+        }
+        else
+        {
+            Debug.LogWarning("Canvas component not assigned in PersistentPanel!");
+        }
+    }
+} 
