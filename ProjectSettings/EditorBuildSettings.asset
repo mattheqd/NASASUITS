@@ -11,12 +11,18 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Samples/XERAL XR Plugin/3.0.0-pre.4/AR Features/ImageTracking/BasicImageTracking.unity
     guid: e0b018a3c3b5cfd4c8e316706ec0a18c
-  - enabled: 1
+  - enabled: 0
     path: Assets/Samples/XR Interaction Toolkit/2.6.4/Hands Interaction Demo/HandsDemoScene.unity
     guid: 3ff35cecbcc52cc42945cf531638a60a
   - enabled: 0
     path: Assets/Samples/XR Hands/1.4.3/Gestures/HandGestures.unity
     guid: cd792f2302b8b6f4c9f264e2a4503e15
+  - enabled: 0
+    path: Assets/Scenes/HMD.unity
+    guid: 9fc0d4010bbf28b4594072e72b8655ab
+  - enabled: 1
+    path: Assets/Scenes/SimpleHMD.unity
+    guid: 0bdc68fa4a87a5249adbcbe2b022c0d5
   m_configObjects:
     com.unity.xr.arfoundation.simulation_settings: {fileID: 11400000, guid: 9ac4004b2714e5c4eaedfe426c50b41b, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 7a2c7d9f16540b1448fa771eb5f122f7, type: 2}
