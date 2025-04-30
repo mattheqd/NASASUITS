@@ -1,0 +1,40 @@
+{
+    "procedures": [
+      {
+        "procedureName": "Egress",
+        "procedureDescription": "Emergency exit procedure from the station",
+        "instructionSteps": [
+          {
+            "instructionText": "Secure all loose equipment",
+            "requiresConfirmation": true,
+            "isCompleted": false,
+            "isSkipped": false
+          },
+          {
+            "instructionText": "Verify pressure equalization",
+            "requiresConfirmation": true,
+            "isCompleted": false,
+            "isSkipped": false
+          },
+          {
+            "instructionText": "Put on emergency oxygen mask",
+            "requiresConfirmation": true,
+            "isCompleted": false,
+            "isSkipped": false
+          },
+          {
+            "instructionText": "Release safety locks",
+            "requiresConfirmation": true,
+            "isCompleted": false,
+            "isSkipped": false
+          },
+          {
+            "instructionText": "Exit through emergency hatch",
+            "requiresConfirmation": true,
+            "isCompleted": false,
+            "isSkipped": false
+          }
+        ]
+      }
+    ]
+  }
