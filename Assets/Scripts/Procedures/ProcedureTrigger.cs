@@ -25,17 +25,11 @@ public class ProcedureTrigger : MonoBehaviour
     
     private bool playerInLocation = false;
     
+    //*------ Functions ------*/
     private void Start()
-    {
-        if (procedureDisplay == null)
-        {
-            Debug.LogError("ProcedureTrigger: ProcedureDisplay reference is missing!");
-        }
-        
+    {       
         if (triggerOnButtonClick && triggerButton != null)
-        {
             triggerButton.onClick.AddListener(OnTriggerButtonClicked);
-        }
     }
     
     private void OnDestroy()
@@ -48,19 +42,16 @@ public class ProcedureTrigger : MonoBehaviour
     
     private void Update()
     {
-        if (triggerOnLocationEnter)
-        {
-            CheckLocationTrigger();
-        }
+        if (triggerOnLocationEnter) CheckLocationTrigger();
     }
     
+    // check if player is in a specific location
     private void CheckLocationTrigger()
     {
         // This is a simple implementation - you might want to use colliders instead
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         
-        if (player != null)
-        {
+        if (player) {
             // Check if player is in range
             bool inRange = Vector3.Distance(transform.position, player.transform.position) <= triggerRadius;
             
@@ -70,41 +61,26 @@ public class ProcedureTrigger : MonoBehaviour
                 playerInLocation = true;
                 ActivateProcedure();
             }
-            else if (!inRange && playerInLocation)
-            {
+            else
                 playerInLocation = false;
-            }
         }
     }
     
+    // activate procedure if button is clicked
     private void OnTriggerButtonClicked()
     {
         ActivateProcedure();
     }
     
-    private void ActivateProcedure()
-    {
+    // activate procedure if not already active
+    private void ActivateProcedure() {
         if (procedureDisplay != null && !procedureDisplay.IsProcedureActive())
-        {
-            procedureDisplay.LoadProcedureByName(procedureName);
-        }
+            procedureDisplay.LoadProcedure(procedureName);
     }
     
-    // For use with Unity collider triggers if preferred
-    private void OnTriggerEnter(Collider other)
-    {
+    // when player leaves station location, set playerInLocation to false
+    private void OnTriggerExit(Collider other) {
         if (triggerOnLocationEnter && other.CompareTag("Player"))
-        {
-            playerInLocation = true;
-            ActivateProcedure();
-        }
-    }
-    
-    private void OnTriggerExit(Collider other)
-    {
-        if (triggerOnLocationEnter && other.CompareTag("Player"))
-        {
             playerInLocation = false;
-        }
     }
 } 
