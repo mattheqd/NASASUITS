@@ -1,5 +1,6 @@
 /**
  * Data structure for procedures
+ * - all instructions and procedures are mapped to numerical IDs and stored in a DB
  */
 using System;
 using System.Collections.Generic;
@@ -25,3 +26,62 @@ public class Procedure
     public List<InstructionStep> instructionSteps; // list of instructions for the procedure
 }
 
+// Procedures database stored in a container
+[System.Serializable]
+public class ProcedureContainer
+{
+    public List<Procedure> procedures = new List<Procedure>();
+}
+
+// Procedure manager to load and store procedures - claude 3.7
+public class ProcedureManager : MonoBehaviour
+{
+    private static ProcedureManager _instance; // singleton instance
+    public static ProcedureManager Instance => _instance; 
+    
+    private ProcedureContainer allProcedures;
+    
+    // Awake is called when script is loaded
+    // destroy duplicate instances
+    private void Awake()
+    {
+        if (_instance == null)
+        {
+            _instance = this;
+            DontDestroyOnLoad(gameObject);
+            LoadProcedures();
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+    
+    // Load procedures from JSON file
+    private void LoadProcedures()
+    {
+        // Load JSON from a TextAsset in Resources folder
+        TextAsset jsonFile = Resources.Load<TextAsset>("procedures_data");
+        if (jsonFile != null)
+        {
+            allProcedures = JsonUtility.FromJson<ProcedureContainer>(jsonFile.text);
+        }
+        else
+        {
+            Debug.LogError("Procedures data file not found!");
+            allProcedures = new ProcedureContainer();
+        }
+    }
+    
+    // Get procedure by name
+    public Procedure GetProcedureByName(string name)
+    {
+        return allProcedures.procedures.Find(p => p.procedureName == name);
+    }
+    
+    // Get all procedures
+    public List<Procedure> GetAllProcedures()
+    {
+        return allProcedures.procedures;
+    }
+}
