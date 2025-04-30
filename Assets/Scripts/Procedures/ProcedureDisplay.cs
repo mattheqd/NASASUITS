@@ -102,7 +102,7 @@ public class ProcedureDisplay : MonoBehaviour
 
         // get the procedure from the manager
         Procedure procedure = ProcedureManager.Instance.GetProcedure(procedureName);
-        if (procedure) DisplayProcedure(procedure);
+        if (procedure != null) DisplayProcedure(procedure);
     }
 
     // display procedure
@@ -122,8 +122,8 @@ public class ProcedureDisplay : MonoBehaviour
         // Setup UI
         titleText.text = procedure.procedureName;
         descriptionText.text = procedure.procedureDescription;
-        CreateStepIndicators(procedure.instructionSteps.Count);
-        DisplayCurrentStep();
+        // CreateStepIndicators(procedure.instructionSteps.Count);
+        // DisplayCurrentStep();
         procedurePanel.SetActive(true);
         UpdateNavigationButtons();
     }
@@ -140,7 +140,7 @@ public class ProcedureDisplay : MonoBehaviour
         currentStepIndex++;
         
         // Update display
-        DisplayCurrentStep();
+        // DisplayCurrentStep();
         
         // Update button states
         UpdateNavigationButtons();
@@ -158,7 +158,7 @@ public class ProcedureDisplay : MonoBehaviour
         currentStepIndex--;
         
         // Update display
-        DisplayCurrentStep();
+        // DisplayCurrentStep();
         
         // Update button states
         UpdateNavigationButtons();
@@ -167,7 +167,7 @@ public class ProcedureDisplay : MonoBehaviour
     // Control when navigation buttons are enabled/disabled
     private void UpdateNavigationButtons()
     {
-        if (!currentProcedure) return;
+        if (currentProcedure == null) return;
         
         // Back button is disabled on first step
         if (backButton != null) backButton.interactable = (currentStepIndex > 0);
@@ -182,7 +182,7 @@ public class ProcedureDisplay : MonoBehaviour
     // Displays when user confirms completion of the procedure
     public void CompleteProcedure()
     {
-        if (!currentProcedure) return;
+        if (currentProcedure == null) return;
         
         // Mark the final step as completed
         if (currentStepIndex < currentProcedure.instructionSteps.Count)
