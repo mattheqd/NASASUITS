@@ -7,6 +7,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Events;
 using TMPro;
 
 // Class to define groups of interface elements
@@ -39,8 +40,8 @@ public class ProcedureDisplay : MonoBehaviour
     // Events triggered when user interacts with UI
     public UnityEvent onProcedureCompleted;
 
-    // current procedure state
-    private ProcedureDisplay currentProcedure;
+    // store current procedure as a reference
+    private Procedure currentProcedure;
     private int currentStepIndex = 0;
     private List<GameObject> stepIndicators = new List<GameObject>(); // list of step indicators for the progress bar
 

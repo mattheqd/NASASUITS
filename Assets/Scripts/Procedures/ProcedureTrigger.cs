@@ -35,9 +35,7 @@ public class ProcedureTrigger : MonoBehaviour
     private void OnDestroy()
     {
         if (triggerButton != null)
-        {
             triggerButton.onClick.RemoveListener(OnTriggerButtonClicked);
-        }
     }
     
     private void Update()
