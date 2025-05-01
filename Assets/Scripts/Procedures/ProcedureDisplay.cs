@@ -135,19 +135,16 @@ public class ProcedureDisplay : MonoBehaviour
         // Setup UI
         titleText.text = procedure.procedureName;
         descriptionText.text = procedure.procedureDescription;
-        CreateStepIndicators(procedure.instructionSteps.Count);
-        DisplayCurrentStep();
-        procedurePanel.SetActive(true);
-        UpdateNavigationButtons();
-
-        // Show only continue button initially
-        if (nextButton != null) nextButton.gameObject.SetActive(false);
-        if (backButton != null) backButton.gameObject.SetActive(false);
-        if (homeButton != null) homeButton.gameObject.SetActive(true);
-        if (completeButton != null) completeButton.gameObject.SetActive(false);
+        stepText.text = "Click Continue to start the procedure";
+        progressText.text = "";
         
-        // Rename next button to "Continue" for the intro screen
-        if (continueButton != null) continueButton.gameObject.SetActive(true);
+        CreateStepIndicators(procedure.instructionSteps.Count);
+        
+        // Make sure panel is visible
+        procedurePanel.SetActive(true);
+        
+        // Update navigation buttons
+        UpdateNavigationButtons();
     }
     
     //*------ Navigation Functions ------*/

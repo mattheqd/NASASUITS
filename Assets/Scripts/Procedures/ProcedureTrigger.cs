@@ -81,4 +81,3 @@ public class ProcedureTrigger : MonoBehaviour
         if (triggerOnLocationEnter && other.CompareTag("Player"))
             playerInLocation = false;
     }
-} 
