@@ -266,7 +266,7 @@
       "url": "https://packages.unity.com"
     },
     "com.xreal.xr": {
-      "version": "file:C:/Users/jasmi/Downloads/com.xreal.xr.tar.gz",
+      "version": "file:/Users/andrewhwang/Downloads/com.xreal.xr.tar.gz",
       "depth": 0,
       "source": "local-tarball",
       "dependencies": {
