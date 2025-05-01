@@ -296,9 +296,23 @@ public class ProcedureDisplay : MonoBehaviour
         }
     }
 
-    // display current step the user is on (ex: )
+    // display current step the user is on (ex: "Step 1 of 3")
     private void DisplayCurrentStep() {
-        if (currentProcedure== null) return;
+        if (currentProcedure == null) return;
+        
+        // If we're at the intro screen (index = -1)
+        if (currentStepIndex == -1) {
+            // Just show the description, not a specific step
+            stepText.text = "Click Continue to start the procedure";
+            progressText.text = "";
+            return;
+        }
+        
+        // Check if the index is valid
+        if (currentStepIndex < 0 || currentStepIndex >= currentProcedure.instructionSteps.Count) {
+            Debug.LogError("Invalid step index: " + currentStepIndex);
+            return;
+        }
 
         // get current step
         InstructionStep step = currentProcedure.instructionSteps[currentStepIndex];
@@ -317,13 +331,13 @@ public class ProcedureDisplay : MonoBehaviour
                 if (indicatorImage != null) {
                     // previous steps are completed (past completed steps)
                     if (i < currentStepIndex)
-                        indicatorImage.color = Color.green;
+                        indicatorImage.color = completedStepColor;
                     // current step is active (current step)
-                    if (i == currentStepIndex)
-                        indicatorImage.color = Color.green;
+                    else if (i == currentStepIndex)
+                        indicatorImage.color = activeStepColor;
                     // future steps are inactive (future steps)
-                    if (i > currentStepIndex)
-                        indicatorImage.color = Color.gray;
+                    else
+                        indicatorImage.color = inactiveStepColor;
                 }
             }
         }
