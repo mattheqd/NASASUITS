@@ -2,6 +2,12 @@
  * Manager to control display of procedures and tracking of progress/status
  * - Define UI components and displays
  * - Define functions to control the display
+ * EXAMPLE:
+ * - Title: "Procedure: Open the airlock door"
+ * - Description: "This procedure will guide you through the process of opening the airlock door."
+ * - Progress text: "Step 1 of 3"
+ * - Step text: "Open the airlock door"
+ * - Step indicators: 3 circles, 1 circle is green, 1 circle is gray, 1 circle is gray
  */
 using System.Collections;
 using System.Collections.Generic;
@@ -21,7 +27,6 @@ public class ProcedureDisplay : MonoBehaviour
     [SerializeField] private TextMeshProUGUI descriptionText;
     [SerializeField] private TextMeshProUGUI stepText;
     [SerializeField] private TextMeshProUGUI progressText;
-    [SerializeField] private Button continueButton;
 
     // Navigation buttons to move next, previous, skip, or return to main menu
     [Header("Navigation Controls")]
@@ -29,6 +34,7 @@ public class ProcedureDisplay : MonoBehaviour
     [SerializeField] private Button backButton;
     [SerializeField] private Button homeButton;
     [SerializeField] private Button completeButton; // confirmation button to complete the procedure
+    [SerializeField] private Button continueButton;
 
     // Progress indicators (i.e. progress bar)
     [Header("Progress Indicators")]
