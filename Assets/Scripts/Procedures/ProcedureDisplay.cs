@@ -27,6 +27,7 @@ public class ProcedureDisplay : MonoBehaviour
     [SerializeField] private TextMeshProUGUI descriptionText;
     [SerializeField] private TextMeshProUGUI stepText;
     [SerializeField] private TextMeshProUGUI progressText;
+    [SerializeField] private GameObject descriptionTextContainer;
 
     // Navigation buttons to move next, previous, skip, or return to main menu
     [Header("Navigation Controls")]
@@ -261,8 +262,11 @@ public class ProcedureDisplay : MonoBehaviour
     public void StartInstructions() {
         if (currentProcedure == null) return;
         currentStepIndex = 0; // set to first instruction
+        descriptionText.text = ""; // clear description text when instructions start
         DisplayCurrentStep();
         UpdateNavigationButtons();
+        if (descriptionTextContainer != null) // hide description text container
+            descriptionTextContainer.SetActive(false);
     }
     
     // Check if currently inside a procedure
