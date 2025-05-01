@@ -292,7 +292,7 @@ public class ProcedureDisplay : MonoBehaviour
 
     // display current step the user is on (ex: )
     private void DisplayCurrentStep() {
-        if (currentProcedureProcedure == null) return;
+        if (currentProcedure== null) return;
 
         // get current step
         InstructionStep step = currentProcedure.instructionSteps[currentStepIndex];
