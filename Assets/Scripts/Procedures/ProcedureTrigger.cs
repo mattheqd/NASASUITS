@@ -16,7 +16,7 @@ public class ProcedureTrigger : MonoBehaviour
     [SerializeField] private bool triggerOnButtonClick = true;
     [SerializeField] private bool triggerOnLocationEnter = false;
     
-    [Header("Button Reference (if using button trigger)")]
+    [Header("Button Reference (if using button trigger)")]  // button that triggers the start of a procedure
     [SerializeField] private Button triggerButton;
     
     [Header("Location Trigger (if using location trigger)")]
