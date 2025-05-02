@@ -57,8 +57,8 @@ public class ProcedureDisplay : MonoBehaviour
     // Initialize the display
     private void Awake()
     {
-        if (procedurePanel == null || titleText == null || 
-            descriptionText == null || stepText == null || 
+        // Check for required components
+        if (titleText == null || descriptionText == null || stepText == null || 
             progressText == null || nextButton == null || 
             backButton == null || homeButton == null ||
             completeButton == null)
@@ -66,16 +66,22 @@ public class ProcedureDisplay : MonoBehaviour
             Debug.LogError("ProcedureDisplay: Missing required UI component references!");
         }
         
-        // Add listeners for buttons to check for button presses
-        if (nextButton != null)
-            nextButton.onClick.AddListener(GoToNextStep);
+        // Initialize the procedure display
+        InitializeProcedureDisplay();
+    }
+
+    private void InitializeProcedureDisplay()
+    {
+        // Set up initial state
+        if (titleText != null) titleText.text = "Procedure Title";
+        if (descriptionText != null) descriptionText.text = "Procedure Description";
+        if (stepText != null) stepText.text = "Step 0/0";
+        if (progressText != null) progressText.text = "";
         
-        if (backButton != null)
-            backButton.onClick.AddListener(GoToPreviousStep);
-        
-        if (homeButton != null)
-            homeButton.onClick.AddListener(ReturnToHome);
-        
+        // Set up button listeners
+        if (nextButton != null) nextButton.onClick.AddListener(GoToNextStep);
+        if (backButton != null) backButton.onClick.AddListener(GoToPreviousStep);
+        if (homeButton != null) homeButton.onClick.AddListener(ReturnToHome);
         if (completeButton != null)
         {
             completeButton.onClick.AddListener(CompleteProcedure);
@@ -84,6 +90,8 @@ public class ProcedureDisplay : MonoBehaviour
 
         if (continueButton != null)
             continueButton.onClick.AddListener(StartInstructions);
+
+        CreateStepIndicators(0); // Create step indicators with 0 steps initially
     }
 
     // Remove listeners for buttons when the display is no longer in view
