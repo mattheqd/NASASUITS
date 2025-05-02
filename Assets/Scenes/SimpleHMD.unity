@@ -691,7 +691,7 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 334232603}
+  m_GameObject: {fileID: 297249879}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
@@ -710,7 +710,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 334232603}
+  m_GameObject: {fileID: 297249879}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
@@ -799,7 +799,7 @@ CanvasRenderer:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 334232603}
+  m_GameObject: {fileID: 297249879}
   m_CullTransparentMesh: 1
 --- !u!1 &336742177
 GameObject:
@@ -831,7 +831,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1349233625}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
@@ -1102,7 +1102,6 @@ RectTransform:
   - {fileID: 1636599323}
   - {fileID: 263242298}
   - {fileID: 1143345453}
-  - {fileID: 1349233625}
   - {fileID: 847154676}
   m_Father: {fileID: 764522294}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1418,17 +1417,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 709148889}
   m_CullTransparentMesh: 1
---- !u!114 &725732615 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 3293510487661852890, guid: e2698219e3231e94c8765d49b9dd5cff, type: 3}
-  m_PrefabInstance: {fileID: 1898319031}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &764522293
 GameObject:
   m_ObjectHideFlags: 0
@@ -2030,17 +2018,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1047364781}
   m_CullTransparentMesh: 1
---- !u!114 &1077028940 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6617087079894059806, guid: e2698219e3231e94c8765d49b9dd5cff, type: 3}
-  m_PrefabInstance: {fileID: 1898319031}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1104780943
 GameObject:
   m_ObjectHideFlags: 0
@@ -3313,11 +3290,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a11674f2ae1e0495eb56bde60de10d01, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  oxygenText: {fileID: 1077028940}
-  bpmText: {fileID: 725732615}
+  oxygenText: {fileID: 0}
+  bpmText: {fileID: 0}
   temperatureText: {fileID: 0}
   batteryText: {fileID: 0}
-  httpUrl: https://27ed-128-195-95-17.ngrok-free.app
+  httpUrl: 'https://ae94-128-195-95-16.ngrok-free.app/ '
   pollingInterval: 1
 --- !u!1 &1765386471
 GameObject:
@@ -3355,7 +3332,6 @@ RectTransform:
   - {fileID: 709148890}
   - {fileID: 1924605275}
   - {fileID: 1377641873}
-  - {fileID: 297249880}
   - {fileID: 680515714}
   - {fileID: 1316821562}
   - {fileID: 1362262509}
@@ -4102,8 +4078,7 @@ MonoBehaviour:
   titleText: {fileID: 1377641874}
   descriptionText: {fileID: 680515715}
   stepText: {fileID: 1316821563}
-  progressText: {fileID: 297249881}
-  descriptionTextContainer: {fileID: 0}
+  descriptionTextContainer: {fileID: 680515713}
   nextButton: {fileID: 1924605277}
   backButton: {fileID: 1033179995}
   homeButton: {fileID: 1205878677}
@@ -4508,3 +4483,4 @@ SceneRoots:
   m_Roots:
   - {fileID: 1860836113}
   - {fileID: 802585382}
+  - {fileID: 336742178}
