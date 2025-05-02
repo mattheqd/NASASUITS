@@ -26,7 +26,7 @@ public class ProcedureDisplay : MonoBehaviour
     [SerializeField] private TextMeshProUGUI titleText;
     [SerializeField] private TextMeshProUGUI descriptionText;
     [SerializeField] private TextMeshProUGUI stepText;
-    [SerializeField] private TextMeshProUGUI progressText;
+    // [SerializeField] private TextMeshProUGUI progressText;
     [SerializeField] private GameObject descriptionTextContainer;
 
     // Navigation buttons to move next, previous, skip, or return to main menu
@@ -59,7 +59,7 @@ public class ProcedureDisplay : MonoBehaviour
     {
         // Check for required components
         if (titleText == null || descriptionText == null || stepText == null || 
-            progressText == null || nextButton == null || 
+            // progressText == null || nextButton == null || 
             backButton == null || homeButton == null ||
             completeButton == null || continueButton == null ||
             stepIndicatorContainer == null || stepIndicatorPrefab == null)
@@ -77,7 +77,7 @@ public class ProcedureDisplay : MonoBehaviour
         if (titleText != null) titleText.text = "Procedure Title";
         if (descriptionText != null) descriptionText.text = "Procedure Description";
         if (stepText != null) stepText.text = "Step 0/0";
-        if (progressText != null) progressText.text = "";
+        // if (progressText != null) progressText.text = "";
         
         // Set up button listeners
         if (nextButton != null) nextButton.onClick.AddListener(GoToNextStep);
@@ -146,7 +146,7 @@ public class ProcedureDisplay : MonoBehaviour
         titleText.text = procedure.procedureName;
         descriptionText.text = procedure.procedureDescription;
         stepText.text = "Click Continue to start the procedure";
-        progressText.text = "";
+        // progressText.text = "";
         
         CreateStepIndicators(procedure.instructionSteps.Count);
         
@@ -231,7 +231,7 @@ public class ProcedureDisplay : MonoBehaviour
         
         // Display completion message
         stepText.text = "Procedure completed successfully!";
-        progressText.text = "Completed";
+        // progressText.text = "Completed";
         
         // Hide navigation buttons
         if (nextButton != null) nextButton.gameObject.SetActive(false);
@@ -314,7 +314,7 @@ public class ProcedureDisplay : MonoBehaviour
         if (currentStepIndex == -1) {
             // Just show the description, not a specific step
             stepText.text = "Click Continue to start the procedure";
-            progressText.text = "";
+            // progressText.text = "";
             return;
         }
         
@@ -329,7 +329,7 @@ public class ProcedureDisplay : MonoBehaviour
 
         // update step text
         stepText.text = step.instructionText;
-        progressText.text = $"Step {currentStepIndex + 1} of {currentProcedure.instructionSteps.Count}";
+        // progressText.text = $"Step {currentStepIndex + 1} of {currentProcedure.instructionSteps.Count}";
 
         // update step indicators (i.e. current number for the progress bar)
         for (int i = 0; i < stepIndicators.Count; ++i) {
