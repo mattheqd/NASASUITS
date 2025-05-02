@@ -61,7 +61,8 @@ public class ProcedureDisplay : MonoBehaviour
             descriptionText == null || stepText == null || 
             progressText == null || nextButton == null || 
             backButton == null || homeButton == null ||
-            completeButton == null)
+            completeButton == null || continueButton == null ||
+            stepIndicatorContainer == null || stepIndicatorPrefab == null)
         {
             Debug.LogError("ProcedureDisplay: Missing required UI component references!");
         }
