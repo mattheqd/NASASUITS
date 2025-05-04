@@ -74,9 +74,9 @@ public class ProcedureDisplay : MonoBehaviour
     private void InitializeProcedureDisplay()
     {
         // Set up initial state
-        if (titleText != null) titleText.text = "Procedure Title";
+        if (titleText != null) titleText.text = "Procedure";
         if (descriptionText != null) descriptionText.text = "Procedure Description";
-        if (stepText != null) stepText.text = "Step 0/0";
+        if (stepText != null) stepText.text = "";
         // if (progressText != null) progressText.text = "";
         
         // Set up button listeners
@@ -145,7 +145,7 @@ public class ProcedureDisplay : MonoBehaviour
         // Setup UI
         titleText.text = procedure.procedureName;
         descriptionText.text = procedure.procedureDescription;
-        stepText.text = "Click Continue to start the procedure";
+        stepText.text = "";
         // progressText.text = "";
         
         CreateStepIndicators(procedure.instructionSteps.Count);
