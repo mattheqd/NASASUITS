@@ -1468,6 +1468,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: XREALVirtualController
       objectReference: {fileID: 0}
+    - target: {fileID: 1406232319260624, guid: 2c9de2075f186724ea9319b75c310df0, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4279751068700536, guid: 2c9de2075f186724ea9319b75c310df0, type: 3}
       propertyPath: m_LocalPosition.x
       value: 9999
