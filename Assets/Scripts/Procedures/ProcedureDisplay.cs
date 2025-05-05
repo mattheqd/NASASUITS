@@ -5,8 +5,7 @@
  * EXAMPLE:
  * - Title: "Procedure: Open the airlock door"
  * - Description: "This procedure will guide you through the process of opening the airlock door."
- * - Progress text: "Step 1 of 3"
- * - Step text: "Open the airlock door"
+ * - Step text: "Step 1 of 3"
  * - Step indicators: 3 circles, 1 circle is green, 1 circle is gray, 1 circle is gray
  */
 using System.Collections;
@@ -26,16 +25,13 @@ public class ProcedureDisplay : MonoBehaviour
     [SerializeField] private TextMeshProUGUI titleText;
     [SerializeField] private TextMeshProUGUI descriptionText;
     [SerializeField] private TextMeshProUGUI stepText;
-    // [SerializeField] private TextMeshProUGUI progressText;
-    [SerializeField] private GameObject descriptionTextContainer;
+    [SerializeField] private TextMeshProUGUI progressText; // Shows "X/Y steps completed"
+    [SerializeField] private Transform stepsPanel; // Container for all steps
+    [SerializeField] private StepItem stepItemPrefab; // Prefab for individual step items
 
-    // Navigation buttons to move next, previous, skip, or return to main menu
+    // Navigation buttons to move next or start procedure
     [Header("Navigation Controls")]
     [SerializeField] private Button nextButton;
-    [SerializeField] private Button backButton;
-    [SerializeField] private Button homeButton;
-    [SerializeField] private Button completeButton; // confirmation button to complete the procedure
-    [SerializeField] private Button continueButton;
 
     // Progress indicators (i.e. progress bar)
     [Header("Progress Indicators")]
@@ -52,6 +48,7 @@ public class ProcedureDisplay : MonoBehaviour
     private Procedure currentProcedure;
     private int currentStepIndex = 0;
     private List<GameObject> stepIndicators = new List<GameObject>(); // list of step indicators for the progress bar
+    private List<GameObject> stepItems = new List<GameObject>(); // list of step item GameObjects
 
     //*------ Functions to control the display ------*/
     // Initialize the display
@@ -59,10 +56,9 @@ public class ProcedureDisplay : MonoBehaviour
     {
         // Check for required components
         if (titleText == null || descriptionText == null || stepText == null || 
-            // progressText == null || nextButton == null || 
-            backButton == null || homeButton == null ||
-            completeButton == null || continueButton == null ||
-            stepIndicatorContainer == null || stepIndicatorPrefab == null)
+            nextButton == null ||
+            stepIndicatorContainer == null || stepIndicatorPrefab == null ||
+            progressText == null || stepsPanel == null || stepItemPrefab == null)
         {
             Debug.LogError("ProcedureDisplay: Missing required UI component references!");
         }
@@ -77,20 +73,10 @@ public class ProcedureDisplay : MonoBehaviour
         if (titleText != null) titleText.text = "Procedure";
         if (descriptionText != null) descriptionText.text = "Procedure Description";
         if (stepText != null) stepText.text = "";
-        // if (progressText != null) progressText.text = "";
+        if (progressText != null) progressText.text = "0/0 steps completed";
         
         // Set up button listeners
         if (nextButton != null) nextButton.onClick.AddListener(GoToNextStep);
-        if (backButton != null) backButton.onClick.AddListener(GoToPreviousStep);
-        if (homeButton != null) homeButton.onClick.AddListener(ReturnToHome);
-        if (completeButton != null)
-        {
-            completeButton.onClick.AddListener(CompleteProcedure);
-            completeButton.gameObject.SetActive(false); // Hide complete button initially
-        }
-
-        if (continueButton != null)
-            continueButton.onClick.AddListener(StartInstructions);
 
         CreateStepIndicators(0); // Create step indicators with 0 steps initially
     }
@@ -100,18 +86,6 @@ public class ProcedureDisplay : MonoBehaviour
     {
         if (nextButton != null)
             nextButton.onClick.RemoveListener(GoToNextStep);
-        
-        if (backButton != null)
-            backButton.onClick.RemoveListener(GoToPreviousStep);
-        
-        if (homeButton != null)
-            homeButton.onClick.RemoveListener(ReturnToHome);
-        
-        if (completeButton != null)
-            completeButton.onClick.RemoveListener(CompleteProcedure);
-
-        if (continueButton != null)
-            continueButton.onClick.RemoveListener(StartInstructions);
     }
 
     // load sets of instructions based on a procedure name
@@ -133,7 +107,7 @@ public class ProcedureDisplay : MonoBehaviour
     {
         // Store the current procedure
         currentProcedure = procedure;
-        currentStepIndex = -1; // indicate procedure has not started (start screen at the title and description)
+        currentStepIndex = -1; // Start with no step highlighted
         
         // Reset all steps
         foreach (var step in currentProcedure.instructionSteps)
@@ -146,15 +120,16 @@ public class ProcedureDisplay : MonoBehaviour
         titleText.text = procedure.procedureName;
         descriptionText.text = procedure.procedureDescription;
         stepText.text = "";
-        // progressText.text = "";
+        progressText.text = $"0/{procedure.instructionSteps.Count} steps completed";
         
         CreateStepIndicators(procedure.instructionSteps.Count);
+        CreateStepItems(procedure.instructionSteps);
         
         // Make sure panel is visible
         procedurePanel.SetActive(true);
         
-        // Update navigation buttons
-        UpdateNavigationButtons();
+        // Display current state (no step highlighted)
+        DisplayCurrentStep();
     }
     
     //*------ Navigation Functions ------*/
@@ -162,120 +137,20 @@ public class ProcedureDisplay : MonoBehaviour
     // called when user presses on the next button 
     public void GoToNextStep()
     {
-        // Mark current step as completed
-        currentProcedure.instructionSteps[currentStepIndex].isCompleted = true;
-        
-        // Move to next step
-        currentStepIndex++;
+        if (currentProcedure == null) return;
+
+        // If we're at the last step, go back to the first step
+        if (currentStepIndex >= currentProcedure.instructionSteps.Count - 1)
+        {
+            currentStepIndex = 0;
+        }
+        else
+        {
+            currentStepIndex++;
+        }
         
         // Update display
         DisplayCurrentStep();
-        
-        // Update button states
-        UpdateNavigationButtons();
-    }
-    
-    // Go to the previous step
-    public void GoToPreviousStep()
-    {
-        if (currentProcedure == null || currentStepIndex <= 0)
-        {
-            return;
-        }
-        
-        // Move to previous step
-        currentStepIndex--;
-        
-        // Update display
-        DisplayCurrentStep();
-        
-        // Update button states
-        UpdateNavigationButtons();
-    }
-    
-    // Control when navigation buttons are enabled/disabled
-    private void UpdateNavigationButtons()
-    {
-        if (currentProcedure == null) return;
-
-        // If the user has not confirmed the procedure yet
-        if (currentStepIndex == -1) {
-            if (continueButton != null) continueButton.gameObject.SetActive(true);
-            if (nextButton != null) nextButton.gameObject.SetActive(false);
-            if (backButton != null) backButton.gameObject.SetActive(false);
-            if (completeButton != null) completeButton.gameObject.SetActive(false);
-            return;
-        }
-
-        // Hide continue button once instructions start
-        if (continueButton != null) continueButton.gameObject.SetActive(false);
-        
-        // Back button is disabled on first step
-        if (backButton != null) backButton.interactable = (currentStepIndex > 0);
-        
-        // Next button is enabled for all but last step
-        if (nextButton != null) nextButton.gameObject.SetActive(currentStepIndex < currentProcedure.instructionSteps.Count - 1);
-        
-        // Complete button is only shown on the last step
-        if (completeButton != null) completeButton.gameObject.SetActive(currentStepIndex == currentProcedure.instructionSteps.Count - 1);
-    }
-    
-    // Displays when user confirms completion of the procedure
-    public void CompleteProcedure()
-    {
-        if (currentProcedure == null) return;
-        
-        // Mark the final step as completed
-        if (currentStepIndex < currentProcedure.instructionSteps.Count)
-            currentProcedure.instructionSteps[currentStepIndex].isCompleted = true;
-        
-        // Display completion message
-        stepText.text = "Procedure completed successfully!";
-        // progressText.text = "Completed";
-        
-        // Hide navigation buttons
-        if (nextButton != null) nextButton.gameObject.SetActive(false);
-        if (backButton != null) backButton.gameObject.SetActive(false);
-        if (completeButton != null) completeButton.gameObject.SetActive(false);
-        
-        // Show only home button
-        if (homeButton != null) homeButton.gameObject.SetActive(true);
-        
-        // Invoke completion event
-        onProcedureCompleted.Invoke();
-        
-        // Update all indicators to completed
-        foreach (var indicator in stepIndicators)
-        {
-            if (indicator != null)
-            {
-                Image indicatorImage = indicator.GetComponent<Image>();
-                if (indicatorImage != null)
-                    indicatorImage.color = completedStepColor;
-            }
-        }
-    }
-    
-    // TODO: Activate navigation path to home (airlock)
-    public void ReturnToHome()
-    {
-        // hide panel
-        procedurePanel.SetActive(false);
-
-        // reset current procedure
-        currentProcedure = null;
-        currentStepIndex = 0;
-    }
-
-    // function to start instructions sequence (i.e. confirm follow through for a procedure)
-    public void StartInstructions() {
-        if (currentProcedure == null) return;
-        currentStepIndex = 0; // set to first instruction
-        descriptionText.text = ""; // clear description text when instructions start
-        DisplayCurrentStep();
-        UpdateNavigationButtons();
-        if (descriptionTextContainer != null) // hide description text container
-            descriptionTextContainer.SetActive(false);
     }
     
     // Check if currently inside a procedure
@@ -293,6 +168,7 @@ public class ProcedureDisplay : MonoBehaviour
             if (indicator != null)
                 Destroy(indicator);
         }
+        stepIndicators.Clear();
 
         // create new indicators
         for (int i = 0; i < stepCount; ++i) {
@@ -306,48 +182,101 @@ public class ProcedureDisplay : MonoBehaviour
         }
     }
 
-    // display current step the user is on (ex: "Step 1 of 3")
-    private void DisplayCurrentStep() {
-        if (currentProcedure == null) return;
-        
-        // If we're at the intro screen (index = -1)
-        if (currentStepIndex == -1) {
-            // Just show the description, not a specific step
-            stepText.text = "Click Continue to start the procedure";
-            // progressText.text = "";
+    // Create step items in the steps panel
+    private void CreateStepItems(List<InstructionStep> steps)
+    {
+        // Clear existing step items
+        foreach (var item in stepItems)
+        {
+            if (item != null)
+                Destroy(item);
+        }
+        stepItems.Clear();
+
+        // Ensure steps panel is properly positioned relative to master container
+        RectTransform panelRect = stepsPanel.GetComponent<RectTransform>();
+        if (panelRect != null)
+        {
+            // Reset any existing offset
+            panelRect.anchoredPosition = Vector2.zero;
+        }
+
+        // Create new step items
+        for (int i = 0; i < steps.Count; i++)
+        {
+            // Create the step item and ensure it's properly parented
+            StepItem stepItem = Instantiate(stepItemPrefab);
+            stepItem.transform.SetParent(stepsPanel, false);
+            stepItems.Add(stepItem.gameObject);
+
+            // Set step number and text
+            stepItem.SetStep(i + 1, steps[i].instructionText);
+            stepItem.SetColor(inactiveStepColor);
+        }
+
+        // Force multiple canvas updates
+        Canvas.ForceUpdateCanvases();
+        StartCoroutine(ForceUpdateCanvasesDelayed());
+    }
+
+    private IEnumerator ForceUpdateCanvasesDelayed()
+    {
+        yield return new WaitForEndOfFrame();
+        Canvas.ForceUpdateCanvases();
+        yield return new WaitForEndOfFrame();
+        Canvas.ForceUpdateCanvases();
+    }
+
+    // Display the current step
+    private void DisplayCurrentStep()
+    {
+        if (currentProcedure == null || currentStepIndex < 0)
+        {
+            // No step is active
+            stepText.text = "";
+            progressText.text = $"0/{currentProcedure?.instructionSteps.Count ?? 0} steps completed";
             return;
         }
-        
-        // Check if the index is valid
-        if (currentStepIndex < 0 || currentStepIndex >= currentProcedure.instructionSteps.Count) {
-            Debug.LogError("Invalid step index: " + currentStepIndex);
+
+        if (currentStepIndex >= currentProcedure.instructionSteps.Count)
             return;
-        }
 
-        // get current step
-        InstructionStep step = currentProcedure.instructionSteps[currentStepIndex];
+        // Update step text
+        stepText.text = currentProcedure.instructionSteps[currentStepIndex].instructionText;
+        progressText.text = $"{currentStepIndex + 1}/{currentProcedure.instructionSteps.Count} steps completed";
 
-        // update step text
-        stepText.text = step.instructionText;
-        // progressText.text = $"Step {currentStepIndex + 1} of {currentProcedure.instructionSteps.Count}";
-
-        // update step indicators (i.e. current number for the progress bar)
-        for (int i = 0; i < stepIndicators.Count; ++i) {
-            if (stepIndicators[i] != null) {
-                // indicatorImage is the image component representing each step in the progress bar
+        // Update step indicators
+        for (int i = 0; i < stepIndicators.Count; i++)
+        {
+            if (stepIndicators[i] != null)
+            {
                 Image indicatorImage = stepIndicators[i].GetComponent<Image>();
-
-                // update color of indicator based on current step
-                if (indicatorImage != null) {
-                    // previous steps are completed (past completed steps)
+                if (indicatorImage != null)
+                {
                     if (i < currentStepIndex)
                         indicatorImage.color = completedStepColor;
-                    // current step is active (current step)
                     else if (i == currentStepIndex)
                         indicatorImage.color = activeStepColor;
-                    // future steps are inactive (future steps)
                     else
                         indicatorImage.color = inactiveStepColor;
+                }
+            }
+        }
+
+        // Update step items
+        for (int i = 0; i < stepItems.Count; i++)
+        {
+            if (stepItems[i] != null)
+            {
+                TextMeshProUGUI[] texts = stepItems[i].GetComponentsInChildren<TextMeshProUGUI>();
+                foreach (var text in texts)
+                {
+                    if (i < currentStepIndex)
+                        text.color = completedStepColor;
+                    else if (i == currentStepIndex)
+                        text.color = activeStepColor;
+                    else
+                        text.color = inactiveStepColor;
                 }
             }
         }
