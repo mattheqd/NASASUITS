@@ -1,496 +1,496 @@
 {
-    "procedures": [
-      {
-        "procedureName": "Egress",
-        "procedureDescription": "Emergency exit procedure from the station",
-        "instructionSteps": [
-          {
-            "instructionText": "Secure all loose equipment",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "Verify pressure equalization",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "Don emergency gear",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "Release safety locks",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "Exit through emergency hatch",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          }
-        ]
-      },
-      {
-        "procedureName": "Verify LTV Coordination",
-        "procedureDescription": "Verify coordination with Lunar Terrain Vehicle",
-        "instructionSteps": [
-          {
-            "instructionText": "PR: Verify ping has been received from LTV",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "PR: Verify worksite POI locations have been provided by LTV",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "PR: Verify that EV1 has received LTV POIs",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "PR: Announce that PR operations are complete, will now begin monitoring EVA. Turning operations over to EVA.",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          }
-        ]
-      },
-      {
-        "procedureName": "Connect UIA to DCU and start Depress",
-        "procedureDescription": "Connect UIA to DCU and begin depressurization",
-        "instructionSteps": [
-          {
-            "instructionText": "UIA and DCU: EV1 verify umbilical connection from UIA to DCU",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "UIA: EV-1, EMU PWR – ON",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "DCU: BATT – UMB",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "UIA: DEPRESS PUMP PWR – ON",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          }
-        ]
-      },
-      {
-        "procedureName": "Prep O2 Tanks",
-        "procedureDescription": "Prepare oxygen tanks for EVA",
-        "instructionSteps": [
-          {
-            "instructionText": "UIA: OXYGEN O2 VENT – OPEN",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "HMD: Wait until both Primary and Secondary OXY tanks are < 10psi",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "UIA: OXYGEN O2 VENT – CLOSE",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "DCU: OXY – PRI",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "UIA: OXYGEN EMU-1 – OPEN",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "HMD: Wait until EV1 Primary O2 tank > 3000 psi",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "UIA: OXYGEN EMU-1 – CLOSE",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "DCU: OXY – SEC",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "UIA: OXYGEN EMU-1 – OPEN",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "HMD: Wait until EV1 Secondary O2 tank > 3000 psi",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "UIA: OXYGEN EMU-1 – CLOSE",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "DCU: OXY – PRI",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          }
-        ]
-      },
-      {
-        "procedureName": "END Depress, Check Switches and Disconnect",
-        "procedureDescription": "End depressurization, check switches and disconnect",
-        "instructionSteps": [
-          {
-            "instructionText": "HMD: Wait until SUIT PRESSURE and O2 Pressure = 4",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "UIA: DEPRESS PUMP PWR – OFF",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "DCU: BATT – LOCAL",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "UIA: EV-1 EMU PWR - OFF",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "DCU: Verify OXY – PRI",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "DCU: Verify COMMS – A",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "DCU: Verify FAN – PRI",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "DCU: Verify PUMP – CLOSE",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "DCU: Verify CO2 – A",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "UIA and DCU: EV1 disconnect UIA and DCU umbilical",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          }
-        ]
-      },
-      {
-        "procedureName": "Determine Navigation Path",
-        "procedureDescription": "Determine navigation path for EVA",
-        "instructionSteps": [
-          {
-            "instructionText": "EV1: Drop pins and determine best path for each POI provided by LTV",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "EV1: Verify the path has been generated. Wait for go from PR",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "PR: Unlock Airlock, announce all clear for EV",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "EV: Exit airlock and begin navigation to worksite",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          }
-        ]
-      },
-      {
-        "procedureName": "Navigation",
-        "procedureDescription": "Navigate to worksite",
-        "instructionSteps": [
-          {
-            "instructionText": "EV: Navigate to first POI",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "PR: Monitor location data and video streams",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          }
-        ]
-      },
-      {
-        "procedureName": "Geologic Sampling",
-        "procedureDescription": "Perform geologic sampling at worksite",
-        "instructionSteps": [
-          {
-            "instructionText": "Announce arrival to worksite over comms: 'Arrived at site, beginning sampling.'",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "Perform Sampling Procedures",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "Announce completion: 'Sampling is complete at this location. PR please verify receipt of data. Beginning nav to next location.'",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "Proceed to next location if available and restart Geologic Sampling procedures",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          }
-        ]
-      },
-      {
-        "procedureName": "Sampling Procedure",
-        "procedureDescription": "Detailed procedure for geological sampling",
-        "instructionSteps": [
-          {
-            "instructionText": "HMD: EV Open Sampling Procedure",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "HMD: If available, perform Field Notes on Rock, which can include picture, voice notes, etc.",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "HMD: Perform XRF Scan",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "XRF: Press and HOLD trigger",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "XRF: Aim close to sample until beep, then release trigger",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "HMD: Announce 'Scan Complete, PR verify data received.'",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "HMD: If Rock Composition outside of nominal parameters, collect rock.",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "HMD: If able, drop and label a pin",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "Repeat until all samples in area are scanned.",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          }
-        ]
-      },
-      {
-        "procedureName": "Return to Pressurized Rover",
-        "procedureDescription": "Return to the Pressurized Rover",
-        "instructionSteps": [
-          {
-            "instructionText": "HMD: Verify path to rover.",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "HMD: Begin return to PR.",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          }
-        ]
-      },
-      {
-        "procedureName": "EVA Ingress",
-        "procedureDescription": "Procedure for EVA ingress",
-        "instructionSteps": [
-          {
-            "instructionText": "UIA and DCU: EV1 connect UIA and DCU umbilical",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "UIA: EV-1 EMU PWR – ON",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "DCU: BATT – UMB",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          }
-        ]
-      },
-      {
-        "procedureName": "Vent O2 Tanks",
-        "procedureDescription": "Vent oxygen tanks after EVA",
-        "instructionSteps": [
-          {
-            "instructionText": "UIA: OXYGEN O2 VENT – OPEN",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "HMD: Wait until both Primary and Secondary OXY tanks are < 10psi",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "UIA: OXYGEN O2 VENT – CLOSE",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          }
-        ]
-      },
-      {
-        "procedureName": "Empty Water Tanks",
-        "procedureDescription": "Empty water tanks after EVA",
-        "instructionSteps": [
-          {
-            "instructionText": "DCU: PUMP – OPEN",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "UIA: EV-1 WASTE WATER – OPEN",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "HMD: Wait until water EV1 Coolant tank is < 5%",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "UIA: EV-1, WASTE WATER – CLOSE",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          }
-        ]
-      },
-      {
-        "procedureName": "Disconnect UIA from DCU",
-        "procedureDescription": "Disconnect UIA from DCU after EVA",
-        "instructionSteps": [
-          {
-            "instructionText": "UIA: EV-1 EMU PWR – OFF",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          },
-          {
-            "instructionText": "DCU: EV1 disconnect umbilical",
-            "requiresConfirmation": true,
-            "isCompleted": false,
-            "isSkipped": false
-          }
-        ]
-      }
-    ]
-  }
+  "procedures": [
+    {
+      "procedureName": "Egress",
+      "procedureDescription": "Emergency exit procedure from the station",
+      "instructionSteps": [
+        {
+          "instructionText": "Secure all loose equipment",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "Verify pressure equalization",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "Don emergency gear",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "Release safety locks",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "Exit through emergency hatch",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        }
+      ]
+    },
+    {
+      "procedureName": "Verify LTV Coordination",
+      "procedureDescription": "Verify coordination with Lunar Terrain Vehicle",
+      "instructionSteps": [
+        {
+          "instructionText": "PR: Verify ping has been received from LTV",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "PR: Verify worksite POI locations have been provided by LTV",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "PR: Verify that EV1 has received LTV POIs",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "PR: Announce that PR operations are complete, will now begin monitoring EVA. Turning operations over to EVA.",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        }
+      ]
+    },
+    {
+      "procedureName": "Connect UIA to DCU and start Depress",
+      "procedureDescription": "Connect UIA to DCU and begin depressurization",
+      "instructionSteps": [
+        {
+          "instructionText": "UIA and DCU: EV1 verify umbilical connection from UIA to DCU",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "UIA: EV-1, EMU PWR – ON",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "DCU: BATT – UMB",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "UIA: DEPRESS PUMP PWR – ON",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        }
+      ]
+    },
+    {
+      "procedureName": "Prep O2 Tanks",
+      "procedureDescription": "Prepare oxygen tanks for EVA",
+      "instructionSteps": [
+        {
+          "instructionText": "UIA: OXYGEN O2 VENT – OPEN",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "HMD: Wait until both Primary and Secondary OXY tanks are < 10psi",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "UIA: OXYGEN O2 VENT – CLOSE",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "DCU: OXY – PRI",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "UIA: OXYGEN EMU-1 – OPEN",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "HMD: Wait until EV1 Primary O2 tank > 3000 psi",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "UIA: OXYGEN EMU-1 – CLOSE",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "DCU: OXY – SEC",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "UIA: OXYGEN EMU-1 – OPEN",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "HMD: Wait until EV1 Secondary O2 tank > 3000 psi",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "UIA: OXYGEN EMU-1 – CLOSE",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "DCU: OXY – PRI",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        }
+      ]
+    },
+    {
+      "procedureName": "END Depress, Check Switches and Disconnect",
+      "procedureDescription": "End depressurization, check switches and disconnect",
+      "instructionSteps": [
+        {
+          "instructionText": "HMD: Wait until SUIT PRESSURE and O2 Pressure = 4",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "UIA: DEPRESS PUMP PWR – OFF",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "DCU: BATT – LOCAL",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "UIA: EV-1 EMU PWR - OFF",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "DCU: Verify OXY – PRI",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "DCU: Verify COMMS – A",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "DCU: Verify FAN – PRI",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "DCU: Verify PUMP – CLOSE",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "DCU: Verify CO2 – A",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "UIA and DCU: EV1 disconnect UIA and DCU umbilical",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        }
+      ]
+    },
+    {
+      "procedureName": "Determine Navigation Path",
+      "procedureDescription": "Determine navigation path for EVA",
+      "instructionSteps": [
+        {
+          "instructionText": "EV1: Drop pins and determine best path for each POI provided by LTV",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "EV1: Verify the path has been generated. Wait for go from PR",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "PR: Unlock Airlock, announce all clear for EV",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "EV: Exit airlock and begin navigation to worksite",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        }
+      ]
+    },
+    {
+      "procedureName": "Navigation",
+      "procedureDescription": "Navigate to worksite",
+      "instructionSteps": [
+        {
+          "instructionText": "EV: Navigate to first POI",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "PR: Monitor location data and video streams",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        }
+      ]
+    },
+    {
+      "procedureName": "Geologic Sampling",
+      "procedureDescription": "Perform geologic sampling at worksite",
+      "instructionSteps": [
+        {
+          "instructionText": "Announce arrival to worksite over comms: 'Arrived at site, beginning sampling.'",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "Perform Sampling Procedures",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "Announce completion: 'Sampling is complete at this location. PR please verify receipt of data. Beginning nav to next location.'",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "Proceed to next location if available and restart Geologic Sampling procedures",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        }
+      ]
+    },
+    {
+      "procedureName": "Sampling Procedure",
+      "procedureDescription": "Detailed procedure for geological sampling",
+      "instructionSteps": [
+        {
+          "instructionText": "HMD: EV Open Sampling Procedure",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "HMD: If available, perform Field Notes on Rock, which can include picture, voice notes, etc.",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "HMD: Perform XRF Scan",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "XRF: Press and HOLD trigger",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "XRF: Aim close to sample until beep, then release trigger",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "HMD: Announce 'Scan Complete, PR verify data received.'",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "HMD: If Rock Composition outside of nominal parameters, collect rock.",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "HMD: If able, drop and label a pin",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "Repeat until all samples in area are scanned.",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        }
+      ]
+    },
+    {
+      "procedureName": "Return to Pressurized Rover",
+      "procedureDescription": "Return to the Pressurized Rover",
+      "instructionSteps": [
+        {
+          "instructionText": "HMD: Verify path to rover.",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "HMD: Begin return to PR.",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        }
+      ]
+    },
+    {
+      "procedureName": "EVA Ingress",
+      "procedureDescription": "Procedure for EVA ingress",
+      "instructionSteps": [
+        {
+          "instructionText": "UIA and DCU: EV1 connect UIA and DCU umbilical",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "UIA: EV-1 EMU PWR – ON",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "DCU: BATT – UMB",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        }
+      ]
+    },
+    {
+      "procedureName": "Vent O2 Tanks",
+      "procedureDescription": "Vent oxygen tanks after EVA",
+      "instructionSteps": [
+        {
+          "instructionText": "UIA: OXYGEN O2 VENT – OPEN",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "HMD: Wait until both Primary and Secondary OXY tanks are < 10psi",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "UIA: OXYGEN O2 VENT – CLOSE",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        }
+      ]
+    },
+    {
+      "procedureName": "Empty Water Tanks",
+      "procedureDescription": "Empty water tanks after EVA",
+      "instructionSteps": [
+        {
+          "instructionText": "DCU: PUMP – OPEN",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "UIA: EV-1 WASTE WATER – OPEN",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "HMD: Wait until water EV1 Coolant tank is < 5%",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "UIA: EV-1, WASTE WATER – CLOSE",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        }
+      ]
+    },
+    {
+      "procedureName": "Disconnect UIA from DCU",
+      "procedureDescription": "Disconnect UIA from DCU after EVA",
+      "instructionSteps": [
+        {
+          "instructionText": "UIA: EV-1 EMU PWR – OFF",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        },
+        {
+          "instructionText": "DCU: EV1 disconnect umbilical",
+          "requiresConfirmation": true,
+          "isCompleted": false,
+          "isSkipped": false
+        }
+      ]
+    }
+  ]
+}
