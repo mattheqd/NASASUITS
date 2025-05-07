@@ -1,5 +1,6 @@
 //* Script for voice memo during geosampling. 
 //* handles recording, transcription, and waveform visualization
+//* the api picks up the microphone input (ex: built in mic on glasses vs laptop)
 
 using UnityEngine;
 using UnityEngine.UI;
