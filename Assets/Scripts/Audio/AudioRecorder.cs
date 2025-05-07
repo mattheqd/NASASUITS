@@ -7,8 +7,8 @@ using System.Collections;
 using System.IO;
 using TMPro;
 using System;
-using Whisper;
-using Whisper.Utils;
+using VivoxUnity;
+using Unity.Services.Vivox;
 
 public class AudioRecorder : MonoBehaviour
 {
@@ -49,6 +49,11 @@ public class AudioRecorder : MonoBehaviour
     // Waveform visualization
     private RectTransform[] waveformBars;
     private Coroutine waveformCoroutine;
+    
+    // Vivox components
+    private VivoxUnity.Client vivoxClient;
+    private ILoginSession loginSession;
+    private IChannelSession channelSession;
 
     private void Awake()
     {
@@ -99,17 +104,74 @@ public class AudioRecorder : MonoBehaviour
         transcriptionFilePath = Path.Combine(transcriptsFolderPath, fileName);
         Debug.Log("Transcription will be saved to: " + transcriptionFilePath);
         
-        // Initialize Whisper if not already set
-        if (whisperManager == null)
+        // Initialize Vivox
+        InitializeVivox();
+    }
+    
+    private async void InitializeVivox()
+    {
+        try
         {
-            whisperManager = FindObjectOfType<WhisperManager>();
-            if (whisperManager == null)
-            {
-                GameObject whisperObj = new GameObject("WhisperManager");
-                whisperManager = whisperObj.AddComponent<WhisperManager>();
-                whisperManager.DownloadModel(modelName);
-            }
+            // Initialize Vivox service
+            await VivoxService.Instance.InitializeAsync();
+            
+            // Get the client
+            vivoxClient = VivoxService.Instance.Client;
+            
+            // Create a login session
+            var accountId = new AccountId(
+                VivoxService.Instance.Key, 
+                "userId" + UnityEngine.Random.Range(0, 10000), 
+                "issuer", 
+                null);
+                
+            loginSession = vivoxClient.GetLoginSession(accountId);
+            
+            // Login
+            await loginSession.BeginLoginAsync();
+            
+            // Set up channel for transcription
+            var channelId = new ChannelId(
+                VivoxService.Instance.Key,
+                "transcriptionChannel",
+                "issuer",
+                ChannelType.NonPositional);
+                
+            channelSession = loginSession.GetChannelSession(channelId);
+            
+            // Enable transcription
+            channelSession.BeginSetTranscriptionSettingsAsync(
+                true, // Enable transcription
+                null, // Default language
+                (result) => {
+                    if (result.IsError)
+                    {
+                        Debug.LogError($"Failed to enable transcription: {result.ErrorMessage}");
+                    }
+                    else
+                    {
+                        Debug.Log("Transcription enabled successfully");
+                    }
+                });
+                
+            // Subscribe to transcription events
+            channelSession.TranscriptionReceived += OnTranscriptionReceived;
+            
+            Debug.Log("Vivox initialized successfully");
         }
+        catch (Exception e)
+        {
+            Debug.LogError($"Failed to initialize Vivox: {e.Message}");
+        }
+    }
+    
+    private void OnTranscriptionReceived(object sender, TranscriptionReceivedEventArgs args)
+    {
+        // Update the current transcription
+        currentTranscription = args.Text;
+        
+        // Update the UI
+        SaveTranscriptionToUI();
     }
 
     private void OnDestroy()
@@ -123,6 +185,18 @@ public class AudioRecorder : MonoBehaviour
         // Stop coroutine if running
         if (waveformCoroutine != null)
             StopCoroutine(waveformCoroutine);
+            
+        // Clean up Vivox
+        if (channelSession != null)
+        {
+            channelSession.TranscriptionReceived -= OnTranscriptionReceived;
+            channelSession.Disconnect();
+        }
+        
+        if (loginSession != null && loginSession.State == LoginState.LoggedIn)
+        {
+            loginSession.Logout();
+        }
     }
     
     private void InitializeWaveformBars()
@@ -202,7 +276,7 @@ public class AudioRecorder : MonoBehaviour
         }
     }
 
-    private void StartRecording()
+    private async void StartRecording()
     {
         if (string.IsNullOrEmpty(microphoneDevice))
         {
@@ -233,10 +307,24 @@ public class AudioRecorder : MonoBehaviour
             StopCoroutine(waveformCoroutine);
         waveformCoroutine = StartCoroutine(VisualizeWaveform());
         
+        // Join the channel to start transcription
+        if (channelSession != null && channelSession.ChannelState != ConnectionState.Connected)
+        {
+            try
+            {
+                await channelSession.BeginConnectAsync();
+                Debug.Log("Connected to transcription channel");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Failed to connect to transcription channel: {e.Message}");
+            }
+        }
+        
         UpdateStatus("Recording...");
     }
 
-    private void StopRecording()
+    private async void StopRecording()
     {
         if (!isRecording) return;
 
@@ -259,9 +347,6 @@ public class AudioRecorder : MonoBehaviour
             trimmedClip.SetData(samples, 0);
 
             recording = trimmedClip;
-            
-            // Transcribe the audio using Whisper
-            StartCoroutine(TranscribeAudio(recording));
         }
 
         // Update UI
@@ -279,33 +364,19 @@ public class AudioRecorder : MonoBehaviour
             waveformCoroutine = null;
         }
         
-        UpdateStatus("Processing audio...");
-    }
-    
-    private IEnumerator TranscribeAudio(AudioClip clip)
-    {
-        if (whisperManager == null)
+        // Leave the channel to stop transcription
+        if (channelSession != null && channelSession.ChannelState == ConnectionState.Connected)
         {
-            Debug.LogError("WhisperManager is not initialized!");
-            yield break;
+            try
+            {
+                await channelSession.BeginDisconnectAsync();
+                Debug.Log("Disconnected from transcription channel");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Failed to disconnect from transcription channel: {e.Message}");
+            }
         }
-        
-        UpdateStatus("Transcribing audio...");
-        
-        // Convert AudioClip to WAV
-        byte[] wavData = WavUtility.FromAudioClip(clip);
-        
-        // Start transcription
-        whisperManager.OnTranscriptionResult.AddListener(OnTranscriptionResult);
-        whisperManager.TranscribeAudio(wavData);
-        
-        // Wait for transcription to complete
-        while (whisperManager.IsTranscribing)
-        {
-            yield return null;
-        }
-        
-        whisperManager.OnTranscriptionResult.RemoveListener(OnTranscriptionResult);
         
         // Update UI with final transcription
         SaveTranscriptionToUI();
@@ -317,12 +388,6 @@ public class AudioRecorder : MonoBehaviour
         }
         
         UpdateStatus("Recording saved!");
-    }
-    
-    private void OnTranscriptionResult(string result)
-    {
-        currentTranscription = result;
-        SaveTranscriptionToUI();
     }
 
     private void PlayRecording()
