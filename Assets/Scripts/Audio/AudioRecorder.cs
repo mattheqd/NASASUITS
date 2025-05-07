@@ -12,7 +12,7 @@ public class AudioRecorder : MonoBehaviour
 {
     [Header("UI References")]
     [SerializeField] private Button recordButton;
-    [SerializeField] private Button playButton;
+    // [SerializeField] private Button playButton;
     [SerializeField] private TextMeshProUGUI statusText; // display the recording status (recording, not recording, etc)
     [SerializeField] private GameObject voiceMemoPanel; // empty panel to contain voice features
     [SerializeField] private TextMeshProUGUI transcriptionText;
@@ -62,8 +62,8 @@ public class AudioRecorder : MonoBehaviour
         if (recordButton != null)
             recordButton.onClick.AddListener(ToggleRecording);
         
-        if (playButton != null)
-            playButton.onClick.AddListener(PlayRecording);
+        // if (playButton != null)
+        //     playButton.onClick.AddListener(PlayRecording);
             
         // Initialize UI
         if (voiceMemoPanel != null)
@@ -78,8 +78,8 @@ public class AudioRecorder : MonoBehaviour
         if (recordButton != null)
             recordButton.onClick.RemoveListener(ToggleRecording);
         
-        if (playButton != null)
-            playButton.onClick.RemoveListener(PlayRecording);
+        // if (playButton != null)
+        //     playButton.onClick.RemoveListener(PlayRecording);
             
         // Clean up dictation recognizer
         if (dictationRecognizer != null)
@@ -158,17 +158,23 @@ public class AudioRecorder : MonoBehaviour
     {
         if (string.IsNullOrEmpty(microphoneDevice))
         {
-            UpdateStatus("No microphone available!");
+            Debug.LogWarning("No microphone available!");
             return;
         }
 
         // Initialize dictation recognizer if needed
         if (dictationRecognizer == null)
         {
-            dictationRecognizer = new DictationRecognizer();
-            dictationRecognizer.DictationResult += OnDictationResult;
-            dictationRecognizer.DictationComplete += OnDictationComplete;
-            dictationRecognizer.DictationError += OnDictationError;
+            try {
+                dictationRecognizer = new DictationRecognizer();
+                dictationRecognizer.DictationResult += OnDictationResult;
+                dictationRecognizer.DictationComplete += OnDictationComplete;
+                dictationRecognizer.DictationError += OnDictationError;
+            }
+            catch (System.Exception e) {
+                Debug.LogError("Failed to initialize dictation recognizer: " + e.Message);
+                return;
+            }
         }
 
         // Start recording
@@ -180,7 +186,7 @@ public class AudioRecorder : MonoBehaviour
         dictationRecognizer.Start();
 
         // Update UI
-        if (recordButton != null)
+        if (recordButton != null && recordButton.GetComponentInChildren<TextMeshProUGUI>() != null)
             recordButton.GetComponentInChildren<TextMeshProUGUI>().text = "Stop Recording";
         
         // Show waveform visualizer
@@ -204,24 +210,34 @@ public class AudioRecorder : MonoBehaviour
         isRecording = false;
         
         // Stop dictation
-        dictationRecognizer.Stop();
+        try {
+            if (dictationRecognizer != null)
+                dictationRecognizer.Stop();
+        }
+        catch (System.Exception e) {
+            Debug.LogError("Error stopping dictation: " + e.Message);
+            // Continue anyway
+        }
 
-        // Trim the recording to actual length
-        float recordingLength = Time.time - startRecordingTime;
-        AudioClip trimmedClip = AudioClip.Create("Recording", 
-            (int)(recordingLength * sampleRate), 
-            1, 
-            sampleRate, 
-            false);
+        // Only process recording if we have one
+        if (recording != null) {
+            // Trim the recording to actual length
+            float recordingLength = Time.time - startRecordingTime;
+            AudioClip trimmedClip = AudioClip.Create("Recording", 
+                (int)(recordingLength * sampleRate), 
+                1, 
+                sampleRate, 
+                false);
 
-        float[] samples = new float[(int)(recordingLength * sampleRate)];
-        recording.GetData(samples, 0);
-        trimmedClip.SetData(samples, 0);
+            float[] samples = new float[(int)(recordingLength * sampleRate)];
+            recording.GetData(samples, 0);
+            trimmedClip.SetData(samples, 0);
 
-        recording = trimmedClip;
+            recording = trimmedClip;
+        }
 
         // Update UI
-        if (recordButton != null)
+        if (recordButton != null && recordButton.GetComponentInChildren<TextMeshProUGUI>() != null)
             recordButton.GetComponentInChildren<TextMeshProUGUI>().text = "Start Recording";
             
         // Hide waveform visualizer
