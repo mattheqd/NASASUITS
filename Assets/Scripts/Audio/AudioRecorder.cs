@@ -7,12 +7,13 @@ using System.Collections;
 using System.IO;
 using TMPro;
 using System;
+using UnityEngine.Windows.Speech;
 
 public class AudioRecorder : MonoBehaviour
 {
     [Header("UI References")]
     [SerializeField] private Button recordButton;
-    // [SerializeField] private Button playButton;
+    [SerializeField] private Button playButton;
     [SerializeField] private TextMeshProUGUI statusText; // display the recording status (recording, not recording, etc)
     [SerializeField] private GameObject voiceMemoPanel; // empty panel to contain voice features
     [SerializeField] private TextMeshProUGUI transcriptionText;
@@ -35,13 +36,16 @@ public class AudioRecorder : MonoBehaviour
     private float startRecordingTime;
     private AudioSource audioSource;
     
+    // Speech recognition components
+    private DictationRecognizer dictationRecognizer;
+    private string currentTranscription = "";
+    
     // Path to save transcriptions
     private string transcriptionFilePath;
 
     // Waveform visualization
     private RectTransform[] waveformBars;
     private Coroutine waveformCoroutine;
-    private string currentTranscription = "";
 
     private void Awake()
     {
@@ -63,8 +67,8 @@ public class AudioRecorder : MonoBehaviour
         if (recordButton != null)
             recordButton.onClick.AddListener(ToggleRecording);
         
-        // if (playButton != null)
-        //     playButton.onClick.AddListener(PlayRecording);
+        if (playButton != null)
+            playButton.onClick.AddListener(PlayRecording);
             
         // Initialize UI
         if (voiceMemoPanel != null)
@@ -87,6 +91,57 @@ public class AudioRecorder : MonoBehaviour
         // Set up transcription file path
         transcriptionFilePath = Path.Combine(Application.persistentDataPath, "transcriptions.txt");
         Debug.Log("Transcriptions will be saved to: " + transcriptionFilePath);
+        
+        // Initialize dictation recognizer
+        InitializeDictationRecognizer();
+    }
+    
+    private void InitializeDictationRecognizer()
+    {
+        try
+        {
+            dictationRecognizer = new DictationRecognizer();
+            dictationRecognizer.DictationResult += OnDictationResult;
+            dictationRecognizer.DictationComplete += OnDictationComplete;
+            dictationRecognizer.DictationError += OnDictationError;
+            Debug.Log("Dictation recognizer initialized successfully");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Failed to initialize dictation recognizer: " + e.Message);
+        }
+    }
+
+    private void OnDictationResult(string text, ConfidenceLevel confidence)
+    {
+        Debug.Log("Dictation result: " + text);
+        currentTranscription += text + " ";
+        
+        if (transcriptionText != null)
+        {
+            transcriptionText.text = currentTranscription;
+        }
+    }
+
+    private void OnDictationComplete(DictationCompletionCause cause)
+    {
+        Debug.Log("Dictation completed: " + cause);
+        
+        if (cause != DictationCompletionCause.Complete)
+        {
+            Debug.LogWarning("Dictation did not complete successfully: " + cause);
+        }
+        
+        // Save the transcription when dictation completes
+        if (!string.IsNullOrEmpty(currentTranscription))
+        {
+            SaveMemo(currentTranscription);
+        }
+    }
+
+    private void OnDictationError(string error, int hresult)
+    {
+        Debug.LogError("Dictation error: " + error);
     }
 
     private void OnDestroy()
@@ -94,12 +149,21 @@ public class AudioRecorder : MonoBehaviour
         if (recordButton != null)
             recordButton.onClick.RemoveListener(ToggleRecording);
         
-        // if (playButton != null)
-        //     playButton.onClick.RemoveListener(PlayRecording);
+        if (playButton != null)
+            playButton.onClick.RemoveListener(PlayRecording);
             
         // Stop coroutine if running
         if (waveformCoroutine != null)
             StopCoroutine(waveformCoroutine);
+            
+        // Clean up dictation recognizer
+        if (dictationRecognizer != null)
+        {
+            dictationRecognizer.DictationResult -= OnDictationResult;
+            dictationRecognizer.DictationComplete -= OnDictationComplete;
+            dictationRecognizer.DictationError -= OnDictationError;
+            dictationRecognizer.Dispose();
+        }
     }
     
     private void InitializeWaveformBars()
@@ -197,6 +261,25 @@ public class AudioRecorder : MonoBehaviour
         isRecording = true;
         startRecordingTime = Time.time;
         
+        // Start dictation
+        try
+        {
+            if (dictationRecognizer == null)
+            {
+                InitializeDictationRecognizer();
+            }
+            
+            if (dictationRecognizer != null)
+            {
+                dictationRecognizer.Start();
+                Debug.Log("Dictation recognizer started");
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Error starting dictation: " + e.Message);
+        }
+        
         // Update UI
         if (recordButton != null && recordButton.GetComponentInChildren<TextMeshProUGUI>() != null)
             recordButton.GetComponentInChildren<TextMeshProUGUI>().text = "Stop Recording";
@@ -220,6 +303,20 @@ public class AudioRecorder : MonoBehaviour
         // Stop recording
         Microphone.End(microphoneDevice);
         isRecording = false;
+        
+        // Stop dictation
+        try
+        {
+            if (dictationRecognizer != null)
+            {
+                dictationRecognizer.Stop();
+                Debug.Log("Dictation recognizer stopped");
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Error stopping dictation: " + e.Message);
+        }
 
         // Only process recording if we have one
         if (recording != null) {
@@ -236,9 +333,6 @@ public class AudioRecorder : MonoBehaviour
             trimmedClip.SetData(samples, 0);
 
             recording = trimmedClip;
-            
-            // Generate transcription based on audio characteristics
-            GenerateTranscription(samples, recordingLength);
         }
 
         // Update UI
@@ -296,57 +390,6 @@ public class AudioRecorder : MonoBehaviour
             float recordingTime = Time.time - startRecordingTime;
             statusText.text = $"Recording... {recordingTime:F1}s";
         }
-    }
-
-    // Simple method to generate a transcription based on audio characteristics
-    private void GenerateTranscription(float[] samples, float recordingLength)
-    {
-        // Calculate some basic audio metrics
-        float averageAmplitude = 0;
-        float maxAmplitude = 0;
-        int silenceCount = 0;
-        
-        for (int i = 0; i < samples.Length; i += 1000) // Sample every 1000th value for performance
-        {
-            float amplitude = Mathf.Abs(samples[i]);
-            averageAmplitude += amplitude;
-            maxAmplitude = Mathf.Max(maxAmplitude, amplitude);
-            
-            if (amplitude < 0.01f)
-                silenceCount++;
-        }
-        
-        averageAmplitude /= (samples.Length / 1000);
-        
-        // Generate a simple transcription based on audio characteristics
-        string transcription = $"Voice memo recorded at {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}. ";
-        
-        if (recordingLength < 3)
-            transcription += "This was a very short recording. ";
-        else if (recordingLength > 30)
-            transcription += "This was a longer recording. ";
-            
-        if (averageAmplitude < 0.05f)
-            transcription += "The audio was very quiet. ";
-        else if (averageAmplitude > 0.2f)
-            transcription += "The audio was quite loud. ";
-            
-        if (silenceCount > (samples.Length / 1000) / 3)
-            transcription += "There were several moments of silence. ";
-            
-        transcription += $"Recording duration: {recordingLength:F1} seconds.";
-        
-        // Set the transcription
-        currentTranscription = transcription;
-        
-        // Update UI
-        if (transcriptionText != null)
-        {
-            transcriptionText.text = transcription;
-        }
-        
-        // Save the transcription
-        SaveMemo(transcription);
     }
 
     private IEnumerator VisualizeWaveform()
