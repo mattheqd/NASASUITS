@@ -7,8 +7,6 @@ using System.Collections;
 using System.IO;
 using TMPro;
 using System;
-using VivoxUnity;
-using Unity.Services.Vivox;
 
 public class AudioRecorder : MonoBehaviour
 {
@@ -30,10 +28,6 @@ public class AudioRecorder : MonoBehaviour
     [SerializeField] private float waveformAmplitudeMultiplier = 50f;
     [SerializeField] private float waveformMinHeight = 5f;
     [SerializeField] private float waveformMaxHeight = 50f;
-    
-    [Header("Whisper Settings")]
-    [SerializeField] private WhisperManager whisperManager;
-    [SerializeField] private string modelName = "ggml-tiny.bin";
 
     private AudioClip recording;
     private bool isRecording = false;
@@ -42,18 +36,15 @@ public class AudioRecorder : MonoBehaviour
     private AudioSource audioSource;
     private string currentTranscription = "";
     
-    // Path to save transcriptions
+    // Path to save recordings and transcriptions
     private string transcriptsFolderPath;
+    private string recordingsFolderPath;
     private string transcriptionFilePath;
+    private string recordingFilePath;
 
     // Waveform visualization
     private RectTransform[] waveformBars;
     private Coroutine waveformCoroutine;
-    
-    // Vivox components
-    private VivoxUnity.Client vivoxClient;
-    private ILoginSession loginSession;
-    private IChannelSession channelSession;
 
     private void Awake()
     {
@@ -96,82 +87,17 @@ public class AudioRecorder : MonoBehaviour
         // Initialize waveform bars
         InitializeWaveformBars();
         
-        // Set up transcription folder and file path
+        // Set up folders for transcriptions and recordings
         transcriptsFolderPath = Path.Combine(Application.dataPath, "Transcripts");
+        recordingsFolderPath = Path.Combine(Application.dataPath, "Recordings");
         
-        // Assume the directory exists as specified
-        string fileName = "transcription_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt";
-        transcriptionFilePath = Path.Combine(transcriptsFolderPath, fileName);
+        // Generate filenames with timestamps
+        string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        transcriptionFilePath = Path.Combine(transcriptsFolderPath, $"transcription_{timestamp}.txt");
+        recordingFilePath = Path.Combine(recordingsFolderPath, $"recording_{timestamp}.mp3");
+        
         Debug.Log("Transcription will be saved to: " + transcriptionFilePath);
-        
-        // Initialize Vivox
-        InitializeVivox();
-    }
-    
-    private async void InitializeVivox()
-    {
-        try
-        {
-            // Initialize Vivox service
-            await VivoxService.Instance.InitializeAsync();
-            
-            // Get the client
-            vivoxClient = VivoxService.Instance.Client;
-            
-            // Create a login session
-            var accountId = new AccountId(
-                VivoxService.Instance.Key, 
-                "userId" + UnityEngine.Random.Range(0, 10000), 
-                "issuer", 
-                null);
-                
-            loginSession = vivoxClient.GetLoginSession(accountId);
-            
-            // Login
-            await loginSession.BeginLoginAsync();
-            
-            // Set up channel for transcription
-            var channelId = new ChannelId(
-                VivoxService.Instance.Key,
-                "transcriptionChannel",
-                "issuer",
-                ChannelType.NonPositional);
-                
-            channelSession = loginSession.GetChannelSession(channelId);
-            
-            // Enable transcription
-            channelSession.BeginSetTranscriptionSettingsAsync(
-                true, // Enable transcription
-                null, // Default language
-                (result) => {
-                    if (result.IsError)
-                    {
-                        Debug.LogError($"Failed to enable transcription: {result.ErrorMessage}");
-                    }
-                    else
-                    {
-                        Debug.Log("Transcription enabled successfully");
-                    }
-                });
-                
-            // Subscribe to transcription events
-            channelSession.TranscriptionReceived += OnTranscriptionReceived;
-            
-            Debug.Log("Vivox initialized successfully");
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"Failed to initialize Vivox: {e.Message}");
-        }
-    }
-    
-    private void OnTranscriptionReceived(object sender, TranscriptionReceivedEventArgs args)
-    {
-        // Update the current transcription
-        currentTranscription = args.Text;
-        
-        // Update the UI
-        SaveTranscriptionToUI();
+        Debug.Log("Recording will be saved to: " + recordingFilePath);
     }
 
     private void OnDestroy()
@@ -185,18 +111,6 @@ public class AudioRecorder : MonoBehaviour
         // Stop coroutine if running
         if (waveformCoroutine != null)
             StopCoroutine(waveformCoroutine);
-            
-        // Clean up Vivox
-        if (channelSession != null)
-        {
-            channelSession.TranscriptionReceived -= OnTranscriptionReceived;
-            channelSession.Disconnect();
-        }
-        
-        if (loginSession != null && loginSession.State == LoginState.LoggedIn)
-        {
-            loginSession.Logout();
-        }
     }
     
     private void InitializeWaveformBars()
@@ -276,7 +190,7 @@ public class AudioRecorder : MonoBehaviour
         }
     }
 
-    private async void StartRecording()
+    private void StartRecording()
     {
         if (string.IsNullOrEmpty(microphoneDevice))
         {
@@ -307,24 +221,10 @@ public class AudioRecorder : MonoBehaviour
             StopCoroutine(waveformCoroutine);
         waveformCoroutine = StartCoroutine(VisualizeWaveform());
         
-        // Join the channel to start transcription
-        if (channelSession != null && channelSession.ChannelState != ConnectionState.Connected)
-        {
-            try
-            {
-                await channelSession.BeginConnectAsync();
-                Debug.Log("Connected to transcription channel");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"Failed to connect to transcription channel: {e.Message}");
-            }
-        }
-        
         UpdateStatus("Recording...");
     }
 
-    private async void StopRecording()
+    private void StopRecording()
     {
         if (!isRecording) return;
 
@@ -347,6 +247,9 @@ public class AudioRecorder : MonoBehaviour
             trimmedClip.SetData(samples, 0);
 
             recording = trimmedClip;
+            
+            // Save the recording as MP3
+            SaveRecordingAsMP3(recording);
         }
 
         // Update UI
@@ -364,30 +267,52 @@ public class AudioRecorder : MonoBehaviour
             waveformCoroutine = null;
         }
         
-        // Leave the channel to stop transcription
-        if (channelSession != null && channelSession.ChannelState == ConnectionState.Connected)
+        // For now, just display a placeholder message
+        if (transcriptionText != null)
         {
-            try
-            {
-                await channelSession.BeginDisconnectAsync();
-                Debug.Log("Disconnected from transcription channel");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"Failed to disconnect from transcription channel: {e.Message}");
-            }
-        }
-        
-        // Update UI with final transcription
-        SaveTranscriptionToUI();
-        
-        // Save the transcription to file
-        if (!string.IsNullOrEmpty(currentTranscription))
-        {
-            SaveMemo(currentTranscription);
+            transcriptionText.text = "Recording saved. Transcription will be processed on the server.";
         }
         
         UpdateStatus("Recording saved!");
+    }
+
+    private void SaveRecordingAsMP3(AudioClip clip)
+    {
+        try
+        {
+            // Ensure the directory exists
+            if (!Directory.Exists(recordingsFolderPath))
+            {
+                Directory.CreateDirectory(recordingsFolderPath);
+            }
+            
+            // Generate a new filename with timestamp
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            recordingFilePath = Path.Combine(recordingsFolderPath, $"recording_{timestamp}.wav");
+            
+            // Convert to WAV and save (Unity doesn't support direct MP3 encoding)
+            SavWav.Save(recordingFilePath, clip);
+            
+            Debug.Log("Recording saved to: " + recordingFilePath);
+            
+            // TODO: Send the recording to the backend server for transcription
+            // This would typically be done via a web request or other network communication
+            
+            // For demonstration, we'll just create a placeholder transcription file
+            if (!Directory.Exists(transcriptsFolderPath))
+            {
+                Directory.CreateDirectory(transcriptsFolderPath);
+            }
+            
+            transcriptionFilePath = Path.Combine(transcriptsFolderPath, $"transcription_{timestamp}.txt");
+            File.WriteAllText(transcriptionFilePath, "Awaiting transcription from server...");
+            
+            Debug.Log("Placeholder transcription file created at: " + transcriptionFilePath);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Error saving recording: " + e.Message);
+        }
     }
 
     private void PlayRecording()
@@ -470,47 +395,114 @@ public class AudioRecorder : MonoBehaviour
             yield return new WaitForSeconds(waveformUpdateInterval);
         }
     }
-    
-    private void SaveMemo(string memoText)
+}
+
+// Helper class to save AudioClip as WAV file
+// Source: http://wiki.unity3d.com/index.php/SaveWavUtil
+public static class SavWav
+{
+    const int HEADER_SIZE = 44;
+
+    public static bool Save(string filepath, AudioClip clip)
     {
-        if (string.IsNullOrEmpty(memoText))
+        if (!filepath.ToLower().EndsWith(".wav"))
         {
-            Debug.LogWarning("Cannot save empty memo text");
-            return;
+            filepath = filepath + ".wav";
         }
-        
+
+        var samples = new float[clip.samples];
+        clip.GetData(samples, 0);
+
         try
         {
-            // Create a new file for each recording with timestamp in filename
-            string fileName = "transcription_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt";
-            string filePath = Path.Combine(transcriptsFolderPath, fileName);
-            
-            // Write the full transcription to the file
-            File.WriteAllText(filePath, memoText);
-            
-            // Also append to a log file that contains all transcriptions
-            string logFilePath = Path.Combine(transcriptsFolderPath, "all_transcriptions.txt");
-            string entry = $"[{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}] {memoText}\n\n";
-            File.AppendAllText(logFilePath, entry);
-            
-            Debug.Log("Voice memo saved to: " + filePath);
+            using (var fileStream = CreateEmpty(filepath))
+            {
+                ConvertAndWrite(fileStream, samples);
+                WriteHeader(fileStream, clip);
+            }
+            return true;
         }
         catch (Exception e)
         {
-            Debug.LogError("Error saving transcription: " + e.Message);
+            Debug.LogError("Error saving WAV file: " + e.Message);
+            return false;
         }
     }
 
-    private void SaveTranscriptionToUI()
+    private static FileStream CreateEmpty(string filepath)
     {
-        if (transcriptionText != null)
+        var fileStream = new FileStream(filepath, FileMode.Create);
+        byte emptyByte = new byte();
+
+        for (int i = 0; i < HEADER_SIZE; i++)
         {
-            transcriptionText.text = currentTranscription;
-            Debug.Log("Updated UI with transcription: " + currentTranscription);
+            fileStream.WriteByte(emptyByte);
         }
-        else
+
+        return fileStream;
+    }
+
+    private static void ConvertAndWrite(FileStream fileStream, float[] samples)
+    {
+        Int16[] intData = new Int16[samples.Length];
+
+        for (int i = 0; i < samples.Length; i++)
         {
-            Debug.LogError("TranscriptionText reference is missing!");
+            intData[i] = (short)(samples[i] * 32767);
         }
+
+        byte[] byteArray = new byte[intData.Length * 2];
+        Buffer.BlockCopy(intData, 0, byteArray, 0, byteArray.Length);
+        fileStream.Write(byteArray, 0, byteArray.Length);
+    }
+
+    private static void WriteHeader(FileStream fileStream, AudioClip clip)
+    {
+        var hz = clip.frequency;
+        var channels = clip.channels;
+        var samples = clip.samples;
+
+        fileStream.Seek(0, SeekOrigin.Begin);
+
+        byte[] riff = System.Text.Encoding.UTF8.GetBytes("RIFF");
+        fileStream.Write(riff, 0, 4);
+
+        byte[] chunkSize = BitConverter.GetBytes(fileStream.Length - 8);
+        fileStream.Write(chunkSize, 0, 4);
+
+        byte[] wave = System.Text.Encoding.UTF8.GetBytes("WAVE");
+        fileStream.Write(wave, 0, 4);
+
+        byte[] fmt = System.Text.Encoding.UTF8.GetBytes("fmt ");
+        fileStream.Write(fmt, 0, 4);
+
+        byte[] subChunk1 = BitConverter.GetBytes(16);
+        fileStream.Write(subChunk1, 0, 4);
+
+        UInt16 one = 1;
+        byte[] audioFormat = BitConverter.GetBytes(one);
+        fileStream.Write(audioFormat, 0, 2);
+
+        byte[] numChannels = BitConverter.GetBytes(channels);
+        fileStream.Write(numChannels, 0, 2);
+
+        byte[] sampleRate = BitConverter.GetBytes(hz);
+        fileStream.Write(sampleRate, 0, 4);
+
+        byte[] byteRate = BitConverter.GetBytes(hz * channels * 2);
+        fileStream.Write(byteRate, 0, 4);
+
+        UInt16 blockAlign = (ushort)(channels * 2);
+        fileStream.Write(BitConverter.GetBytes(blockAlign), 0, 2);
+
+        UInt16 bps = 16;
+        byte[] bitsPerSample = BitConverter.GetBytes(bps);
+        fileStream.Write(bitsPerSample, 0, 2);
+
+        byte[] datastring = System.Text.Encoding.UTF8.GetBytes("data");
+        fileStream.Write(datastring, 0, 4);
+
+        byte[] subChunk2 = BitConverter.GetBytes(samples * channels * 2);
+        fileStream.Write(subChunk2, 0, 4);
     }
 } 
