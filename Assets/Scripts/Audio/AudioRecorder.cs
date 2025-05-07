@@ -41,6 +41,7 @@ public class AudioRecorder : MonoBehaviour
     // Waveform visualization
     private RectTransform[] waveformBars;
     private Coroutine waveformCoroutine;
+    private string currentTranscription = "";
 
     private void Awake()
     {
@@ -140,6 +141,10 @@ public class AudioRecorder : MonoBehaviour
             
         if (waveformVisualizer != null)
             waveformVisualizer.SetActive(false);
+            
+        currentTranscription = "";
+        
+        UpdateStatus("Ready to record");
     }
 
     private void ToggleRecording()
@@ -158,7 +163,7 @@ public class AudioRecorder : MonoBehaviour
     {
         if (string.IsNullOrEmpty(microphoneDevice))
         {
-            Debug.LogWarning("No microphone available!");
+            UpdateStatus("No microphone available!");
             return;
         }
 
@@ -177,13 +182,24 @@ public class AudioRecorder : MonoBehaviour
             }
         }
 
+        // Clear previous transcription
+        currentTranscription = "";
+        if (transcriptionText != null)
+            transcriptionText.text = "";
+
         // Start recording
         recording = Microphone.Start(microphoneDevice, false, maxRecordingTime, sampleRate);
         isRecording = true;
         startRecordingTime = Time.time;
         
         // Start dictation
-        dictationRecognizer.Start();
+        try {
+            dictationRecognizer.Start();
+        }
+        catch (System.Exception e) {
+            Debug.LogError("Error starting dictation: " + e.Message);
+            // Continue anyway - we can still record audio
+        }
 
         // Update UI
         if (recordButton != null && recordButton.GetComponentInChildren<TextMeshProUGUI>() != null)
@@ -257,6 +273,8 @@ public class AudioRecorder : MonoBehaviour
         if (transcriptionText != null && !string.IsNullOrEmpty(transcriptionText.text))
         {
             SaveMemo(transcriptionText.text);
+
+        Debug.Log("transcribed text" + transcriptionText.text);
         }
     }
 
