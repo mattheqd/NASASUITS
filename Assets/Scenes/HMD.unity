@@ -5471,6 +5471,18 @@ MonoBehaviour:
   - {fileID: 914874855}
   - {fileID: 2102832618}
   - {fileID: 794073509}
+  tabIcons:
+  - {fileID: 70639145}
+  - {fileID: 2121671751}
+  - {fileID: 914049650}
+  - {fileID: 915460827}
+  - {fileID: 207543538}
+  tabTexts:
+  - {fileID: 307924439}
+  - {fileID: 1214210159}
+  - {fileID: 1024851559}
+  - {fileID: 896100859}
+  - {fileID: 620531690}
   tabNormalColor: {r: 0.1686, g: 0.1765, b: 0.1843, a: 1}
   tabSelectedColor: {r: 0.0314, g: 0.8667, b: 1, a: 1}
 --- !u!114 &1560570991

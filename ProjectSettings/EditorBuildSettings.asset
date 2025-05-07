@@ -23,12 +23,15 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/SimpleHMD.unity
     guid: 0bdc68fa4a87a5249adbcbe2b022c0d5
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/HMD 2.unity
     guid: bd5d87b33c8452040b0d2fe744cd896e
   - enabled: 0
     path: Assets/Scenes/phonecamera.unity
     guid: 7897dcc5c4047cb43811df21600d1d63
+  - enabled: 1
+    path: Assets/Scenes/Voice.unity
+    guid: 3635fa7efdc4e514694b94275858cfd7
   m_configObjects:
     com.unity.xr.arfoundation.simulation_settings: {fileID: 11400000, guid: 9ac4004b2714e5c4eaedfe426c50b41b, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 7a2c7d9f16540b1448fa771eb5f122f7, type: 2}
