@@ -7,7 +7,8 @@ using System.Collections;
 using System.IO;
 using TMPro;
 using System;
-using UnityEngine.Windows.Speech;
+using Whisper;
+using Whisper.Utils;
 
 public class AudioRecorder : MonoBehaviour
 {
@@ -29,15 +30,16 @@ public class AudioRecorder : MonoBehaviour
     [SerializeField] private float waveformAmplitudeMultiplier = 50f;
     [SerializeField] private float waveformMinHeight = 5f;
     [SerializeField] private float waveformMaxHeight = 50f;
+    
+    [Header("Whisper Settings")]
+    [SerializeField] private WhisperManager whisperManager;
+    [SerializeField] private string modelName = "ggml-tiny.bin";
 
     private AudioClip recording;
     private bool isRecording = false;
     private string microphoneDevice;
     private float startRecordingTime;
     private AudioSource audioSource;
-    
-    // Speech recognition components
-    private DictationRecognizer dictationRecognizer;
     private string currentTranscription = "";
     
     // Path to save transcriptions
@@ -91,63 +93,23 @@ public class AudioRecorder : MonoBehaviour
         
         // Set up transcription folder and file path
         transcriptsFolderPath = Path.Combine(Application.dataPath, "Transcripts");
-
+        
+        // Assume the directory exists as specified
         string fileName = "transcription_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt";
         transcriptionFilePath = Path.Combine(transcriptsFolderPath, fileName);
         Debug.Log("Transcription will be saved to: " + transcriptionFilePath);
         
-        // Initialize dictation recognizer
-        InitializeDictationRecognizer();
-    }
-    
-    private void InitializeDictationRecognizer()
-    {
-        try
+        // Initialize Whisper if not already set
+        if (whisperManager == null)
         {
-            dictationRecognizer = new DictationRecognizer();
-            dictationRecognizer.DictationResult += OnDictationResult;
-            dictationRecognizer.DictationComplete += OnDictationComplete;
-            dictationRecognizer.DictationError += OnDictationError;
-            Debug.Log("Dictation recognizer initialized successfully");
+            whisperManager = FindObjectOfType<WhisperManager>();
+            if (whisperManager == null)
+            {
+                GameObject whisperObj = new GameObject("WhisperManager");
+                whisperManager = whisperObj.AddComponent<WhisperManager>();
+                whisperManager.DownloadModel(modelName);
+            }
         }
-        catch (Exception e)
-        {
-            Debug.LogError("Failed to initialize dictation recognizer: " + e.Message);
-        }
-    }
-
-    private void OnDictationResult(string text, ConfidenceLevel confidence)
-    {
-        Debug.Log("Dictation result: " + text);
-        currentTranscription += text + " ";
-        
-        if (transcriptionText != null)
-        {
-            transcriptionText.text = currentTranscription;
-        }
-        
-        SaveTranscriptionToUI();
-    }
-
-    private void OnDictationComplete(DictationCompletionCause cause)
-    {
-        Debug.Log("Dictation completed: " + cause);
-        
-        if (cause != DictationCompletionCause.Complete)
-        {
-            Debug.LogWarning("Dictation did not complete successfully: " + cause);
-        }
-        
-        // Save the transcription when dictation completes
-        if (!string.IsNullOrEmpty(currentTranscription))
-        {
-            SaveMemo(currentTranscription);
-        }
-    }
-
-    private void OnDictationError(string error, int hresult)
-    {
-        Debug.LogError("Dictation error: " + error);
     }
 
     private void OnDestroy()
@@ -161,15 +123,6 @@ public class AudioRecorder : MonoBehaviour
         // Stop coroutine if running
         if (waveformCoroutine != null)
             StopCoroutine(waveformCoroutine);
-            
-        // Clean up dictation recognizer
-        if (dictationRecognizer != null)
-        {
-            dictationRecognizer.DictationResult -= OnDictationResult;
-            dictationRecognizer.DictationComplete -= OnDictationComplete;
-            dictationRecognizer.DictationError -= OnDictationError;
-            dictationRecognizer.Dispose();
-        }
     }
     
     private void InitializeWaveformBars()
@@ -267,25 +220,6 @@ public class AudioRecorder : MonoBehaviour
         isRecording = true;
         startRecordingTime = Time.time;
         
-        // Start dictation
-        try
-        {
-            if (dictationRecognizer == null)
-            {
-                InitializeDictationRecognizer();
-            }
-            
-            if (dictationRecognizer != null)
-            {
-                dictationRecognizer.Start();
-                Debug.Log("Dictation recognizer started");
-            }
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("Error starting dictation: " + e.Message);
-        }
-        
         // Update UI
         if (recordButton != null && recordButton.GetComponentInChildren<TextMeshProUGUI>() != null)
             recordButton.GetComponentInChildren<TextMeshProUGUI>().text = "Stop Recording";
@@ -309,20 +243,6 @@ public class AudioRecorder : MonoBehaviour
         // Stop recording
         Microphone.End(microphoneDevice);
         isRecording = false;
-        
-        // Stop dictation
-        try
-        {
-            if (dictationRecognizer != null)
-            {
-                dictationRecognizer.Stop();
-                Debug.Log("Dictation recognizer stopped");
-            }
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("Error stopping dictation: " + e.Message);
-        }
 
         // Only process recording if we have one
         if (recording != null) {
@@ -339,6 +259,9 @@ public class AudioRecorder : MonoBehaviour
             trimmedClip.SetData(samples, 0);
 
             recording = trimmedClip;
+            
+            // Transcribe the audio using Whisper
+            StartCoroutine(TranscribeAudio(recording));
         }
 
         // Update UI
@@ -356,7 +279,35 @@ public class AudioRecorder : MonoBehaviour
             waveformCoroutine = null;
         }
         
-        // Make sure transcription is displayed in UI
+        UpdateStatus("Processing audio...");
+    }
+    
+    private IEnumerator TranscribeAudio(AudioClip clip)
+    {
+        if (whisperManager == null)
+        {
+            Debug.LogError("WhisperManager is not initialized!");
+            yield break;
+        }
+        
+        UpdateStatus("Transcribing audio...");
+        
+        // Convert AudioClip to WAV
+        byte[] wavData = WavUtility.FromAudioClip(clip);
+        
+        // Start transcription
+        whisperManager.OnTranscriptionResult.AddListener(OnTranscriptionResult);
+        whisperManager.TranscribeAudio(wavData);
+        
+        // Wait for transcription to complete
+        while (whisperManager.IsTranscribing)
+        {
+            yield return null;
+        }
+        
+        whisperManager.OnTranscriptionResult.RemoveListener(OnTranscriptionResult);
+        
+        // Update UI with final transcription
         SaveTranscriptionToUI();
         
         // Save the transcription to file
@@ -366,6 +317,12 @@ public class AudioRecorder : MonoBehaviour
         }
         
         UpdateStatus("Recording saved!");
+    }
+    
+    private void OnTranscriptionResult(string result)
+    {
+        currentTranscription = result;
+        SaveTranscriptionToUI();
     }
 
     private void PlayRecording()
