@@ -319,9 +319,20 @@ public class AudioRecorder : MonoBehaviour
 
     // Transcribed result
     private void OnDictationResult(string text, ConfidenceLevel confidence)
-    {
-        // Update the transcription text
-        if (transcriptionText != null) { transcriptionText.text = text; }
+    { 
+        // Store the transcription
+        currentTranscription = text;
+        
+        // Update the UI text element
+        if (transcriptionText != null)
+        {
+            transcriptionText.text = text;
+            Debug.Log("Transcription updated: " + text);
+        }
+        else
+        {
+            Debug.LogError("TranscriptionText reference is missing!");
+        }
     }
 
     private void OnDictationComplete(DictationCompletionCause cause)
@@ -372,7 +383,7 @@ public class AudioRecorder : MonoBehaviour
     private void SaveMemo(string memoText)
     {
         // TODO: save to file
-        Debug.Log("Voice memo saved: " + memoText);
+            Debug.Log("Voice memo saved: " + (string.IsNullOrEmpty(memoText) ? "empty" : memoText));
         
         // For now, just keep the text visible in the UI
     }
