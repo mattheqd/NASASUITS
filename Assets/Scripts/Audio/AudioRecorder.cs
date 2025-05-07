@@ -121,6 +121,8 @@ public class AudioRecorder : MonoBehaviour
         {
             transcriptionText.text = currentTranscription;
         }
+        
+        SaveTranscriptionToUI();
     }
 
     private void OnDictationComplete(DictationCompletionCause cause)
@@ -350,6 +352,15 @@ public class AudioRecorder : MonoBehaviour
             waveformCoroutine = null;
         }
         
+        // Make sure transcription is displayed in UI
+        SaveTranscriptionToUI();
+        
+        // Save the transcription to file
+        if (!string.IsNullOrEmpty(currentTranscription))
+        {
+            SaveMemo(currentTranscription);
+        }
+        
         UpdateStatus("Recording saved!");
     }
 
@@ -453,6 +464,19 @@ public class AudioRecorder : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError("Error saving transcription: " + e.Message);
+        }
+    }
+
+    private void SaveTranscriptionToUI()
+    {
+        if (transcriptionText != null)
+        {
+            transcriptionText.text = currentTranscription;
+            Debug.Log("Updated UI with transcription: " + currentTranscription);
+        }
+        else
+        {
+            Debug.LogError("TranscriptionText reference is missing!");
         }
     }
 } 
