@@ -41,6 +41,7 @@ public class AudioRecorder : MonoBehaviour
     private string currentTranscription = "";
     
     // Path to save transcriptions
+    private string transcriptsFolderPath;
     private string transcriptionFilePath;
 
     // Waveform visualization
@@ -88,9 +89,12 @@ public class AudioRecorder : MonoBehaviour
         // Initialize waveform bars
         InitializeWaveformBars();
         
-        // Set up transcription file path
-        transcriptionFilePath = Path.Combine(Application.persistentDataPath, "transcriptions.txt");
-        Debug.Log("Transcriptions will be saved to: " + transcriptionFilePath);
+        // Set up transcription folder and file path
+        transcriptsFolderPath = Path.Combine(Application.dataPath, "Transcripts");
+
+        string fileName = "transcription_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt";
+        transcriptionFilePath = Path.Combine(transcriptsFolderPath, fileName);
+        Debug.Log("Transcription will be saved to: " + transcriptionFilePath);
         
         // Initialize dictation recognizer
         InitializeDictationRecognizer();
@@ -455,11 +459,19 @@ public class AudioRecorder : MonoBehaviour
         
         try
         {
-            // Append to file with timestamp
-            string entry = $"[{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}] {memoText}\n";
-            File.AppendAllText(transcriptionFilePath, entry);
+            // Create a new file for each recording with timestamp in filename
+            string fileName = "transcription_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".txt";
+            string filePath = Path.Combine(transcriptsFolderPath, fileName);
             
-            Debug.Log("Voice memo saved: " + memoText);
+            // Write the full transcription to the file
+            File.WriteAllText(filePath, memoText);
+            
+            // Also append to a log file that contains all transcriptions
+            string logFilePath = Path.Combine(transcriptsFolderPath, "all_transcriptions.txt");
+            string entry = $"[{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}] {memoText}\n\n";
+            File.AppendAllText(logFilePath, entry);
+            
+            Debug.Log("Voice memo saved to: " + filePath);
         }
         catch (Exception e)
         {
