@@ -42,7 +42,7 @@ public class AudioRecorder : MonoBehaviour
     private string currentTranscription = "";
     
     // Path to save recordings and transcriptions
-    private string transcriptsFolderPath;
+    private string transcriptsFolderPath = Application.persistentDataPath + "/Transcripts";
     private string transcriptionFilePath;
 
     // Waveform visualization
@@ -290,7 +290,7 @@ public class AudioRecorder : MonoBehaviour
         UpdateStatus("Recording complete. Awaiting transcription...");
     }
 
-    private void OnTranscriptionReceived(object, data) {
+    private void OnTranscriptionReceived(object data) {
         // data is a string containing the json
         string transcription = data.ToString();
         // current transcription is what the user is currently recording
@@ -311,16 +311,15 @@ public class AudioRecorder : MonoBehaviour
     }
 
     private void SaveTranscription(string transcription) {
-        transcriptsFolderPath = Application.persistentDataPath + "/Transcripts";
         if (string.IsNullOrEmpty(transcription)) return;
         
         // generate a filename with timestamp
-        if (string.IsNullOrEmpty(transcriptsFolderPath)) {
+        if (string.IsNullOrEmpty(transcriptionFilePath)) {
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-            transcriptsFolderPath = Path.Combine(transcriptsFolderPath, timestamp); // ex: "User/Assets/Transcripts/2025-05-09_17-30-25"
+            transcriptionFilePath = Path.Combine(transcriptsFolderPath, $"transcription_{timestamp}.txt"); 
         }
         // write all the transcription text to the file
-        File.WriteAllText(transcriptsFolderPath, transcription);
+        File.WriteAllText(transcriptionFilePath, transcription);
     }
 
     private void PlayRecording()
