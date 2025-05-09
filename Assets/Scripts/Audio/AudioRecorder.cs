@@ -7,6 +7,7 @@ using System.Collections;
 using System.IO;
 using TMPro;
 using System;
+using System.Collections.Generic;
 
 public class AudioRecorder : MonoBehaviour
 {
@@ -42,9 +43,7 @@ public class AudioRecorder : MonoBehaviour
     
     // Path to save recordings and transcriptions
     private string transcriptsFolderPath;
-    private string recordingsFolderPath;
     private string transcriptionFilePath;
-    private string recordingFilePath;
 
     // Waveform visualization
     private RectTransform[] waveformBars;
@@ -199,7 +198,7 @@ public class AudioRecorder : MonoBehaviour
         if (transcriptionText != null)
             transcriptionText.text = "";
 
-        // Start recording
+        // Start recording by streaming audio to the server
         recording = Microphone.Start(microphoneDevice, false, maxRecordingTime, sampleRate);
         isRecording = true;
         startRecordingTime = Time.time;
@@ -213,6 +212,7 @@ public class AudioRecorder : MonoBehaviour
             waveformVisualizer.SetActive(true);
             
         // Start waveform visualization
+        // destroy any existing waveform coroutine
         if (waveformCoroutine != null)
             StopCoroutine(waveformCoroutine);
         waveformCoroutine = StartCoroutine(VisualizeWaveform());
@@ -243,9 +243,6 @@ public class AudioRecorder : MonoBehaviour
             trimmedClip.SetData(samples, 0);
 
             recording = trimmedClip;
-            
-            // Save the recording as MP3
-            SaveRecordingAsMP3(recording);
         }
 
         // Update UI
@@ -263,46 +260,22 @@ public class AudioRecorder : MonoBehaviour
             waveformCoroutine = null;
         }
         
-        UpdateStatus("Recording saved!");
-    }
+        // stop audio streaming
+        if (streamingCoroutine != null) {
+            StopCoroutine(streamingCoroutine); // stops the streaming function
+            streamingCoroutine = null; // clear anything inside the streaming coroutine
 
-    private void SaveRecordingAsMP3(AudioClip clip)
-    {
-        try
-        {
-            // Ensure the directory exists
-            if (!Directory.Exists(recordingsFolderPath))
-            {
-                Directory.CreateDirectory(recordingsFolderPath);
-            }
-            
-            // Generate a new filename with timestamp
-            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            recordingFilePath = Path.Combine(recordingsFolderPath, $"recording_{timestamp}.wav");
-            
-            // Convert to WAV and save (Unity doesn't support direct MP3 encoding)
-            SavWav.Save(recordingFilePath, clip);
-            
-            Debug.Log("Recording saved to: " + recordingFilePath);
-            
-            // TODO: Send the recording to the backend server for transcription
-            // This would typically be done via a web request or other network communication
-            
-            // For demonstration, we'll just create a placeholder transcription file
-            if (!Directory.Exists(transcriptsFolderPath))
-            {
-                Directory.CreateDirectory(transcriptsFolderPath);
-            }
-            
-            transcriptionFilePath = Path.Combine(transcriptsFolderPath, $"transcription_{timestamp}.txt");
-            File.WriteAllText(transcriptionFilePath, "Awaiting transcription from server...");
-            
-            Debug.Log("Placeholder transcription file created at: " + transcriptionFilePath);
+            // notify the server when the transcription session is over
+            if (WebSocketClient.Instance != null) {
+                // create a new dictionary to store the session id 
+                // session id maps to each transcription session
+                // the transcription session stores the audio data represented as a base64 encoded string
+                // base64 is a way to encode binary data into a string of ASCII characters. this is used to transport audio data.
+                WebSocketClient.Instance.Send("end_transcription", new Dictionary<string, object> ) {
+                    {"session_id", currentSessionId}
+                }
         }
-        catch (Exception e)
-        {
-            Debug.LogError("Error saving recording: " + e.Message);
-        }
+        UpdateStatus("Recording complete. Awaiting transcription...");
     }
 
     private void PlayRecording()
