@@ -29,6 +29,10 @@ public class AudioRecorder : MonoBehaviour
     [SerializeField] private float waveformMinHeight = 5f;
     [SerializeField] private float waveformMaxHeight = 50f;
 
+    [Header("WebSocket Settings")]
+    [SerializeField] private bool useWebSocketTranscription = true;
+    [SerializeField] private float audioChunkDuration = 1.0f; // Send audio in 1-second chunks
+
     private AudioClip recording;
     private bool isRecording = false;
     private string microphoneDevice;
@@ -45,6 +49,10 @@ public class AudioRecorder : MonoBehaviour
     // Waveform visualization
     private RectTransform[] waveformBars;
     private Coroutine waveformCoroutine;
+    
+    // WebSocket streaming
+    private Coroutine streamingCoroutine;
+    private string currentSessionId;
 
     private void Awake()
     {
@@ -74,30 +82,16 @@ public class AudioRecorder : MonoBehaviour
         {
             // Make sure panel is visible when active
             Image panelImage = voiceMemoPanel.GetComponent<Image>();
-            if (panelImage != null)
-            {
-                Color color = panelImage.color;
-                color.a = 0.8f; // Set alpha to visible
-                panelImage.color = color;
-            }
-            
-            voiceMemoPanel.SetActive(false);
+            voiceMemoPanel.SetActive(true);
         }
             
         // Initialize waveform bars
         InitializeWaveformBars();
         
-        // Set up folders for transcriptions and recordings
-        transcriptsFolderPath = Path.Combine(Application.dataPath, "Transcripts");
-        recordingsFolderPath = Path.Combine(Application.dataPath, "Recordings");
-        
-        // Generate filenames with timestamps
-        string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        transcriptionFilePath = Path.Combine(transcriptsFolderPath, $"transcription_{timestamp}.txt");
-        recordingFilePath = Path.Combine(recordingsFolderPath, $"recording_{timestamp}.mp3");
-        
-        Debug.Log("Transcription will be saved to: " + transcriptionFilePath);
-        Debug.Log("Recording will be saved to: " + recordingFilePath);
+        // subscribe to websocket client to get transcription results
+        // transcript is sent to a function that updates the transcription text on the UI
+        if (WebSocketClient.Instance != null)
+            WebSocketClient.Instance.Subscribe("transcription", OnTranscriptionReceived);
     }
 
     private void OnDestroy()
@@ -113,6 +107,7 @@ public class AudioRecorder : MonoBehaviour
             StopCoroutine(waveformCoroutine);
     }
     
+    // ----- Interface Functions -----
     private void InitializeWaveformBars()
     {
         if (waveformVisualizer == null) return;
@@ -178,6 +173,7 @@ public class AudioRecorder : MonoBehaviour
         UpdateStatus("Ready to record");
     }
 
+    // ----- Recording Functions -----
     private void ToggleRecording()
     {
         if (!isRecording)
@@ -265,12 +261,6 @@ public class AudioRecorder : MonoBehaviour
         {
             StopCoroutine(waveformCoroutine);
             waveformCoroutine = null;
-        }
-        
-        // For now, just display a placeholder message
-        if (transcriptionText != null)
-        {
-            transcriptionText.text = "Recording saved. Transcription will be processed on the server.";
         }
         
         UpdateStatus("Recording saved!");
