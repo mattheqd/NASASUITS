@@ -53,6 +53,7 @@ public class AudioRecorder : MonoBehaviour
     private Coroutine streamingCoroutine;
     private string currentSessionId;
 
+    //----- Initialize/Destructor Functions -------
     private void Awake()
     {
         // Get the default microphone
@@ -271,11 +272,32 @@ public class AudioRecorder : MonoBehaviour
                 // session id maps to each transcription session
                 // the transcription session stores the audio data represented as a base64 encoded string
                 // base64 is a way to encode binary data into a string of ASCII characters. this is used to transport audio data.
-                WebSocketClient.Instance.Send("end_transcription", new Dictionary<string, object> ) {
+                WebSocketClient.Instance.Send("end_transcription", new Dictionary<string, object> {
                     {"session_id", currentSessionId}
-                }
+                });
+            }
         }
         UpdateStatus("Recording complete. Awaiting transcription...");
+    }
+
+    private void OnTranscriptionReceived(object, data) {
+        // data is a string containing the json
+        string transcription = data.ToString();
+        // current transcription is what the user is currently recording
+        // after the session, a local copy of the transcription is saved
+        currentTranscription = transcription;
+
+        // update ui on the main thread by adding the transcription to the queue
+        UnityMainThreadDispatcher.Instance().Enqueue(() => {
+            // update the transcription text on the ui to the received transcript
+            if (transcriptionText != null)
+                transcriptionText.text = transcription;
+
+            // save a local copy of the transcription to the file system
+            // this copy can only be accessed during the session
+            // after, the session will be saved to the server
+            SaveTranscription(transcription);
+        })
     }
 
     private void PlayRecording()
@@ -299,6 +321,7 @@ public class AudioRecorder : MonoBehaviour
         }
     }
 
+    // sends the status (ex: error, recording, etc)
     private void UpdateStatus(string message)
     {
         if (statusText != null)
@@ -359,113 +382,3 @@ public class AudioRecorder : MonoBehaviour
         }
     }
 }
-
-// Helper class to save AudioClip as WAV file
-// Source: http://wiki.unity3d.com/index.php/SaveWavUtil
-public static class SavWav
-{
-    const int HEADER_SIZE = 44;
-
-    public static bool Save(string filepath, AudioClip clip)
-    {
-        if (!filepath.ToLower().EndsWith(".wav"))
-        {
-            filepath = filepath + ".wav";
-        }
-
-        var samples = new float[clip.samples];
-        clip.GetData(samples, 0);
-
-        try
-        {
-            using (var fileStream = CreateEmpty(filepath))
-            {
-                ConvertAndWrite(fileStream, samples);
-                WriteHeader(fileStream, clip);
-            }
-            return true;
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("Error saving WAV file: " + e.Message);
-            return false;
-        }
-    }
-
-    private static FileStream CreateEmpty(string filepath)
-    {
-        var fileStream = new FileStream(filepath, FileMode.Create);
-        byte emptyByte = new byte();
-
-        for (int i = 0; i < HEADER_SIZE; i++)
-        {
-            fileStream.WriteByte(emptyByte);
-        }
-
-        return fileStream;
-    }
-
-    private static void ConvertAndWrite(FileStream fileStream, float[] samples)
-    {
-        Int16[] intData = new Int16[samples.Length];
-
-        for (int i = 0; i < samples.Length; i++)
-        {
-            intData[i] = (short)(samples[i] * 32767);
-        }
-
-        byte[] byteArray = new byte[intData.Length * 2];
-        Buffer.BlockCopy(intData, 0, byteArray, 0, byteArray.Length);
-        fileStream.Write(byteArray, 0, byteArray.Length);
-    }
-
-    private static void WriteHeader(FileStream fileStream, AudioClip clip)
-    {
-        var hz = clip.frequency;
-        var channels = clip.channels;
-        var samples = clip.samples;
-
-        fileStream.Seek(0, SeekOrigin.Begin);
-
-        byte[] riff = System.Text.Encoding.UTF8.GetBytes("RIFF");
-        fileStream.Write(riff, 0, 4);
-
-        byte[] chunkSize = BitConverter.GetBytes(fileStream.Length - 8);
-        fileStream.Write(chunkSize, 0, 4);
-
-        byte[] wave = System.Text.Encoding.UTF8.GetBytes("WAVE");
-        fileStream.Write(wave, 0, 4);
-
-        byte[] fmt = System.Text.Encoding.UTF8.GetBytes("fmt ");
-        fileStream.Write(fmt, 0, 4);
-
-        byte[] subChunk1 = BitConverter.GetBytes(16);
-        fileStream.Write(subChunk1, 0, 4);
-
-        UInt16 one = 1;
-        byte[] audioFormat = BitConverter.GetBytes(one);
-        fileStream.Write(audioFormat, 0, 2);
-
-        byte[] numChannels = BitConverter.GetBytes(channels);
-        fileStream.Write(numChannels, 0, 2);
-
-        byte[] sampleRate = BitConverter.GetBytes(hz);
-        fileStream.Write(sampleRate, 0, 4);
-
-        byte[] byteRate = BitConverter.GetBytes(hz * channels * 2);
-        fileStream.Write(byteRate, 0, 4);
-
-        UInt16 blockAlign = (ushort)(channels * 2);
-        fileStream.Write(BitConverter.GetBytes(blockAlign), 0, 2);
-
-        UInt16 bps = 16;
-        byte[] bitsPerSample = BitConverter.GetBytes(bps);
-        fileStream.Write(bitsPerSample, 0, 2);
-
-        byte[] datastring = System.Text.Encoding.UTF8.GetBytes("data");
-        fileStream.Write(datastring, 0, 4);
-
-        byte[] subChunk2 = BitConverter.GetBytes(samples * channels * 2);
-        fileStream.Write(subChunk2, 0, 4);
-    }
-} 
