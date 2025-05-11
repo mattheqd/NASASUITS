@@ -129,10 +129,54 @@ public class GeosamplingManager : MonoBehaviour {
                 DisplaySampleSummary();
                 break;
         }
-        // update the nav buttons
-        UpdateNavigationButtons();
     }
+}
 
-    private void UpdateNavigationButtons() {
+private void SaveSampleData() {
+    // sample name and location will be sent by the tss
+    if (sampleNameInput != null && sampleNameInput.text != null) {
+        currentSample.sampleName = sampleNameInput.text;
+        currentSample.location = sampleLocationInput.text;
     }
+    currentSample.timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+    currentSample.photoPath = photoPath;
+    currentSample.transcription = transcription;
+}
+
+// change the sample info after a scan
+private void UpdateSampleInfoDisplay() {
+    if (sampleNameInput != null && !string.IsNullOrEmpty(currentSample.sampleName)) {
+        sampleNameInput.text = currentSample.sampleName;
+    }
+    
+    if (sampleLocationInput != null && !string.IsNullOrEmpty(currentSample.location)) {
+        sampleLocationInput.text = currentSample.location;
+    }
+}
+
+// display sample info on the ui
+private void DisplaySampleSummary() {
+    // get all the text elements in the confirmation panel 
+    TextMeshProUGUI[] textElements = confirmationPanel.GetComponentsInChildren<TextMeshProUGUI>();
+    // update the text elements with the current sample data
+    foreach (var text in textElements) {
+            if (text.name.Contains("SampleName")) {
+                text.text = currentSample.sampleName;
+            }
+            else if (text.name.Contains("Location")) {
+                text.text = currentSample.location;
+            }
+            else if (text.name.Contains("Timestamp")) {
+                text.text = currentSample.timestamp;
+            }
+            else if (text.name.Contains("Transcription")) {
+                text.text = currentSample.transcription;
+            }
+        }
+}
+
+// confirm each sample one by one to save in the database
+// ? will TSS auto update this when the rock is scanned? 
+private void ConfirmSample() {
+    pass;
 }
