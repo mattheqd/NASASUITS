@@ -139,7 +139,7 @@ public class GeosamplingManager : MonoBehaviour {
     public void OnVoiceMemoComplete() {
         // Get transcription from AudioRecorder
         if (audioRecorder != null) {
-            currentSample.transcription = audioRecorder.GetCurrentTranscription();
+            //currentSample.transcription = audioRecorder.GetCurrentTranscription();
         }
         SetState(GeosamplingState.CaptureOptions);
     }
