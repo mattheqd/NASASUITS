@@ -1,6 +1,9 @@
 //* manages the overall geosampling process
 using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine.UI;
+using TMPro;
+using System;
 
 public class GeosamplingManager : MonoBehaviour {
     [SerializeField] private GameObject startDisplay; // starting panel with notification and instructions preview
@@ -25,7 +28,7 @@ public class GeosamplingManager : MonoBehaviour {
     
     // store the current state (i.e. which panel or rock is being displayed)
     private enum GeosamplingState {
-        Procedure,
+        Start,  
         ScanRock,
         CaptureOptions,
         Photo,
@@ -38,7 +41,7 @@ public class GeosamplingManager : MonoBehaviour {
     // this will be created when the user scans a rock
     private GeosamplingState currentState = GeosamplingState.Start;
 
-    / Data structure to hold sample information
+    // Data structure to hold sample information
     [Serializable]
     private class SampleData {
         public string sampleName;
@@ -53,12 +56,6 @@ public class GeosamplingManager : MonoBehaviour {
         SetState(GeosamplingState.Start); // initialize start display when the scene starts
 
         // Set up button listeners
-        if (backButton != null)
-            backButton.onClick.AddListener(GoBack);
-            
-        if (nextButton != null)
-            nextButton.onClick.AddListener(GoNext);
-            
         if (photoButton != null)
             photoButton.onClick.AddListener(() => SetState(GeosamplingState.Photo));
             
@@ -68,14 +65,9 @@ public class GeosamplingManager : MonoBehaviour {
         if (confirmButton != null)
             confirmButton.onClick.AddListener(ConfirmSample);
     }
+    
     private void OnDestroy() {
         // Remove button listeners
-        if (backButton != null)
-            backButton.onClick.RemoveListener(GoBack);
-            
-        if (nextButton != null)
-            nextButton.onClick.RemoveListener(GoNext);
-            
         if (photoButton != null)
             photoButton.onClick.RemoveListener(() => SetState(GeosamplingState.Photo));
             
@@ -85,6 +77,7 @@ public class GeosamplingManager : MonoBehaviour {
         if (confirmButton != null)
             confirmButton.onClick.RemoveListener(ConfirmSample);
     }
+    
     // set the state when some signal is received
     // ex: when the user clicks the photo button, we will switch to the photo panel and change the state
     private void SetState(GeosamplingState newState) {
@@ -117,7 +110,8 @@ public class GeosamplingManager : MonoBehaviour {
             case GeosamplingState.VoiceMemo:
                 if (audioRecorder != null && audioRecorder.gameObject != null) {
                     audioRecorder.gameObject.SetActive(true);
-                    audioRecorder.ShowVoiceMemoPanel();
+                    // Check if ShowVoiceMemoPanel method exists
+                    // If not, you'll need to add it to AudioRecorder.cs
                 }
                 break;
             case GeosamplingState.SampleInfo:
@@ -130,36 +124,57 @@ public class GeosamplingManager : MonoBehaviour {
                 break;
         }
     }
-}
 
-private void SaveSampleData() {
-    // sample name and location will be sent by the tss
-    if (sampleNameInput != null && sampleNameInput.text != null) {
-        currentSample.sampleName = sampleNameInput.text;
-        currentSample.location = sampleLocationInput.text;
+    // Add methods to handle state transitions without next/back buttons
+    public void OnScanComplete() {
+        SetState(GeosamplingState.CaptureOptions);
     }
-    currentSample.timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-    currentSample.photoPath = photoPath;
-    currentSample.transcription = transcription;
-}
 
-// change the sample info after a scan
-private void UpdateSampleInfoDisplay() {
-    if (sampleNameInput != null && !string.IsNullOrEmpty(currentSample.sampleName)) {
-        sampleNameInput.text = currentSample.sampleName;
+    public void OnPhotoComplete() {
+        // Store photo path
+        // currentSample.photoPath = ... (get from photo capture component)
+        SetState(GeosamplingState.CaptureOptions);
     }
-    
-    if (sampleLocationInput != null && !string.IsNullOrEmpty(currentSample.location)) {
-        sampleLocationInput.text = currentSample.location;
-    }
-}
 
-// display sample info on the ui
-private void DisplaySampleSummary() {
-    // get all the text elements in the confirmation panel 
-    TextMeshProUGUI[] textElements = confirmationPanel.GetComponentsInChildren<TextMeshProUGUI>();
-    // update the text elements with the current sample data
-    foreach (var text in textElements) {
+    public void OnVoiceMemoComplete() {
+        // Get transcription from AudioRecorder
+        if (audioRecorder != null) {
+            currentSample.transcription = audioRecorder.GetCurrentTranscription();
+        }
+        SetState(GeosamplingState.CaptureOptions);
+    }
+
+    public void OnCaptureOptionsComplete() {
+        SetState(GeosamplingState.SampleInfo);
+    }
+
+    // private void SaveSampleData() {
+    //     // sample name and location will be sent by the tss
+    //     if (sampleNameInput != null && sampleNameInput.text != null) {
+    //         currentSample.sampleName = sampleNameInput.text;
+    //         currentSample.location = sampleLocationInput.text;
+    //     }
+    //     currentSample.timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        
+    // }
+
+    // change the sample info after a scan
+    private void UpdateSampleInfoDisplay() {
+        if (sampleNameInput != null && !string.IsNullOrEmpty(currentSample.sampleName)) {
+            sampleNameInput.text = currentSample.sampleName;
+        }
+        
+        if (sampleLocationInput != null && !string.IsNullOrEmpty(currentSample.location)) {
+            sampleLocationInput.text = currentSample.location;
+        }
+    }
+
+    // display sample info on the ui
+    private void DisplaySampleSummary() {
+        // get all the text elements in the confirmation panel 
+        TextMeshProUGUI[] textElements = confirmationPanel.GetComponentsInChildren<TextMeshProUGUI>();
+        // update the text elements with the current sample data
+        foreach (var text in textElements) {
             if (text.name.Contains("SampleName")) {
                 text.text = currentSample.sampleName;
             }
@@ -173,10 +188,18 @@ private void DisplaySampleSummary() {
                 text.text = currentSample.transcription;
             }
         }
-}
+    }
 
-// confirm each sample one by one to save in the database
-// ? will TSS auto update this when the rock is scanned? 
-private void ConfirmSample() {
-    pass;
+    // confirm each sample one by one to save in the database
+    // ? will TSS auto update this when the rock is scanned? 
+    private void ConfirmSample() {
+        // Reset and return to start
+        ResetSample();
+        SetState(GeosamplingState.Start);
+    }
+    
+    // Reset the current sample data to an empty sample
+    private void ResetSample() {
+        currentSample = new SampleData();
+    }
 }
