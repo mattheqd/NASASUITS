@@ -30,6 +30,7 @@ public class WebSocketClient : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject); 
         ConnectToServer();
+        ConnectToServer();
     }
     private void ConnectToServer() {
         ws = new WebSocket(serverUrl);
@@ -68,9 +69,10 @@ public class WebSocketClient : MonoBehaviour
     // ---- Handle Message Communication ----
     // processes the message received from the server
     private void HandleMessage(WsMessage message) {
-        if (messageHandlers.ContainsKey(message.type)) {
-            foreach (var handler in messageHandlers[message.type]) {
-                handler(message.data);
+        // only call handlers if the message type exists in the dictionary
+        if (messageHandlers.TryGetValue(message.type, out var handlers)) {
+            foreach (var handle in handlers) {
+                handle(message.data);
             }
         }
     }
