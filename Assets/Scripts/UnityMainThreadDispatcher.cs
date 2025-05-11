@@ -13,18 +13,18 @@ public class UnityMainThreadDispatcher : MonoBehaviour {
     
     // create a public static instance of the dispatcher which can be accessed by other scripts
     // the public instance allows other scripts to call the dispatcher without direct access
-    public static UnityMainThreadDispatcher _instance { get; private set; }
+    public static UnityMainThreadDispatcher Instance { get; private set; }
 
     // when initialized, check if the instance is already set
     // destroy existing instances to reset the thread
     private void Awake()
     {
-        if (_instance != null && _instance != this)
+        if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
         }
-        _instance = this;
+        Instance = this;
         DontDestroyOnLoad(gameObject);
     }
     // process all incoming actions on the main thread
