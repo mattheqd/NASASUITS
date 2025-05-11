@@ -85,4 +85,54 @@ public class GeosamplingManager : MonoBehaviour {
         if (confirmButton != null)
             confirmButton.onClick.RemoveListener(ConfirmSample);
     }
+    // set the state when some signal is received
+    // ex: when the user clicks the photo button, we will switch to the photo panel and change the state
+    private void SetState(GeosamplingState newState) {
+        currentState = newState; 
+
+        // hide all panels before showing the new one
+        startDisplay.SetActive(false);
+        scanRockPanel.SetActive(false);
+        captureOptionsPanel.SetActive(false);
+        photoPanel.SetActive(false);
+        if (audioRecorder != null && audioRecorder.gameObject != null)
+            audioRecorder.gameObject.SetActive(false);
+        sampleInfoPanel.SetActive(false);
+        confirmationPanel.SetActive(false);
+
+        // show appropriate panel based on the new state
+        switch (currentState) {
+            case GeosamplingState.Start:
+                startDisplay.SetActive(true);
+                break;
+            case GeosamplingState.ScanRock:
+                scanRockPanel.SetActive(true);
+                break;
+            case GeosamplingState.CaptureOptions:
+                captureOptionsPanel.SetActive(true);
+                break;
+            case GeosamplingState.Photo:
+                photoPanel.SetActive(true);
+                break;
+            case GeosamplingState.VoiceMemo:
+                if (audioRecorder != null && audioRecorder.gameObject != null) {
+                    audioRecorder.gameObject.SetActive(true);
+                    audioRecorder.ShowVoiceMemoPanel();
+                }
+                break;
+            case GeosamplingState.SampleInfo:
+                sampleInfoPanel.SetActive(true);
+                UpdateSampleInfoDisplay();
+                break;
+            case GeosamplingState.Confirmation:
+                confirmationPanel.SetActive(true);
+                DisplaySampleSummary();
+                break;
+        }
+        // update the nav buttons
+        UpdateNavigationButtons();
+    }
+
+    private void UpdateNavigationButtons() {
+    }
 }
