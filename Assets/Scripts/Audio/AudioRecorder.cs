@@ -41,8 +41,7 @@ public class AudioRecorder : MonoBehaviour
     private AudioSource audioSource;
     private string currentTranscription = "";
     
-    // Path to save recordings and transcriptions
-    private string transcriptsFolderPath = Application.persistentDataPath + "/Transcripts";
+    private string transcriptsFolderPath;
     private string transcriptionFilePath;
 
     // Waveform visualization
@@ -56,7 +55,8 @@ public class AudioRecorder : MonoBehaviour
     //----- Initialize/Destructor Functions -------
     private void Awake()
     {
-        // Get the default microphone
+        transcriptsFolderPath = Application.persistentDataPath + "/Transcripts";
+        
         if (Microphone.devices.Length > 0)
         {
             microphoneDevice = Microphone.devices[0];
@@ -67,29 +67,22 @@ public class AudioRecorder : MonoBehaviour
             Debug.LogError("No microphone found!");
         }
 
-        // Setup audio source for playback
         audioSource = gameObject.AddComponent<AudioSource>();
 
-        // Setup button listeners
         if (recordButton != null)
             recordButton.onClick.AddListener(ToggleRecording);
         
         if (playButton != null)
             playButton.onClick.AddListener(PlayRecording);
             
-        // Initialize UI
         if (voiceMemoPanel != null)
         {
-            // Make sure panel is visible when active
             Image panelImage = voiceMemoPanel.GetComponent<Image>();
             voiceMemoPanel.SetActive(true);
         }
             
-        // Initialize waveform bars
         InitializeWaveformBars();
         
-        // subscribe to websocket client to get transcription results
-        // transcript is sent to a function that updates the transcription text on the UI
         if (WebSocketClient.Instance != null)
             WebSocketClient.Instance.Subscribe("transcription", OnTranscriptionReceived);
     }
@@ -291,23 +284,15 @@ public class AudioRecorder : MonoBehaviour
     }
 
     private void OnTranscriptionReceived(object data) {
-        // data is a string containing the json
         string transcription = data.ToString();
-        // current transcription is what the user is currently recording
-        // after the session, a local copy of the transcription is saved
         currentTranscription = transcription;
 
-        // update ui on the main thread by adding the transcription to the queue
         UnityMainThreadDispatcher.Instance().Enqueue(() => {
-            // update the transcription text on the ui to the received transcript
             if (transcriptionText != null)
                 transcriptionText.text = transcription;
 
-            // save a local copy of the transcription to the file system
-            // this copy can only be accessed during the session
-            // after, the session will be saved to the server
             SaveTranscription(transcription);
-        })
+        });
     }
 
     private void SaveTranscription(string transcription) {
@@ -349,88 +334,88 @@ public class AudioRecorder : MonoBehaviour
     // outputs a base64 encoded string of the audio data which can be stored in the server
     // the server will store a transcription session with the audio data
     private IEnumerator StreamAudioToServer()
-{
-    // Generate a unique session ID for this recording
-    currentSessionId = System.Guid.NewGuid().ToString();
-    
-    // Tell the server we're starting a new transcription session
-    WebSocketClient.Instance.Send("start_transcription", new Dictionary<string, object> {
-        { "session_id", currentSessionId },
-        { "sample_rate", sampleRate },
-        { "channels", 1 } // Mono audio
-    });
-    
-    Debug.Log($"Started audio streaming session: {currentSessionId}");
-    
-    // Calculate how many samples to send in each chunk
-    int samplesPerChunk = (int)(sampleRate * audioChunkDuration);
-    float[] audioChunk = new float[samplesPerChunk];
-    int lastPosition = 0;
-    
-    while (isRecording && recording != null)
     {
-        // Get current position in the recording (i.e. the current index of the audio clip)
-        // ex: 10000 can represent the 10000th sample in the audio clip. this is arbitrary
-        int currentPosition = Microphone.GetPosition(microphoneDevice);
+        // Generate a unique session ID for this recording
+        currentSessionId = System.Guid.NewGuid().ToString();
         
-        // If we have enough new samples to send a chunk
-        if (currentPosition > lastPosition + samplesPerChunk || 
-            (currentPosition < lastPosition && currentPosition + recording.samples - lastPosition > samplesPerChunk))
+        // Tell the server we're starting a new transcription session
+        WebSocketClient.Instance.Send("start_transcription", new Dictionary<string, object> {
+            { "session_id", currentSessionId },
+            { "sample_rate", sampleRate },
+            { "channels", 1 } // Mono audio
+        });
+        
+        Debug.Log($"Started audio streaming session: {currentSessionId}");
+        
+        // Calculate how many samples to send in each chunk
+        int samplesPerChunk = (int)(sampleRate * audioChunkDuration);
+        float[] audioChunk = new float[samplesPerChunk];
+        int lastPosition = 0;
+        
+        while (isRecording && recording != null)
         {
-            // Handle wrap-around case (i.e. the audio clip is looping back to the beginning)
-            if (currentPosition < lastPosition)
+            // Get current position in the recording (i.e. the current index of the audio clip)
+            // ex: 10000 can represent the 10000th sample in the audio clip. this is arbitrary
+            int currentPosition = Microphone.GetPosition(microphoneDevice);
+            
+            // If we have enough new samples to send a chunk
+            if (currentPosition > lastPosition + samplesPerChunk || 
+                (currentPosition < lastPosition && currentPosition + recording.samples - lastPosition > samplesPerChunk))
             {
-                // Get samples from end of buffer
-                int samplesAtEnd = recording.samples - lastPosition;
-                float[] endSamples = new float[samplesAtEnd];
-                recording.GetData(endSamples, lastPosition);
+                // Handle wrap-around case (i.e. the audio clip is looping back to the beginning)
+                if (currentPosition < lastPosition)
+                {
+                    // Get samples from end of buffer
+                    int samplesAtEnd = recording.samples - lastPosition;
+                    float[] endSamples = new float[samplesAtEnd];
+                    recording.GetData(endSamples, lastPosition);
+                    
+                    // Get samples from beginning of buffer
+                    int samplesAtBeginning = samplesPerChunk - samplesAtEnd;
+                    float[] beginSamples = new float[samplesAtBeginning];
+                    recording.GetData(beginSamples, 0);
+                    
+                    // Combine them
+                    Array.Copy(endSamples, 0, audioChunk, 0, samplesAtEnd);
+                    Array.Copy(beginSamples, 0, audioChunk, samplesAtEnd, samplesAtBeginning);
+                }
+                else
+                {
+                    // Simple case - just get the chunk
+                    recording.GetData(audioChunk, lastPosition);
+                }
                 
-                // Get samples from beginning of buffer
-                int samplesAtBeginning = samplesPerChunk - samplesAtEnd;
-                float[] beginSamples = new float[samplesAtBeginning];
-                recording.GetData(beginSamples, 0);
+                // Convert float array to PCM16 bytes (16-bit signed integers)
+                // PCM is a way to represent audio data as a sequence of numbers
+                // this makes it easier to transport audio data over the network because it's in binary format
+                byte[] pcmBytes = new byte[audioChunk.Length * 2]; // 2 bytes per sample for 16-bit
+                for (int i = 0; i < audioChunk.Length; i++)
+                {
+                    short pcmValue = (short)(audioChunk[i] * 32767);
+                    byte[] pcmSample = BitConverter.GetBytes(pcmValue);
+                    pcmBytes[i * 2] = pcmSample[0];
+                    pcmBytes[i * 2 + 1] = pcmSample[1];
+                }
                 
-                // Combine them
-                Array.Copy(endSamples, 0, audioChunk, 0, samplesAtEnd);
-                Array.Copy(beginSamples, 0, audioChunk, samplesAtEnd, samplesAtBeginning);
-            }
-            else
-            {
-                // Simple case - just get the chunk
-                recording.GetData(audioChunk, lastPosition);
-            }
-            
-            // Convert float array to PCM16 bytes (16-bit signed integers)
-            // PCM is a way to represent audio data as a sequence of numbers
-            // this makes it easier to transport audio data over the network because it's in binary format
-            byte[] pcmBytes = new byte[audioChunk.Length * 2]; // 2 bytes per sample for 16-bit
-            for (int i = 0; i < audioChunk.Length; i++)
-            {
-                short pcmValue = (short)(audioChunk[i] * 32767);
-                byte[] pcmSample = BitConverter.GetBytes(pcmValue);
-                pcmBytes[i * 2] = pcmSample[0];
-                pcmBytes[i * 2 + 1] = pcmSample[1];
+                // Convert binary data to base64 string for JSON transport
+                string base64Audio = Convert.ToBase64String(pcmBytes);
+                
+                // Send the audio chunk to the server
+                WebSocketClient.Instance.Send("audio_chunk", new Dictionary<string, object> {
+                    { "session_id", currentSessionId },
+                    { "audio_data", base64Audio }
+                });
+                
+                // Update last position
+                lastPosition = (lastPosition + samplesPerChunk) % recording.samples;
+                
+                // Log for debugging
+                Debug.Log($"Sent audio chunk: {pcmBytes.Length} bytes");
             }
             
-            // Convert binary data to base64 string for JSON transport
-            string base64Audio = Convert.ToBase64String(pcmBytes);
-            
-            // Send the audio chunk to the server
-            WebSocketClient.Instance.Send("audio_chunk", new Dictionary<string, object> {
-                { "session_id", currentSessionId },
-                { "audio_data", base64Audio }
-            });
-            
-            // Update last position
-            lastPosition = (lastPosition + samplesPerChunk) % recording.samples;
-            
-            // Log for debugging
-            Debug.Log($"Sent audio chunk: {pcmBytes.Length} bytes");
+            yield return new WaitForSeconds(audioChunkDuration / 2); // Check twice per chunk duration
         }
-        
-        yield return new WaitForSeconds(audioChunkDuration / 2); // Check twice per chunk duration
     }
-}
 
     // sends the status (ex: error, recording, etc)
     private void UpdateStatus(string message)

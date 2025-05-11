@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using NativeWebSocket;
+using WebSocketSharp;
 using System.Text;
-using System.Threading.Tasks;
 
 // Message sent to the server
 [Serializable]
@@ -15,10 +14,9 @@ public class WsMessage{
 
 public class WebSocketClient : MonoBehaviour
 {
-    private WebSocket websocket;
-    // create a dictionary to store all message handlers to be called when a message is received
+    private WebSocket ws;
     private Dictionary<string, List<Action<object>>> messageHandlers = new Dictionary<string, List<Action<object>>>();
-    private string serverUrl = "ws://localhost:3000/ws"; // the url used to connect to the server
+    private string serverUrl = "ws://localhost:3000/ws";
     private bool isConnected = false;
 
     public static WebSocketClient Instance { get; private set; } // create a single instance of the websocket client
@@ -32,23 +30,32 @@ public class WebSocketClient : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject); 
         ConnectToServer();
+        ConnectToServer();
     }
-    private async void ConnectToServer() {
-        // create a new websocket connection
-        websocket = new WebSocket(serverUrl);
+    private void ConnectToServer() {
+        ws = new WebSocket(serverUrl);
+        
+        ws.OnOpen += (sender, e) => {
+            isConnected = true;
+            Debug.Log("WebSocket Connected");
+        };
 
-        // ---- function definitions for events ----
-        // += adds the function (ex: () => { isConnected = true; }) to the event (ex: OnOpen)
-        websocket.OnOpen += () => { isConnected = true; };
-        websocket.OnMessage += (bytes) => {
-            string message = Encoding.UTF8.GetString(bytes);
+        ws.OnMessage += (sender, e) => {
+            string message = e.Data;
             WsMessage wsMessage = JsonUtility.FromJson<WsMessage>(message);
             HandleMessage(wsMessage);
         };
-        websocket.OnClose += () => { isConnected = false; };
-        websocket.OnError += (error) => { Debug.LogError("WebSocket Error: " + error); };
-        // connect to the server after the websocket is initialized
-        await websocket.Connect(); 
+
+        ws.OnClose += (sender, e) => {
+            isConnected = false;
+            Debug.Log("WebSocket Closed");
+        };
+
+        ws.OnError += (sender, e) => {
+            Debug.LogError("WebSocket Error: " + e.Message);
+        };
+
+        ws.Connect();
     }
     // subscribe to a message type (i.e. only receive messages of type "string")
     // takes in the type of message and a function to be called every time the message is received
@@ -69,34 +76,28 @@ public class WebSocketClient : MonoBehaviour
             }
         }
     }
-    public async void Send(string type, object data)
+    public void Send(string type, object data)
     {
-        VerifyConnection();
-        // create a new message to send to the server 
-        // ex: { type: "string", data: "hello", success: true }
-        WsMessage message = new WsMessage
-        {
+        if (!isConnected) {
+            Debug.LogWarning("WebSocket is not connected");
+            return;
+        }
+
+        WsMessage message = new WsMessage {
             type = type,
             data = data,
             success = true
         };
         
-        string json = JsonUtility.ToJson(message); 
-        byte[] bytes = Encoding.UTF8.GetBytes(json); // ws processes messages as an array of bytes
-        await websocket.Send(bytes);
+        string json = JsonUtility.ToJson(message);
+        ws.Send(json);
     }
 
     // remove ws connection if the unity application quits
-    private async void OnApplicationQuit()
+    private void OnApplicationQuit()
     {
-        if (websocket != null && isConnected)
-            await websocket.Close();
-    }
-
-    private void VerifyConnection() {
-        if (!isConnected) {
-            Debug.LogWarning("WebSocket is not connected");
-            ConnectToServer();
-        } 
+        if (ws != null && isConnected) {
+            ws.Close();
+        }
     }
 }
