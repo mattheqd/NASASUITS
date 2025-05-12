@@ -1,10 +1,22 @@
 /**
- * Manager to control display of procedures and tracking of progress/status
- * - Define UI components and displays
- * - Define functions to control the display
+ * Manager to control display of procedures and tracking of progress/status. 
+ * These are the UI rules for the display:
+ * ------ COLORS ------
+ * - inProgressTextColor: #252525
+ * - inProgressBackgroundColor: #00DDFF
+ * - completedTextColor: #8E8E8E
+ * - defaultTextColor: #FFFFFF
+ * ------ DISPLAY RULES ------
+ * - The progress bar should display according to the number of steps completed for each procedure
+ * - Each step in a task will be accompanied by a number according to its order
+ * - A check mark will display on any tasks that are finished
+ * - If a task is in progress, a turning wheel will display
+ * ------ DATA STRUCTURE ------
+ * - ProcedureName: Stores a series of tasks (ex: Egress, Ingress, etc.)
+ * - TaskName: stores a series of steps (ex: "Verify LTV Location", "Connect UIA to DCU and start Depress ")
+ * - StepName: stores a single step (ex: "Verify ping has been received from LTV", "Verify worksite POI locations have been provided by LTV")
  * EXAMPLE:
  * - Title: "Procedure: Open the airlock door"
- * - Description: "This procedure will guide you through the process of opening the airlock door."
  * - Step text: "Step 1 of 3"
  * - Step indicators: 3 circles, 1 circle is green, 1 circle is gray, 1 circle is gray
  */
@@ -14,6 +26,15 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
 using TMPro;
+
+// Enum to track the status of instruction steps
+public enum InstructionStatus
+{
+    NotStarted,
+    InProgress,
+    Completed,
+    Skipped
+}
 
 // Class to define groups of interface elements
 public class ProcedureDisplay : MonoBehaviour
@@ -32,6 +53,9 @@ public class ProcedureDisplay : MonoBehaviour
     // Navigation buttons to move next or start procedure
     [Header("Navigation Controls")]
     [SerializeField] private Button nextButton;
+    [SerializeField] private Button completeStepButton; 
+    [SerializeField] private Button skipStepButton;
+    [SerializeField] private Button nextProcedureButton;
 
     // Progress indicators (i.e. progress bar)
     [Header("Progress Indicators")]
