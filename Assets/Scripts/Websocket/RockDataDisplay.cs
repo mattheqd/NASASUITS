@@ -5,6 +5,13 @@ using System.Collections.Concurrent;
 
 public class RockDataDisplay : MonoBehaviour
 {
+    public static RockDataDisplay Instance { get; private set; }
+
+    private void Awake()
+    {
+        Instance = this;
+    }
+
     [Header("EVA 1 Display")]
     public TextMeshProUGUI eva1SpecId;
     public TextMeshProUGUI eva1Oxygen;
@@ -69,11 +76,23 @@ public class RockDataDisplay : MonoBehaviour
         }
     }
 
-    private void HandleRockData(object data)
+    public void HandleRockData(object data)
     {
         try
         {
             Debug.Log($"RockDataDisplay: Received rock data: {data}");
+            Debug.Log($"RockDataDisplay: EVA ID: {((RockData)data).evaId}");
+            Debug.Log($"RockDataDisplay: SPEC ID: {((RockData)data).specId}");
+            Debug.Log($"RockDataDisplay: Oxygen: {((RockData)data).oxygen}%");
+            Debug.Log($"RockDataDisplay: Water: {((RockData)data).water}%");
+            Debug.Log($"RockDataDisplay: CO2: {((RockData)data).co2}%");
+            Debug.Log($"RockDataDisplay: H2: {((RockData)data).h2}%");
+            Debug.Log($"RockDataDisplay: N2: {((RockData)data).n2}%");
+            Debug.Log($"RockDataDisplay: Other: {((RockData)data).other}%");
+            Debug.Log($"RockDataDisplay: Temperature: {((RockData)data).temperature}°C");
+            Debug.Log($"RockDataDisplay: Pressure: {((RockData)data).pressure} Pa");
+            Debug.Log($"RockDataDisplay: Humidity: {((RockData)data).humidity}%");
+            Debug.Log($"RockDataDisplay: Light: {((RockData)data).light} lux");
             RockData rockData = data as RockData;
             if (rockData == null)
             {

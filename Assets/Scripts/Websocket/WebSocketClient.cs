@@ -56,7 +56,19 @@ public class HighFrequencyData
 public class LowFrequencyData
 {
     public long timestamp;
-    public Dictionary<string, float> data;
+    public string type;
+    public float eva1_spec_id;
+    public float eva1_spec_oxy;
+    public float eva1_spec_water;
+    public float eva1_spec_co2;
+    public float eva1_spec_h2;
+    public float eva1_spec_n2;
+    public float eva1_spec_other;
+    public float eva1_spec_temp;
+    public float eva1_spec_pres;
+    public float eva1_spec_humid;
+    public float eva1_spec_light;
+    // ...add more fields as needed for your use case
 }
 
 [Serializable]
@@ -86,8 +98,9 @@ public class WebSocketClient : MonoBehaviour
             return;
         }
         Instance = this;
-        DontDestroyOnLoad(gameObject); 
-        ConnectToServer();
+        DontDestroyOnLoad(gameObject);
+        // Only subscribe to rock_data for RockDataDisplay
+        Subscribe("rock_data", HandleRockDataMessage);
         ConnectToServer();
     }
 
@@ -123,8 +136,19 @@ public class WebSocketClient : MonoBehaviour
             ws.OnMessage += (sender, e) => {
                 string message = e.Data;
                 Debug.Log($"[WS RAW] {message}");
-                WsMessage wsMessage = JsonUtility.FromJson<WsMessage>(message);
-                HandleMessage(wsMessage);
+                // Parse as WsRockDataMessage for rock_data
+                WsRockDataMessage wsRockDataMsg = JsonUtility.FromJson<WsRockDataMessage>(message);
+                if (wsRockDataMsg != null && wsRockDataMsg.type == "rock_data" && wsRockDataMsg.data != null)
+                {
+                    Debug.Log($"[HandleMessage] Rock Data: EVA {wsRockDataMsg.data.evaId}, SPEC {wsRockDataMsg.data.specId}, O2 {wsRockDataMsg.data.oxygen}%, Water {wsRockDataMsg.data.water}%, CO2 {wsRockDataMsg.data.co2}%, H2 {wsRockDataMsg.data.h2}%, N2 {wsRockDataMsg.data.n2}%, Other {wsRockDataMsg.data.other}%, Temp {wsRockDataMsg.data.temperature}°C, Pressure {wsRockDataMsg.data.pressure}Pa, Humidity {wsRockDataMsg.data.humidity}%, Light {wsRockDataMsg.data.light}lux");
+                    HandleRockDataMessage(wsRockDataMsg.data);
+                }
+                else
+                {
+                    // fallback to generic handler for other types
+                    WsMessage wsMessage = JsonUtility.FromJson<WsMessage>(message);
+                    HandleMessage(wsMessage);
+                }
             };
 
             ws.OnClose += (sender, e) => {
@@ -171,6 +195,25 @@ public class WebSocketClient : MonoBehaviour
             }
         }
     }
+
+    private void HandleRockDataMessage(object data)
+    {
+        Debug.Log($"[HandleRockDataMessage] Data: {data}");
+        RockData rockData = data as RockData;
+        if (rockData != null)
+        {
+            Debug.Log($"[HandleRockDataMessage] EVA {rockData.evaId}, SPEC {rockData.specId}, O2 {rockData.oxygen}, Water {rockData.water}, CO2 {rockData.co2}, H2 {rockData.h2}, N2 {rockData.n2}, Other {rockData.other}, Temp {rockData.temperature}, Pressure {rockData.pressure}, Humidity {rockData.humidity}, Light {rockData.light}");
+        }
+        else
+        {
+            Debug.LogError($"[HandleRockDataMessage] Data is not a RockData object, it is {data?.GetType()}");
+        }
+        if (RockDataDisplay.Instance != null)
+        {
+            RockDataDisplay.Instance.HandleRockData(data);
+        }
+    }
+
     public void Send(string type, object data)
     {
         if (!isConnected) {
