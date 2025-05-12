@@ -7,6 +7,7 @@ using System.Collections;
 using System.IO;
 using TMPro;
 using System;
+using System.Collections.Generic;
 
 public class AudioRecorder : MonoBehaviour
 {
@@ -29,6 +30,10 @@ public class AudioRecorder : MonoBehaviour
     [SerializeField] private float waveformMinHeight = 5f;
     [SerializeField] private float waveformMaxHeight = 50f;
 
+    [Header("WebSocket Settings")]
+    [SerializeField] private bool useWebSocketTranscription = true;
+    [SerializeField] private float audioChunkDuration = 1.0f; // Send audio in 1-second chunks
+
     private AudioClip recording;
     private bool isRecording = false;
     private string microphoneDevice;
@@ -36,19 +41,22 @@ public class AudioRecorder : MonoBehaviour
     private AudioSource audioSource;
     private string currentTranscription = "";
     
-    // Path to save recordings and transcriptions
     private string transcriptsFolderPath;
-    private string recordingsFolderPath;
     private string transcriptionFilePath;
-    private string recordingFilePath;
 
     // Waveform visualization
     private RectTransform[] waveformBars;
     private Coroutine waveformCoroutine;
+    
+    // WebSocket streaming
+    private Coroutine streamingCoroutine;
+    private string currentSessionId;
 
+    //----- Initialize/Destructor Functions -------
     private void Awake()
     {
-        // Get the default microphone
+        transcriptsFolderPath = Application.persistentDataPath + "/Transcripts";
+        
         if (Microphone.devices.Length > 0)
         {
             microphoneDevice = Microphone.devices[0];
@@ -59,45 +67,24 @@ public class AudioRecorder : MonoBehaviour
             Debug.LogError("No microphone found!");
         }
 
-        // Setup audio source for playback
         audioSource = gameObject.AddComponent<AudioSource>();
 
-        // Setup button listeners
         if (recordButton != null)
             recordButton.onClick.AddListener(ToggleRecording);
         
         if (playButton != null)
             playButton.onClick.AddListener(PlayRecording);
             
-        // Initialize UI
         if (voiceMemoPanel != null)
         {
-            // Make sure panel is visible when active
             Image panelImage = voiceMemoPanel.GetComponent<Image>();
-            if (panelImage != null)
-            {
-                Color color = panelImage.color;
-                color.a = 0.8f; // Set alpha to visible
-                panelImage.color = color;
-            }
-            
-            voiceMemoPanel.SetActive(false);
+            voiceMemoPanel.SetActive(true);
         }
             
-        // Initialize waveform bars
         InitializeWaveformBars();
         
-        // Set up folders for transcriptions and recordings
-        transcriptsFolderPath = Path.Combine(Application.dataPath, "Transcripts");
-        recordingsFolderPath = Path.Combine(Application.dataPath, "Recordings");
-        
-        // Generate filenames with timestamps
-        string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        transcriptionFilePath = Path.Combine(transcriptsFolderPath, $"transcription_{timestamp}.txt");
-        recordingFilePath = Path.Combine(recordingsFolderPath, $"recording_{timestamp}.mp3");
-        
-        Debug.Log("Transcription will be saved to: " + transcriptionFilePath);
-        Debug.Log("Recording will be saved to: " + recordingFilePath);
+        if (WebSocketClient.Instance != null)
+            WebSocketClient.Instance.Subscribe("transcription", OnTranscriptionReceived);
     }
 
     private void OnDestroy()
@@ -113,6 +100,7 @@ public class AudioRecorder : MonoBehaviour
             StopCoroutine(waveformCoroutine);
     }
     
+    // ----- Interface Functions -----
     private void InitializeWaveformBars()
     {
         if (waveformVisualizer == null) return;
@@ -178,6 +166,7 @@ public class AudioRecorder : MonoBehaviour
         UpdateStatus("Ready to record");
     }
 
+    // ----- Recording Functions -----
     private void ToggleRecording()
     {
         if (!isRecording)
@@ -203,7 +192,7 @@ public class AudioRecorder : MonoBehaviour
         if (transcriptionText != null)
             transcriptionText.text = "";
 
-        // Start recording
+        // Start recording by streaming audio to the server
         recording = Microphone.Start(microphoneDevice, false, maxRecordingTime, sampleRate);
         isRecording = true;
         startRecordingTime = Time.time;
@@ -217,9 +206,20 @@ public class AudioRecorder : MonoBehaviour
             waveformVisualizer.SetActive(true);
             
         // Start waveform visualization
+        // destroy any existing waveform coroutine
         if (waveformCoroutine != null)
             StopCoroutine(waveformCoroutine);
         waveformCoroutine = StartCoroutine(VisualizeWaveform());
+        
+        // Start streaming audio to server
+        if (useWebSocketTranscription && WebSocketClient.Instance != null)
+        {
+            if (streamingCoroutine != null)
+                StopCoroutine(streamingCoroutine);
+            // starts a coroutine thread that takes audio data and sends it to the server
+            // this is called after the recording is complete to save a persistent copy of the transcript to the server
+            streamingCoroutine = StartCoroutine(StreamAudioToServer());
+        }
         
         UpdateStatus("Recording...");
     }
@@ -247,9 +247,6 @@ public class AudioRecorder : MonoBehaviour
             trimmedClip.SetData(samples, 0);
 
             recording = trimmedClip;
-            
-            // Save the recording as MP3
-            SaveRecordingAsMP3(recording);
         }
 
         // Update UI
@@ -267,52 +264,47 @@ public class AudioRecorder : MonoBehaviour
             waveformCoroutine = null;
         }
         
-        // For now, just display a placeholder message
-        if (transcriptionText != null)
-        {
-            transcriptionText.text = "Recording saved. Transcription will be processed on the server.";
+        // stop audio streaming
+        if (streamingCoroutine != null) {
+            StopCoroutine(streamingCoroutine); // stops the streaming function
+            streamingCoroutine = null; // clear anything inside the streaming coroutine
+
+            // notify the server when the transcription session is over
+            if (WebSocketClient.Instance != null) {
+                // create a new dictionary to store the session id 
+                // session id maps to each transcription session
+                // the transcription session stores the audio data represented as a base64 encoded string
+                // base64 is a way to encode binary data into a string of ASCII characters. this is used to transport audio data.
+                WebSocketClient.Instance.Send("end_transcription", new Dictionary<string, object> {
+                    {"session_id", currentSessionId}
+                });
+            }
         }
-        
-        UpdateStatus("Recording saved!");
+        UpdateStatus("Recording complete. Awaiting transcription...");
     }
 
-    private void SaveRecordingAsMP3(AudioClip clip)
-    {
-        try
-        {
-            // Ensure the directory exists
-            if (!Directory.Exists(recordingsFolderPath))
-            {
-                Directory.CreateDirectory(recordingsFolderPath);
-            }
-            
-            // Generate a new filename with timestamp
-            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            recordingFilePath = Path.Combine(recordingsFolderPath, $"recording_{timestamp}.wav");
-            
-            // Convert to WAV and save (Unity doesn't support direct MP3 encoding)
-            SavWav.Save(recordingFilePath, clip);
-            
-            Debug.Log("Recording saved to: " + recordingFilePath);
-            
-            // TODO: Send the recording to the backend server for transcription
-            // This would typically be done via a web request or other network communication
-            
-            // For demonstration, we'll just create a placeholder transcription file
-            if (!Directory.Exists(transcriptsFolderPath))
-            {
-                Directory.CreateDirectory(transcriptsFolderPath);
-            }
-            
-            transcriptionFilePath = Path.Combine(transcriptsFolderPath, $"transcription_{timestamp}.txt");
-            File.WriteAllText(transcriptionFilePath, "Awaiting transcription from server...");
-            
-            Debug.Log("Placeholder transcription file created at: " + transcriptionFilePath);
+    private void OnTranscriptionReceived(object data) {
+        string transcription = data.ToString();
+        currentTranscription = transcription;
+
+        UnityMainThreadDispatcher.Instance().Enqueue(() => {
+            if (transcriptionText != null)
+                transcriptionText.text = transcription;
+
+            SaveTranscription(transcription);
+        });
+    }
+
+    private void SaveTranscription(string transcription) {
+        if (string.IsNullOrEmpty(transcription)) return;
+        
+        // generate a filename with timestamp
+        if (string.IsNullOrEmpty(transcriptionFilePath)) {
+            string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+            transcriptionFilePath = Path.Combine(transcriptsFolderPath, $"transcription_{timestamp}.txt"); 
         }
-        catch (Exception e)
-        {
-            Debug.LogError("Error saving recording: " + e.Message);
-        }
+        // write all the transcription text to the file
+        File.WriteAllText(transcriptionFilePath, transcription);
     }
 
     private void PlayRecording()
@@ -336,6 +328,96 @@ public class AudioRecorder : MonoBehaviour
         }
     }
 
+    // ------ Streaming Function ------
+    // generated by claude 3.7
+    // function is called after a recording
+    // outputs a base64 encoded string of the audio data which can be stored in the server
+    // the server will store a transcription session with the audio data
+    private IEnumerator StreamAudioToServer()
+    {
+        // Generate a unique session ID for this recording
+        currentSessionId = System.Guid.NewGuid().ToString();
+        
+        // Tell the server we're starting a new transcription session
+        WebSocketClient.Instance.Send("start_transcription", new Dictionary<string, object> {
+            { "session_id", currentSessionId },
+            { "sample_rate", sampleRate },
+            { "channels", 1 } // Mono audio
+        });
+        
+        Debug.Log($"Started audio streaming session: {currentSessionId}");
+        
+        // Calculate how many samples to send in each chunk
+        int samplesPerChunk = (int)(sampleRate * audioChunkDuration);
+        float[] audioChunk = new float[samplesPerChunk];
+        int lastPosition = 0;
+        
+        while (isRecording && recording != null)
+        {
+            // Get current position in the recording (i.e. the current index of the audio clip)
+            // ex: 10000 can represent the 10000th sample in the audio clip. this is arbitrary
+            int currentPosition = Microphone.GetPosition(microphoneDevice);
+            
+            // If we have enough new samples to send a chunk
+            if (currentPosition > lastPosition + samplesPerChunk || 
+                (currentPosition < lastPosition && currentPosition + recording.samples - lastPosition > samplesPerChunk))
+            {
+                // Handle wrap-around case (i.e. the audio clip is looping back to the beginning)
+                if (currentPosition < lastPosition)
+                {
+                    // Get samples from end of buffer
+                    int samplesAtEnd = recording.samples - lastPosition;
+                    float[] endSamples = new float[samplesAtEnd];
+                    recording.GetData(endSamples, lastPosition);
+                    
+                    // Get samples from beginning of buffer
+                    int samplesAtBeginning = samplesPerChunk - samplesAtEnd;
+                    float[] beginSamples = new float[samplesAtBeginning];
+                    recording.GetData(beginSamples, 0);
+                    
+                    // Combine them
+                    Array.Copy(endSamples, 0, audioChunk, 0, samplesAtEnd);
+                    Array.Copy(beginSamples, 0, audioChunk, samplesAtEnd, samplesAtBeginning);
+                }
+                else
+                {
+                    // Simple case - just get the chunk
+                    recording.GetData(audioChunk, lastPosition);
+                }
+                
+                // Convert float array to PCM16 bytes (16-bit signed integers)
+                // PCM is a way to represent audio data as a sequence of numbers
+                // this makes it easier to transport audio data over the network because it's in binary format
+                byte[] pcmBytes = new byte[audioChunk.Length * 2]; // 2 bytes per sample for 16-bit
+                for (int i = 0; i < audioChunk.Length; i++)
+                {
+                    short pcmValue = (short)(audioChunk[i] * 32767);
+                    byte[] pcmSample = BitConverter.GetBytes(pcmValue);
+                    pcmBytes[i * 2] = pcmSample[0];
+                    pcmBytes[i * 2 + 1] = pcmSample[1];
+                }
+                
+                // Convert binary data to base64 string for JSON transport
+                string base64Audio = Convert.ToBase64String(pcmBytes);
+                
+                // Send the audio chunk to the server
+                WebSocketClient.Instance.Send("audio_chunk", new Dictionary<string, object> {
+                    { "session_id", currentSessionId },
+                    { "audio_data", base64Audio }
+                });
+                
+                // Update last position
+                lastPosition = (lastPosition + samplesPerChunk) % recording.samples;
+                
+                // Log for debugging
+                Debug.Log($"Sent audio chunk: {pcmBytes.Length} bytes");
+            }
+            
+            yield return new WaitForSeconds(audioChunkDuration / 2); // Check twice per chunk duration
+        }
+    }
+
+    // sends the status (ex: error, recording, etc)
     private void UpdateStatus(string message)
     {
         if (statusText != null)
@@ -396,113 +478,3 @@ public class AudioRecorder : MonoBehaviour
         }
     }
 }
-
-// Helper class to save AudioClip as WAV file
-// Source: http://wiki.unity3d.com/index.php/SaveWavUtil
-public static class SavWav
-{
-    const int HEADER_SIZE = 44;
-
-    public static bool Save(string filepath, AudioClip clip)
-    {
-        if (!filepath.ToLower().EndsWith(".wav"))
-        {
-            filepath = filepath + ".wav";
-        }
-
-        var samples = new float[clip.samples];
-        clip.GetData(samples, 0);
-
-        try
-        {
-            using (var fileStream = CreateEmpty(filepath))
-            {
-                ConvertAndWrite(fileStream, samples);
-                WriteHeader(fileStream, clip);
-            }
-            return true;
-        }
-        catch (Exception e)
-        {
-            Debug.LogError("Error saving WAV file: " + e.Message);
-            return false;
-        }
-    }
-
-    private static FileStream CreateEmpty(string filepath)
-    {
-        var fileStream = new FileStream(filepath, FileMode.Create);
-        byte emptyByte = new byte();
-
-        for (int i = 0; i < HEADER_SIZE; i++)
-        {
-            fileStream.WriteByte(emptyByte);
-        }
-
-        return fileStream;
-    }
-
-    private static void ConvertAndWrite(FileStream fileStream, float[] samples)
-    {
-        Int16[] intData = new Int16[samples.Length];
-
-        for (int i = 0; i < samples.Length; i++)
-        {
-            intData[i] = (short)(samples[i] * 32767);
-        }
-
-        byte[] byteArray = new byte[intData.Length * 2];
-        Buffer.BlockCopy(intData, 0, byteArray, 0, byteArray.Length);
-        fileStream.Write(byteArray, 0, byteArray.Length);
-    }
-
-    private static void WriteHeader(FileStream fileStream, AudioClip clip)
-    {
-        var hz = clip.frequency;
-        var channels = clip.channels;
-        var samples = clip.samples;
-
-        fileStream.Seek(0, SeekOrigin.Begin);
-
-        byte[] riff = System.Text.Encoding.UTF8.GetBytes("RIFF");
-        fileStream.Write(riff, 0, 4);
-
-        byte[] chunkSize = BitConverter.GetBytes(fileStream.Length - 8);
-        fileStream.Write(chunkSize, 0, 4);
-
-        byte[] wave = System.Text.Encoding.UTF8.GetBytes("WAVE");
-        fileStream.Write(wave, 0, 4);
-
-        byte[] fmt = System.Text.Encoding.UTF8.GetBytes("fmt ");
-        fileStream.Write(fmt, 0, 4);
-
-        byte[] subChunk1 = BitConverter.GetBytes(16);
-        fileStream.Write(subChunk1, 0, 4);
-
-        UInt16 one = 1;
-        byte[] audioFormat = BitConverter.GetBytes(one);
-        fileStream.Write(audioFormat, 0, 2);
-
-        byte[] numChannels = BitConverter.GetBytes(channels);
-        fileStream.Write(numChannels, 0, 2);
-
-        byte[] sampleRate = BitConverter.GetBytes(hz);
-        fileStream.Write(sampleRate, 0, 4);
-
-        byte[] byteRate = BitConverter.GetBytes(hz * channels * 2);
-        fileStream.Write(byteRate, 0, 4);
-
-        UInt16 blockAlign = (ushort)(channels * 2);
-        fileStream.Write(BitConverter.GetBytes(blockAlign), 0, 2);
-
-        UInt16 bps = 16;
-        byte[] bitsPerSample = BitConverter.GetBytes(bps);
-        fileStream.Write(bitsPerSample, 0, 2);
-
-        byte[] datastring = System.Text.Encoding.UTF8.GetBytes("data");
-        fileStream.Write(datastring, 0, 4);
-
-        byte[] subChunk2 = BitConverter.GetBytes(samples * channels * 2);
-        fileStream.Write(subChunk2, 0, 4);
-    }
-} 

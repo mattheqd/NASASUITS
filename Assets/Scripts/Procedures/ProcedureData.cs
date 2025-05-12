@@ -8,13 +8,20 @@ using UnityEngine;
 
 // A single step in a list of instructions for each procedure
 [Serializable]
+public enum InstructionStatus
+{
+    NotStarted,
+    InProgress,
+    Completed,
+    Skipped
+}
+
+[Serializable]
 public class InstructionStep
 {
     public string instructionText; // instruction text (ex: "Press the button")
     public bool requiresConfirmation = true; // user must confirm (click a button or voice interaction to continue)
-    public bool isCompleted = false; // default to false
-    public bool isSkipped = false; // user can skip steps
-
+    public InstructionStatus status = InstructionStatus.NotStarted; // Track status instead of separate booleans
 }
 
 // list of instructions make up a procedure
