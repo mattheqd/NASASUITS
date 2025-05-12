@@ -136,8 +136,7 @@ public class ProcedureDisplay : MonoBehaviour
         // Reset all steps
         foreach (var step in currentProcedure.instructionSteps)
         {
-            step.isCompleted = false;
-            step.isSkipped = false;
+            step.status = InstructionStatus.NotStarted;
         }
         
         // Setup UI
