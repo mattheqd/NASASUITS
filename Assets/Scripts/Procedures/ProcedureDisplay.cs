@@ -28,7 +28,7 @@ using UnityEngine.Events;
 using TMPro;
 
 // Enum to track the status of instruction steps
-public enum InstructionStatus
+public enum ProcedureStepStatus
 {
     NotStarted,
     InProgress,
