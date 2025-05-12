@@ -122,7 +122,9 @@ public class WebSocketClient : MonoBehaviour
 
             ws.OnMessage += (sender, e) => {
                 string message = e.Data;
-                HandleRawMessage(message);
+                Debug.Log($"[WS RAW] {message}");
+                WsMessage wsMessage = JsonUtility.FromJson<WsMessage>(message);
+                HandleMessage(wsMessage);
             };
 
             ws.OnClose += (sender, e) => {
