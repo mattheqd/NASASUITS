@@ -1,7 +1,3 @@
-//* Handles UI logic for procedures workflow
-//* a separate script under ProcedureDisplay handles the progress of steps from the first step to the last step
-//* this script will only handle the display and transition across panels (incl. btn clicks)
-
 using UnityEngine;
 using UnityEngine.UI;
 using System.Linq;
@@ -10,58 +6,95 @@ using System.Collections.Generic;
 public class ProceduresFlowManager : MonoBehaviour
 {
     [Header("Panel References")]
-    [SerializeField] private GameObject proceduresListPanel; // the list of procedures. starting screen
-    [SerializeField] private GameObject procedurePreviewPanel; // info about the procedure (ex: time it will take, consumables lost, etc)
-    [SerializeField] private GameObject procedureTaskPanel; // displays a task in the procedure
-    [SerializeField] private GameObject geoSamplingPanel; // Added reference to GeoSampling workflow
+    [SerializeField] private GameObject tasksListPanel;     // First screen - TasksList in hierarchy
+    [SerializeField] private GameObject tasksInfoPanel;     // Second screen - TasksInfo in hierarchy
+    [SerializeField] private GameObject proceduresPanel;    // Third screen - Procedures in hierarchy
     
     [Header("UI Elements")]
-    [SerializeField] private Button startProcedureButton; // start the procedure workflow (ex: egress)
-    [SerializeField] private Button startSamplingButton; // Added button for Geosampling workflow
+    [SerializeField] private Button egressButton;          // Button to go from TasksList to TasksInfo
+    [SerializeField] private Button backButton;            // Button to go back from TasksInfo to TasksList
+    [SerializeField] private Button startButton;           // Button to go from TasksInfo to Procedures
 
-    [SerializeField] private Transform stepsContainer; // contains series of steps for each task
-    [SerializeField] private StepItem stepItemPrefab; // the prefab for each step in the procedure
+    [SerializeField] private Transform stepsContainer;     // Contains series of steps in TasksInfo
+    [SerializeField] private StepItem stepItemPrefab;      // Prefab for each step
     
     [Header("Procedure References")]
-    [SerializeField] private ProcedureDisplay procedureDisplay; // main container for all the procedures
+    [SerializeField] private ProcedureDisplay procedureDisplay; // Main procedure handler
 
     private void Awake()
     {
-        // make all panels invisible
-        proceduresListPanel.SetActive(false);
-        procedurePreviewPanel.SetActive(false);
-        // button listeners
-        startProcedureButton.onClick.AddListener(ShowProcedurePreview);
-        startSamplingButton.onClick.AddListener(ShowGeoSamplingPreview);
-
+        // Make sure only the first panel is active at start
+        tasksListPanel.SetActive(true);
+        tasksInfoPanel.SetActive(false);
+        proceduresPanel.SetActive(false);
+        
+        // Set up button listeners
+        egressButton.onClick.AddListener(ShowTasksInfo);
+        backButton.onClick.AddListener(ShowTasksList);
+        startButton.onClick.AddListener(ShowProcedures);
     }
 
-    //---- Starting screen for procedures and geo sampling ----//
-    // the starting screen for procedures and geo sampling are the same
-    // show the task preview panel for a single procedure (ex: egress)
-    private void ShowProcedurePreview()
+    // Show first panel (TasksList)
+    private void ShowTasksList()
     {
-        proceduresListPanel.SetActive(false); // hide the procedures list
-        procedurePreviewPanel.SetActive(true); // show the procedure preview
-    }
-    private void ShowGeoSamplingPreview()
-    {
-        proceduresListPanel.SetActive(false);
-        procedurePreviewPanel.SetActive(true);
+        tasksInfoPanel.SetActive(false);
+        proceduresPanel.SetActive(false);
+        tasksListPanel.SetActive(true);
     }
 
-    //---- Helper functions to display steps and details ----//
-    // goes to the first step
-    // private void ShowProcedureDetails()
-    // {
-    //     procedurePreviewPanel.SetActive(false);
-    //     taskPanel.SetActive(true); 
-    // }
-    // not used.
-    // private void ShowProceduresList()
-    // {
-    //     procedurePreviewPanel.SetActive(false);
-    //     taskPanel.SetActive(false);
-    //     proceduresListPanel.SetActive(true);
-    // }
+    // Show second panel (TasksInfo) when selecting Egress
+    private void ShowTasksInfo()
+    {
+        tasksListPanel.SetActive(false);
+        proceduresPanel.SetActive(false);
+        tasksInfoPanel.SetActive(true);
+        
+        // Populate steps for the selected procedure
+        PopulateFirstSteps("Egress");
+    }
+
+    // Show third panel (Procedures) when pressing Start
+    private void ShowProcedures()
+    {
+        tasksListPanel.SetActive(false);
+        tasksInfoPanel.SetActive(false);
+        proceduresPanel.SetActive(true);
+    }
+
+    // Populate the steps in the TasksInfo panel
+    private void PopulateFirstSteps(string procedureName)
+    {
+        Debug.Log($"ProceduresFlowManager: PopulateFirstSteps called for '{procedureName}'");
+        
+        if (ProcedureManager.Instance == null)
+        {
+            Debug.LogError("ProceduresFlowManager: ProcedureManager.Instance is null");
+            return;
+        }
+        
+        var proc = ProcedureManager.Instance.GetProcedure(procedureName);
+        if (proc == null)
+        {
+            Debug.LogError($"ProceduresFlowManager: Procedure '{procedureName}' not found");
+            return;
+        }
+        
+        if (stepItemPrefab == null || stepsContainer == null)
+        {
+            Debug.LogError("ProceduresFlowManager: Missing prefab or container reference");
+            return;
+        }
+        
+        // Clear existing steps
+        foreach (Transform child in stepsContainer) 
+            Destroy(child.gameObject);
+        
+        // Populate steps for this procedure
+        int count = Mathf.Min(5, proc.instructionSteps.Count); // Show first 5 steps or less
+        for (int i = 0; i < count; i++)
+        {
+            var item = Instantiate(stepItemPrefab, stepsContainer);
+            item.SetStep(i + 1, proc.instructionSteps[i].instructionText);
+        }
+    }
 } 
