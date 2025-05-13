@@ -42,7 +42,6 @@ public class TasksFlowManager : MonoBehaviour
     {
         proceduresListPanel.SetActive(false);
         procedurePreviewPanel.SetActive(true);
-        PopulateFirstSteps("GeoSampling"); 
     }
 
     //---- Helper functions to display steps and details ----//
