@@ -16,39 +16,39 @@ public class TasksFlowManager : MonoBehaviour
     [SerializeField] private Button startSamplingButton; // Added button for Geosampling workflow
 
     [SerializeField] private Transform stepsContainer; // contains series of steps for each task
-    [SerializeField] private StepItem stepItemPrefab;
+    [SerializeField] private StepItem stepItemPrefab; // the prefab for each step in the procedure
     
     [Header("Procedure References")]
     [SerializeField] private ProcedureDisplay procedureDisplay; // main container for all the procedures
 
     private void Awake()
     {
-        taskInfoPanel.SetActive(false);
-        procedurePanel.SetActive(false);
-        egressButton.onClick.AddListener(ShowTaskInfo);
-        startButton.onClick.AddListener(ShowProcedure);
-        backButton.onClick.AddListener(ShowTasksList);
+        proceduresListPanel.SetActive(false);
+        procedurePreviewPanel.SetActive(false);
+        startProcedureButton.onClick.AddListener(ShowProceduresPreview);
+        startSamplingButton.onClick.AddListener(ShowGeoSamplingPanel);
+        backButton.onClick.AddListener(ShowProceduresList);
     }
 
     // show the task preview panel
-    private void ShowProceduresPreview()
+    private void ShowProcedurePreview()
     {
-        tasksListPanel.SetActive(false);
-        taskInfoPanel.SetActive(true);
+        proceduresListPanel.SetActive(false);
+        procedurePreviewPanel.SetActive(true);
         PopulateFirstSteps("Egress");
     }
 
-    private void ShowProcedure()
+    private void ShowProcedureDetails()
     {
-        taskInfoPanel.SetActive(false);
-        procedurePanel.SetActive(true);
+        procedurePreviewPanel.SetActive(false);
+        taskPanel.SetActive(true);
     }
 
-    private void ShowTasksList()
+    private void ShowProceduresList()
     {
-        taskInfoPanel.SetActive(false);
-        procedurePanel.SetActive(false);
-        tasksListPanel.SetActive(true);
+        procedurePreviewPanel.SetActive(false);
+        taskPanel.SetActive(false);
+        proceduresListPanel.SetActive(true);
     }
 
     private void PopulateFirstSteps(string procedureName)
@@ -76,7 +76,7 @@ public class TasksFlowManager : MonoBehaviour
         foreach (Transform child in stepsContainer) Destroy(child.gameObject);
         
         // populate the steps container with the steps from the procedure
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < proc.instructionSteps.Count; i++)
         {
             var item = Instantiate(stepItemPrefab, stepsContainer);
             item.SetStep(i + 1, proc.instructionSteps[i].instructionText);
