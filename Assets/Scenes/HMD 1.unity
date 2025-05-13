@@ -454,11 +454,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1921242934}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0}
-  m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 0, y: 223.05002}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: -0.000030517578, y: -0.00015258789}
   m_SizeDelta: {x: 800.3, y: 446.10004}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_Pivot: {x: 0, y: 0}
 --- !u!114 &297500224
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2944,8 +2944,18 @@ MonoBehaviour:
   recordButton: {fileID: 1466666412}
   playButton: {fileID: 1392003173}
   statusText: {fileID: 0}
+  voiceMemoPanel: {fileID: 0}
+  transcriptionText: {fileID: 0}
+  waveformVisualizer: {fileID: 0}
   sampleRate: 44100
   maxRecordingTime: 300
+  waveformBarCount: 10
+  waveformUpdateInterval: 0.05
+  waveformAmplitudeMultiplier: 50
+  waveformMinHeight: 5
+  waveformMaxHeight: 50
+  useWebSocketTranscription: 1
+  audioChunkDuration: 1
 --- !u!1 &2036652129
 GameObject:
   m_ObjectHideFlags: 0

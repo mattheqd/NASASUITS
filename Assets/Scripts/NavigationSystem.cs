@@ -36,6 +36,8 @@ public class NavigationSystem : MonoBehaviour
     private RectTransform playerIcon;
     public GameObject pathDotPrefab;
     private List<GameObject> pathDots = new List<GameObject>();
+    public GameObject hazardDotPrefab;
+    private List<GameObject> hazardDots = new List<GameObject>();
 
     public Vector2 startLocation = new Vector2(-5720, -10060);
     public Vector2 endLocation = new Vector2(-5600, -9940);
@@ -99,6 +101,7 @@ public class NavigationSystem : MonoBehaviour
         InitializeNodes();
         UpdateMinimap();
         CalculateAndDrawPath();
+        VisualizeHazardNodes();
     }
 
     void Update()
@@ -157,6 +160,7 @@ public class NavigationSystem : MonoBehaviour
         float yEnd = -10080f;
         float increment = 10f;
 
+        Debug.Log("=== Hazard Node Coordinates ===");
         // Create nodes at each grid line intersection
         for (int i = 0; i < gridLines; i++)
         {
@@ -164,15 +168,21 @@ public class NavigationSystem : MonoBehaviour
             {
                 float x = xStart + i * increment;
                 float y = yStart - j * increment; // y decreases as j increases
+                bool isHazard = IsHazardCoordinate(i, j);
                 Node node = new Node
                 {
                     position = new Vector2(x, y),
-                    isObstacle = false // No obstacles for now
+                    isObstacle = isHazard
                 };
                 allNodes.Add(node);
-                Debug.Log($"Created node at position: ({x}, {y})");
+                
+                if (isHazard)
+                {
+                    Debug.Log($"Hazard at grid position (i={i}, j={j}) -> world position ({x}, {y})");
+                }
             }
         }
+        Debug.Log("=== End Hazard Coordinates ===");
 
         // Connect neighboring nodes (8-way connectivity)
         foreach (Node node in allNodes)
@@ -187,6 +197,42 @@ public class NavigationSystem : MonoBehaviour
                     node.neighbors.Add(otherNode);
                 }
             }
+        }
+    }
+
+    private bool IsHazardCoordinate(int i, int j)
+    {
+        // i and j are already in 0-14 range from the grid creation
+        switch (j)
+        {
+            case 0:
+                return i >= 0 && i <= 14;
+            case 1:
+                return (i >= 0 && i <= 6) || (i >= 8 && i <= 14);
+            case 2:
+                return (i >= 0 && i <= 6) || (i >= 12 && i <= 14);
+            case 3:
+                return (i >= 0 && i <= 6) || i == 11 || i == 14;
+            case 4:
+                return (i >= 0 && i <= 7) || i == 11 || i == 12 || i == 14;
+            case 5:
+                return (i >= 0 && i <= 7) || i == 11 || i == 13 || i == 14;
+            case 6:
+                return i == 0 || i == 1 || (i >= 4 && i <= 6) || i == 13 || i == 14;
+            case 7:
+            case 8:
+            case 10:
+                return i == 0 || i == 1 || (i >= 7 && i <= 14);
+            case 9:
+                return i == 0 || (i >= 7 && i <= 14);
+            case 11:
+            case 12:
+                return (i >= 0 && i <= 5) || (i >= 8 && i <= 14);
+            case 13:
+            case 14:
+                return (i >= 0 && i <= 5) || (i >= 7 && i <= 14);
+            default:
+                return false;
         }
     }
 
@@ -314,8 +360,18 @@ public class NavigationSystem : MonoBehaviour
         // Draw all nodes
         foreach (Node node in allNodes)
         {
-            Gizmos.color = node.isObstacle ? Color.red : Color.white;
-            Gizmos.DrawSphere(new Vector3(node.position.x, 0, node.position.y), 0.1f);
+            if (node.isObstacle)
+            {
+                // Draw hazard nodes in red
+                Gizmos.color = Color.red;
+                Gizmos.DrawSphere(new Vector3(node.position.x, 0, node.position.y), 0.2f);
+            }
+            else
+            {
+                // Draw normal nodes in white
+                Gizmos.color = Color.white;
+                Gizmos.DrawSphere(new Vector3(node.position.x, 0, node.position.y), 0.1f);
+            }
         }
 
         // Draw minimap bounds
@@ -329,6 +385,18 @@ public class NavigationSystem : MonoBehaviour
         foreach (Node node in minimap.visibleNodes)
         {
             Gizmos.DrawSphere(new Vector3(node.position.x, 0.1f, node.position.y), 0.15f);
+        }
+
+        // Draw current path if it exists
+        if (currentPath != null && currentPath.Count > 0)
+        {
+            Gizmos.color = Color.blue;
+            for (int i = 0; i < currentPath.Count - 1; i++)
+            {
+                Vector3 start = new Vector3(currentPath[i].position.x, 0.2f, currentPath[i].position.y);
+                Vector3 end = new Vector3(currentPath[i + 1].position.x, 0.2f, currentPath[i + 1].position.y);
+                Gizmos.DrawLine(start, end);
+            }
         }
     }
 
@@ -400,6 +468,43 @@ public class NavigationSystem : MonoBehaviour
 
             // Update previous position for next iteration
             previousPos = currentPos;
+        }
+    }
+
+    private void VisualizeHazardNodes()
+    {
+        // Clear existing hazard dots
+        foreach (var dot in hazardDots) Destroy(dot);
+        hazardDots.Clear();
+
+        // Create a simple red sprite for the hazard dots
+        Texture2D hazardTexture = new Texture2D(1, 1);
+        hazardTexture.SetPixel(0, 0, Color.red);
+        hazardTexture.Apply();
+        Sprite hazardSprite = Sprite.Create(hazardTexture, new Rect(0, 0, 1, 1), new Vector2(0, 0));
+
+        // Create hazard dots for each hazard node
+        foreach (Node node in allNodes)
+        {
+            if (node.isObstacle)
+            {
+                GameObject hazardObj = new GameObject("HazardDot");
+                hazardObj.transform.SetParent(minimapRect);
+                RectTransform hazardRect = hazardObj.AddComponent<RectTransform>();
+                Image hazardImage = hazardObj.AddComponent<Image>();
+                hazardImage.sprite = hazardSprite;
+                hazardImage.color = Color.red;
+
+                // Set anchors and pivot to (0,0)
+                hazardRect.anchorMin = Vector2.zero;
+                hazardRect.anchorMax = Vector2.zero;
+                hazardRect.pivot = Vector2.zero;
+
+                // Set size and position
+                hazardRect.sizeDelta = new Vector2(4f, 4f);
+                hazardRect.anchoredPosition = WorldToMinimap(node.position);
+                hazardDots.Add(hazardObj);
+            }
         }
     }
 
