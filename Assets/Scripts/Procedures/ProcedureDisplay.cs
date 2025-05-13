@@ -28,7 +28,7 @@ using UnityEngine.Events;
 using TMPro;
 
 // Enum to track the status of instruction steps
-public enum InstructionStatus
+public enum ProcedureStepStatus
 {
     NotStarted,
     InProgress,
@@ -136,8 +136,7 @@ public class ProcedureDisplay : MonoBehaviour
         // Reset all steps
         foreach (var step in currentProcedure.instructionSteps)
         {
-            step.isCompleted = false;
-            step.isSkipped = false;
+            step.status = InstructionStatus.NotStarted;
         }
         
         // Setup UI

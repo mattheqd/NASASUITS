@@ -24,7 +24,7 @@ public class GeosamplingManager : MonoBehaviour {
     [Header("Sample Information Fields")]
     [SerializeField] private TMP_InputField sampleNameInput;  //? this will be sent by the tss
     [SerializeField] private TMP_InputField sampleLocationInput;  //? this will be sent by the tss
-    [SerializeField] private TextMeshProUGUI sampleTimestampText; //? this will be sent by the tss
+    [SerializeField] private TextMeshProUGUI sampleTimestampText; //? this will be automatically generated
     
     // store the current state (i.e. which panel or rock is being displayed)
     private enum GeosamplingState {
