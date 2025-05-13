@@ -5,16 +5,21 @@ using System.Collections.Generic;
 
 public class TasksFlowManager : MonoBehaviour
 {
-    [SerializeField] private GameObject tasksListPanel;
-    [SerializeField] private GameObject taskInfoPanel;
-    [SerializeField] private GameObject procedurePanel;
-    [SerializeField] private Button egressButton;
-    [SerializeField] private Button startButton;
-    [SerializeField] private Button backButton;
-    [SerializeField] private StepItem stepItemPrefab;
-    [SerializeField] private Transform stepsContainer;
+    [Header("Panel References")]
+    [SerializeField] private GameObject proceduresListPanel; // the list of procedures. starting screen
+    [SerializeField] private GameObject procedurePreviewPanel; // info about the procedure (ex: time it will take, consumables lost, etc)
+    [SerializeField] private GameObject taskPanel; // displays a task in the procedure
+    [SerializeField] private GameObject geoSamplingPanel; // Added reference to GeoSampling workflow
+    
+    [Header("UI Elements")]
+    [SerializeField] private Button startProcedureButton; // start the procedure workflow (ex: egress)
+    [SerializeField] private Button startSamplingButton; // Added button for Geosampling workflow
 
-    private List<Procedure> firstThreeProcedures;
+    [SerializeField] private Transform stepsContainer; // contains series of steps for each task
+    [SerializeField] private StepItem stepItemPrefab;
+    
+    [Header("Procedure References")]
+    [SerializeField] private ProcedureDisplay procedureDisplay; // main container for all the procedures
 
     private void Awake()
     {
@@ -56,21 +61,20 @@ public class TasksFlowManager : MonoBehaviour
         var proc = ProcedureManager.Instance.GetProcedure(procedureName);
         if (proc == null)
         {
-            Debug.LogError($"TasksFlowManager: Procedure '{procedureName}' not found");
             return;
         }
         if (stepItemPrefab == null)
         {
-            Debug.LogError("TasksFlowManager: stepItemPrefab is not assigned");
             return;
         }
         if (stepsContainer == null)
         {
-            Debug.LogError("TasksFlowManager: stepsContainer is not assigned");
             return;
         }
+        // clear the current steps in the container to prepare for new steps
         foreach (Transform child in stepsContainer) Destroy(child.gameObject);
-        int count = Mathf.Min(3, proc.instructionSteps.Count);
+        
+        // populate the steps container with the steps from the procedure
         for (int i = 0; i < count; i++)
         {
             var item = Instantiate(stepItemPrefab, stepsContainer);
