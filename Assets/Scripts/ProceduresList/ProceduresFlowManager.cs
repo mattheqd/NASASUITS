@@ -1,10 +1,13 @@
 //* Handles UI logic for procedures workflow
+//* a separate script under ProcedureDisplay handles the progress of steps from the first step to the last step
+//* this script will only handle the display and transition across panels (incl. btn clicks)
+
 using UnityEngine;
 using UnityEngine.UI;
 using System.Linq;
 using System.Collections.Generic;
 
-public class TasksFlowManager : MonoBehaviour
+public class ProceduresFlowManager : MonoBehaviour
 {
     [Header("Panel References")]
     [SerializeField] private GameObject proceduresListPanel; // the list of procedures. starting screen
@@ -24,10 +27,13 @@ public class TasksFlowManager : MonoBehaviour
 
     private void Awake()
     {
+        // make all panels invisible
         proceduresListPanel.SetActive(false);
         procedurePreviewPanel.SetActive(false);
+        // button listeners
         startProcedureButton.onClick.AddListener(ShowProcedurePreview);
         startSamplingButton.onClick.AddListener(ShowGeoSamplingPreview);
+
     }
 
     //---- Starting screen for procedures and geo sampling ----//

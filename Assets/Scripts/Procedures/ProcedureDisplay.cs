@@ -1,6 +1,7 @@
+//* Manager to control the display of procedure content, step progression, and updating the ui to reflect the procedure state
+//* The Procedure Flow Manager will call this class to display the procedure or steps
+
 /**
- * Manager to control display of procedures and tracking of progress/status. 
- * The Procedure Flow Manager will call this class to display the procedure or steps
  * These are the UI rules for the display:
  * ------ COLORS ------
  * - inProgressTextColor: #252525
