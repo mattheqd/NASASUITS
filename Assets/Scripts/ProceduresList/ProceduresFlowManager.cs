@@ -1,3 +1,4 @@
+//* Handles UI logic for procedures workflow
 using UnityEngine;
 using UnityEngine.UI;
 using System.Linq;
@@ -25,61 +26,37 @@ public class TasksFlowManager : MonoBehaviour
     {
         proceduresListPanel.SetActive(false);
         procedurePreviewPanel.SetActive(false);
-        startProcedureButton.onClick.AddListener(ShowProceduresPreview);
-        startSamplingButton.onClick.AddListener(ShowGeoSamplingPanel);
-        backButton.onClick.AddListener(ShowProceduresList);
+        startProcedureButton.onClick.AddListener(ShowProcedurePreview);
+        startSamplingButton.onClick.AddListener(ShowGeoSamplingPreview);
     }
 
-    // show the task preview panel
+    //---- Starting screen for procedures and geo sampling ----//
+    // the starting screen for procedures and geo sampling are the same
+    // show the task preview panel for a single procedure (ex: egress)
     private void ShowProcedurePreview()
+    {
+        proceduresListPanel.SetActive(false); // hide the procedures list
+        procedurePreviewPanel.SetActive(true); // show the procedure preview
+    }
+    private void ShowGeoSamplingPreview()
     {
         proceduresListPanel.SetActive(false);
         procedurePreviewPanel.SetActive(true);
-        PopulateFirstSteps("Egress");
+        PopulateFirstSteps("GeoSampling"); 
     }
 
-    private void ShowProcedureDetails()
-    {
-        procedurePreviewPanel.SetActive(false);
-        taskPanel.SetActive(true);
-    }
-
-    private void ShowProceduresList()
-    {
-        procedurePreviewPanel.SetActive(false);
-        taskPanel.SetActive(false);
-        proceduresListPanel.SetActive(true);
-    }
-
-    private void PopulateFirstSteps(string procedureName)
-    {
-        Debug.Log($"TasksFlowManager: PopulateFirstSteps called for '{procedureName}'");
-        if (ProcedureManager.Instance == null)
-        {
-            Debug.LogError("TasksFlowManager: ProcedureManager.Instance is null");
-            return;
-        }
-        var proc = ProcedureManager.Instance.GetProcedure(procedureName);
-        if (proc == null)
-        {
-            return;
-        }
-        if (stepItemPrefab == null)
-        {
-            return;
-        }
-        if (stepsContainer == null)
-        {
-            return;
-        }
-        // clear the current steps in the container to prepare for new steps
-        foreach (Transform child in stepsContainer) Destroy(child.gameObject);
-        
-        // populate the steps container with the steps from the procedure
-        for (int i = 0; i < proc.instructionSteps.Count; i++)
-        {
-            var item = Instantiate(stepItemPrefab, stepsContainer);
-            item.SetStep(i + 1, proc.instructionSteps[i].instructionText);
-        }
-    }
+    //---- Helper functions to display steps and details ----//
+    // goes to the first step
+    // private void ShowProcedureDetails()
+    // {
+    //     procedurePreviewPanel.SetActive(false);
+    //     taskPanel.SetActive(true); 
+    // }
+    // not used.
+    // private void ShowProceduresList()
+    // {
+    //     procedurePreviewPanel.SetActive(false);
+    //     taskPanel.SetActive(false);
+    //     proceduresListPanel.SetActive(true);
+    // }
 } 
