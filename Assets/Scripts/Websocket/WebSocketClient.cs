@@ -72,10 +72,55 @@ public class LowFrequencyData
 }
 
 [Serializable]
+public class DcuData
+{
+    public int evaId;
+    public float battery;
+    public float oxygen;
+    public float comm;
+    public float fan;
+    public float pump;
+    public float co2;
+}
+
+[Serializable]
+public class UiaData
+{
+    public float emu1_power;
+    public float ev1_supply;
+    public float ev1_waste;
+    public float ev1_oxygen;
+    public float emu2_power;
+    public float ev2_supply;
+    public float ev2_waste;
+    public float ev2_oxygen;
+    public float o2_vent;
+    public float depress_pump;
+}
+
+[Serializable]
 public class WsRockDataMessage
 {
     public string type;
     public RockData data;
+    public bool success;
+    public WsError error;
+}
+
+[Serializable]
+public class WsDcuDataMessage
+{
+    public string type;
+    public DcuData data;
+    public bool success;
+    public WsError error;
+}
+
+[Serializable]
+public class WsUiaDataMessage
+{
+    public string type;
+    public UiaData data;
     public bool success;
     public WsError error;
 }
@@ -99,8 +144,9 @@ public class WebSocketClient : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
-        // Only subscribe to rock_data for RockDataDisplay
         Subscribe("rock_data", HandleRockDataMessage);
+        Subscribe("dcu_data", HandleDcuDataMessage);
+        Subscribe("uia_data", HandleUiaDataMessage);
         ConnectToServer();
     }
 
@@ -136,16 +182,36 @@ public class WebSocketClient : MonoBehaviour
             ws.OnMessage += (sender, e) => {
                 string message = e.Data;
                 Debug.Log($"[WS RAW] {message}");
-                // Parse as WsRockDataMessage for rock_data
-                WsRockDataMessage wsRockDataMsg = JsonUtility.FromJson<WsRockDataMessage>(message);
-                if (wsRockDataMsg != null && wsRockDataMsg.type == "rock_data" && wsRockDataMsg.data != null)
+                
+                if (message.Contains("\"type\":\"rock_data\"") || message.Contains("\"type\": \"rock_data\""))
                 {
-                    Debug.Log($"[HandleMessage] Rock Data: EVA {wsRockDataMsg.data.evaId}, SPEC {wsRockDataMsg.data.specId}, O2 {wsRockDataMsg.data.oxygen}%, Water {wsRockDataMsg.data.water}%, CO2 {wsRockDataMsg.data.co2}%, H2 {wsRockDataMsg.data.h2}%, N2 {wsRockDataMsg.data.n2}%, Other {wsRockDataMsg.data.other}%, Temp {wsRockDataMsg.data.temperature}°C, Pressure {wsRockDataMsg.data.pressure}Pa, Humidity {wsRockDataMsg.data.humidity}%, Light {wsRockDataMsg.data.light}lux");
-                    HandleRockDataMessage(wsRockDataMsg.data);
+                    WsRockDataMessage wsRockDataMsg = JsonUtility.FromJson<WsRockDataMessage>(message);
+                    if (wsRockDataMsg != null && wsRockDataMsg.data != null)
+                    {
+                        Debug.Log($"[RockData] EVA {wsRockDataMsg.data.evaId}, SPEC {wsRockDataMsg.data.specId}, O2 {wsRockDataMsg.data.oxygen}%, Water {wsRockDataMsg.data.water}%, CO2 {wsRockDataMsg.data.co2}%, H2 {wsRockDataMsg.data.h2}%, N2 {wsRockDataMsg.data.n2}%, Other {wsRockDataMsg.data.other}%, Temp {wsRockDataMsg.data.temperature}°C, Pressure {wsRockDataMsg.data.pressure}Pa, Humidity {wsRockDataMsg.data.humidity}%, Light {wsRockDataMsg.data.light}lux");
+                        HandleRockDataMessage(wsRockDataMsg.data);
+                    }
+                }
+                else if (message.Contains("\"type\":\"dcu_data\"") || message.Contains("\"type\": \"dcu_data\""))
+                {
+                    WsDcuDataMessage wsDcuDataMsg = JsonUtility.FromJson<WsDcuDataMessage>(message);
+                    if (wsDcuDataMsg != null && wsDcuDataMsg.data != null)
+                    {
+                        Debug.Log($"[DcuData] EVA {wsDcuDataMsg.data.evaId}, Battery {wsDcuDataMsg.data.battery}%, Oxygen {wsDcuDataMsg.data.oxygen}%, Comm {wsDcuDataMsg.data.comm}%, Fan {wsDcuDataMsg.data.fan}%, Pump {wsDcuDataMsg.data.pump}%, CO2 {wsDcuDataMsg.data.co2}%");
+                        HandleDcuDataMessage(wsDcuDataMsg.data);
+                    }
+                }
+                else if (message.Contains("\"type\":\"uia_data\"") || message.Contains("\"type\": \"uia_data\""))
+                {
+                    WsUiaDataMessage wsUiaDataMsg = JsonUtility.FromJson<WsUiaDataMessage>(message);
+                    if (wsUiaDataMsg != null && wsUiaDataMsg.data != null)
+                    {
+                        Debug.Log($"[UiaData] EMU1 Power {wsUiaDataMsg.data.emu1_power}%, EV1 Supply {wsUiaDataMsg.data.ev1_supply}%, EV1 Waste {wsUiaDataMsg.data.ev1_waste}%, EV1 Oxygen {wsUiaDataMsg.data.ev1_oxygen}%, EMU2 Power {wsUiaDataMsg.data.emu2_power}%, EV2 Supply {wsUiaDataMsg.data.ev2_supply}%, EV2 Waste {wsUiaDataMsg.data.ev2_waste}%, EV2 Oxygen {wsUiaDataMsg.data.ev2_oxygen}%, O2 Vent {wsUiaDataMsg.data.o2_vent}%, Depress Pump {wsUiaDataMsg.data.depress_pump}%");
+                        HandleUiaDataMessage(wsUiaDataMsg.data);
+                    }
                 }
                 else
                 {
-                    // fallback to generic handler for other types
                     WsMessage wsMessage = JsonUtility.FromJson<WsMessage>(message);
                     HandleMessage(wsMessage);
                 }
@@ -212,6 +278,36 @@ public class WebSocketClient : MonoBehaviour
         {
             RockDataDisplay.Instance.HandleRockData(data);
         }
+    }
+
+    private void HandleDcuDataMessage(object data)
+    {
+        Debug.Log($"[HandleDcuDataMessage] Data: {data}");
+        DcuData dcuData = data as DcuData;
+        if (dcuData != null)
+        {
+            Debug.Log($"[HandleDcuDataMessage] EVA {dcuData.evaId}, Battery {dcuData.battery}%, Oxygen {dcuData.oxygen}%, Comm {dcuData.comm}%, Fan {dcuData.fan}%, Pump {dcuData.pump}%, CO2 {dcuData.co2}%");
+        }
+        else
+        {
+            Debug.LogError($"[HandleDcuDataMessage] Data is not a DcuData object, it is {data?.GetType()}");
+        }
+        // You can add additional handling here later
+    }
+
+    private void HandleUiaDataMessage(object data)
+    {
+        Debug.Log($"[HandleUiaDataMessage] Data: {data}");
+        UiaData uiaData = data as UiaData;
+        if (uiaData != null)
+        {
+            Debug.Log($"[HandleUiaDataMessage] EMU1 Power {uiaData.emu1_power}%, EV1 Supply {uiaData.ev1_supply}%, EV1 Waste {uiaData.ev1_waste}%, EV1 Oxygen {uiaData.ev1_oxygen}%, EMU2 Power {uiaData.emu2_power}%, EV2 Supply {uiaData.ev2_supply}%, EV2 Waste {uiaData.ev2_waste}%, EV2 Oxygen {uiaData.ev2_oxygen}%, O2 Vent {uiaData.o2_vent}%, Depress Pump {uiaData.depress_pump}%");
+        }
+        else
+        {
+            Debug.LogError($"[HandleUiaDataMessage] Data is not a UiaData object, it is {data?.GetType()}");
+        }
+        // You can add additional handling here later
     }
 
     public void Send(string type, object data)
