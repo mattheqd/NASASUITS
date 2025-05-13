@@ -30,7 +30,8 @@ public class TasksFlowManager : MonoBehaviour
         backButton.onClick.AddListener(ShowTasksList);
     }
 
-    private void ShowTaskInfo()
+    // show the task preview panel
+    private void ShowProceduresPreview()
     {
         tasksListPanel.SetActive(false);
         taskInfoPanel.SetActive(true);
