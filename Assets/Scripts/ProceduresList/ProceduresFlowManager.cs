@@ -6,8 +6,8 @@ using System.Collections.Generic;
 public class ProceduresFlowManager : MonoBehaviour
 {
     [Header("Panel References")]
-    [SerializeField] private GameObject tasksListPanel;     // First screen - TasksList in hierarchy
-    [SerializeField] private GameObject tasksInfoPanel;     // Second screen - TasksInfo in hierarchy
+    [SerializeField] private GameObject proceduresListPanel;     // First screen - ProceduresList in hierarchy
+    [SerializeField] private GameObject proceduresInfoPanel;     // Second screen - ProceduresInfo in hierarchy
     [SerializeField] private GameObject proceduresPanel;    // Third screen - Procedures in hierarchy
     
     [Header("UI Elements")]
@@ -20,12 +20,13 @@ public class ProceduresFlowManager : MonoBehaviour
     
     [Header("Procedure References")]
     [SerializeField] private ProcedureDisplay procedureDisplay; // Main procedure handler
+    [SerializeField] private ProcedureAutomation procedureAutomation; // Handles automation of steps
 
     private void Awake()
     {
         // Make sure only the first panel is active at start
-        tasksListPanel.SetActive(true);
-        tasksInfoPanel.SetActive(false);
+        proceduresListPanel.SetActive(true);
+        proceduresInfoPanel.SetActive(false);
         proceduresPanel.SetActive(false);
         
         // Set up button listeners
@@ -41,17 +42,17 @@ public class ProceduresFlowManager : MonoBehaviour
     // Show first panel (TasksList)
     private void ShowTasksList()
     {
-        tasksInfoPanel.SetActive(false);
+        proceduresInfoPanel.SetActive(false);
         proceduresPanel.SetActive(false);
-        tasksListPanel.SetActive(true);
+        proceduresListPanel.SetActive(true);
     }
 
     // Show second panel (TasksInfo) when selecting Egress
     private void ShowTasksInfo()
     {
-        tasksListPanel.SetActive(false);
+        proceduresListPanel.SetActive(false);
         proceduresPanel.SetActive(false);
-        tasksInfoPanel.SetActive(true);
+        proceduresInfoPanel.SetActive(true);
         
         // Populate steps for the selected procedure
         PopulateFirstSteps("Egress");
@@ -60,9 +61,21 @@ public class ProceduresFlowManager : MonoBehaviour
     // Show third panel (Procedures) when pressing Start
     private void ShowProcedures()
     {
-        tasksListPanel.SetActive(false);
-        tasksInfoPanel.SetActive(false);
+        proceduresListPanel.SetActive(false);
+        proceduresInfoPanel.SetActive(false);
         proceduresPanel.SetActive(true);
+        
+        // Initialize procedure in the procedure display
+        if (procedureDisplay != null)
+        {
+            procedureDisplay.LoadProcedure("EVA Egress");
+            
+            // Set up automation for the first task
+            if (procedureAutomation != null)
+            {
+                procedureAutomation.SetProcedureState("EVA Egress", "Connect UIA to DCU and start Depress", 0);
+            }
+        }
     }
 
     // Populate the steps in the TasksInfo panel

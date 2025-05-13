@@ -287,22 +287,52 @@ public class ProcedureDisplay : MonoBehaviour
             }
         }
 
-        // Update step items
-        for (int i = 0; i < procedureStepItems.Count; i++)
-        {
-            if (procedureStepItems[i] != null)
+            // Update step items
+            for (int i = 0; i < procedureStepItems.Count; i++)
             {
-                TextMeshProUGUI[] texts = procedureStepItems[i].GetComponentsInChildren<TextMeshProUGUI>();
-                foreach (var text in texts)
+                if (procedureStepItems[i] != null)
                 {
-                    if (i < currentStepIndex)
-                        text.color = completedStepColor;
-                    else if (i == currentStepIndex)
-                        text.color = activeStepColor;
-                    else
-                        text.color = inactiveStepColor;
+                    TextMeshProUGUI[] texts = procedureStepItems[i].GetComponentsInChildren<TextMeshProUGUI>();
+                    foreach (var text in texts)
+                    {
+                        if (i < currentStepIndex)
+                            text.color = completedStepColor;
+                        else if (i == currentStepIndex)
+                            text.color = activeStepColor;
+                        else
+                            text.color = inactiveStepColor;
+                    }
                 }
             }
         }
+
+        // New method for automatic step completion
+        public void CompleteCurrentStep()
+        {
+            if (currentProcedure == null || currentStepIndex < 0 || 
+                currentStepIndex >= currentProcedure.instructionSteps.Count)
+                return;
+        
+            // Mark the current step as completed
+            currentProcedure.instructionSteps[currentStepIndex].status = InstructionStatus.Completed;
+        
+            // Move to the next step
+            if (currentStepIndex < currentProcedure.instructionSteps.Count - 1)
+            {
+                currentStepIndex++;
+                currentProcedure.instructionSteps[currentStepIndex].status = InstructionStatus.InProgress;
+            }
+            else
+            {
+                // Procedure completed
+                if (onProcedureCompleted != null)
+                    onProcedureCompleted.Invoke();
+            }
+        
+            // Update display
+            DisplayCurrentStep();
+        
+            // Log the completion
+            Debug.Log($"ProcedureDisplay: Completed step {currentStepIndex} of procedure {currentProcedure.procedureName}");
+        }
     }
-}
