@@ -9,7 +9,7 @@ public class TasksFlowManager : MonoBehaviour
     [Header("Panel References")]
     [SerializeField] private GameObject proceduresListPanel; // the list of procedures. starting screen
     [SerializeField] private GameObject procedurePreviewPanel; // info about the procedure (ex: time it will take, consumables lost, etc)
-    [SerializeField] private GameObject taskPanel; // displays a task in the procedure
+    [SerializeField] private GameObject procedureTaskPanel; // displays a task in the procedure
     [SerializeField] private GameObject geoSamplingPanel; // Added reference to GeoSampling workflow
     
     [Header("UI Elements")]
