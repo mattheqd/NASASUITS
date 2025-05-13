@@ -36,7 +36,7 @@ public class ProceduresFlowManager : MonoBehaviour
 
     }
 
-    //---- Starting screen for procedures and geo sampling ----//
+    //* ---- Starting screens----//
     // the starting screen for procedures and geo sampling are the same
     // show the task preview panel for a single procedure (ex: egress)
     private void ShowProcedurePreview()
@@ -48,6 +48,23 @@ public class ProceduresFlowManager : MonoBehaviour
     {
         proceduresListPanel.SetActive(false);
         procedurePreviewPanel.SetActive(true);
+    }
+    //* ---- Button clicks ----//
+    // these buttons will be shown on the preview screens
+    private void OnStartButtonClick(Procedure procedure)
+    {
+        // HIde preview and show task panel
+        procedurePreviewPanel.SetActive(false);
+        procedureTaskPanel.SetActive(true);
+
+        // init procedure display
+        procedureDisplay.LoadProcedure(procedure as Procedure);
+    }
+    private void OnStartSamplingButtonClick()
+    {
+        // Hide preview and show task panel
+        procedurePreviewPanel.SetActive(false);
+        geoSamplingPanel.SetActive(true);
     }
 
     //---- Helper functions to display steps and details ----//
