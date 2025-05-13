@@ -305,4 +305,34 @@ using TMPro;
                 }
             }
         }
+
+        // New method for automatic step completion
+        public void CompleteCurrentStep()
+        {
+            if (currentProcedure == null || currentStepIndex < 0 || 
+                currentStepIndex >= currentProcedure.instructionSteps.Count)
+                return;
+        
+            // Mark the current step as completed
+            currentProcedure.instructionSteps[currentStepIndex].status = InstructionStatus.Completed;
+        
+            // Move to the next step
+            if (currentStepIndex < currentProcedure.instructionSteps.Count - 1)
+            {
+                currentStepIndex++;
+                currentProcedure.instructionSteps[currentStepIndex].status = InstructionStatus.InProgress;
+            }
+            else
+            {
+                // Procedure completed
+                if (onProcedureCompleted != null)
+                    onProcedureCompleted.Invoke();
+            }
+        
+            // Update display
+            DisplayCurrentStep();
+        
+            // Log the completion
+            Debug.Log($"ProcedureDisplay: Completed step {currentStepIndex} of procedure {currentProcedure.procedureName}");
+        }
     }
