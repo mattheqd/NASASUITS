@@ -1,5 +1,7 @@
+//* Manager to control the display of procedure content, step progression, and updating the ui to reflect the procedure state
+//* The Procedure Flow Manager will call this class to display the procedure or steps
+
 /**
- * Manager to control display of procedures and tracking of progress/status. 
  * These are the UI rules for the display:
  * ------ COLORS ------
  * - inProgressTextColor: #252525
@@ -42,20 +44,21 @@ public class ProcedureDisplay : MonoBehaviour
     /*------ UI Components ------*/
     // UI components for panel (title, panel, description, step number, progress)
     [Header("UI References")]
-    [SerializeField] private GameObject procedurePanel;
+    [SerializeField] private GameObject displayPanel; // main panel for the display of procedures and steps
     [SerializeField] private TextMeshProUGUI titleText;
-    [SerializeField] private TextMeshProUGUI descriptionText;
-    [SerializeField] private TextMeshProUGUI stepText;
+    // [SerializeField] private TextMeshProUGUI descriptionText;
+    [SerializeField] private TextMeshProUGUI stepText; // ex: "Step 1 of 3"
     [SerializeField] private TextMeshProUGUI progressText; // Shows "X/Y steps completed"
     [SerializeField] private Transform stepsPanel; // Container for all steps
     [SerializeField] private StepItem stepItemPrefab; // Prefab for individual step items
 
     // Navigation buttons to move next or start procedure
     [Header("Navigation Controls")]
-    [SerializeField] private Button nextButton;
-    [SerializeField] private Button completeStepButton; 
-    [SerializeField] private Button skipStepButton;
-    [SerializeField] private Button nextProcedureButton;
+    [SerializeField] private Button nextButton; // go to the next step
+    // [SerializeField] private Button completeStepButton; 
+    [SerializeField] private Button skipStepButton; // skip the current step
+    // removing this button for now
+    // [SerializeField] private Button nextTaskButton; // go to the next task
 
     // Progress indicators (i.e. progress bar)
     [Header("Progress Indicators")]
@@ -69,7 +72,7 @@ public class ProcedureDisplay : MonoBehaviour
     public UnityEvent onProcedureCompleted;
 
     // store current procedure as a reference
-    private Procedure currentProcedure;
+    private Procedure currentProcedure; 
     private int currentStepIndex = 0;
     private List<GameObject> stepIndicators = new List<GameObject>(); // list of step indicators for the progress bar
     private List<GameObject> stepItems = new List<GameObject>(); // list of step item GameObjects
