@@ -197,7 +197,7 @@ public class WebSocketClient : MonoBehaviour
                     WsDcuDataMessage wsDcuDataMsg = JsonUtility.FromJson<WsDcuDataMessage>(message);
                     if (wsDcuDataMsg != null && wsDcuDataMsg.data != null)
                     {
-                        Debug.Log($"[DcuData] EVA {wsDcuDataMsg.data.evaId}, Battery {wsDcuDataMsg.data.battery}%, Oxygen {wsDcuDataMsg.data.oxygen}%, Comm {wsDcuDataMsg.data.comm}%, Fan {wsDcuDataMsg.data.fan}%, Pump {wsDcuDataMsg.data.pump}%, CO2 {wsDcuDataMsg.data.co2}%");
+                        Debug.Log($"[DcuData] EVA {wsDcuDataMsg.data.evaId}, Battery {(wsDcuDataMsg.data.battery > 0 ? 1 : 0)}, Oxygen {(wsDcuDataMsg.data.oxygen > 0 ? 1 : 0)}, Comm {(wsDcuDataMsg.data.comm > 0 ? 1 : 0)}, Fan {(wsDcuDataMsg.data.fan > 0 ? 1 : 0)}, Pump {(wsDcuDataMsg.data.pump > 0 ? 1 : 0)}, CO2 {(wsDcuDataMsg.data.co2 > 0 ? 1 : 0)}");
                         HandleDcuDataMessage(wsDcuDataMsg.data);
                     }
                 }
@@ -206,7 +206,7 @@ public class WebSocketClient : MonoBehaviour
                     WsUiaDataMessage wsUiaDataMsg = JsonUtility.FromJson<WsUiaDataMessage>(message);
                     if (wsUiaDataMsg != null && wsUiaDataMsg.data != null)
                     {
-                        Debug.Log($"[UiaData] EMU1 Power {wsUiaDataMsg.data.emu1_power}%, EV1 Supply {wsUiaDataMsg.data.ev1_supply}%, EV1 Waste {wsUiaDataMsg.data.ev1_waste}%, EV1 Oxygen {wsUiaDataMsg.data.ev1_oxygen}%, EMU2 Power {wsUiaDataMsg.data.emu2_power}%, EV2 Supply {wsUiaDataMsg.data.ev2_supply}%, EV2 Waste {wsUiaDataMsg.data.ev2_waste}%, EV2 Oxygen {wsUiaDataMsg.data.ev2_oxygen}%, O2 Vent {wsUiaDataMsg.data.o2_vent}%, Depress Pump {wsUiaDataMsg.data.depress_pump}%");
+                        Debug.Log($"[UiaData] EMU1 Power {(wsUiaDataMsg.data.emu1_power > 0 ? 1 : 0)}, EV1 Supply {(wsUiaDataMsg.data.ev1_supply > 0 ? 1 : 0)}, EV1 Waste {(wsUiaDataMsg.data.ev1_waste > 0 ? 1 : 0)}, EV1 Oxygen {(wsUiaDataMsg.data.ev1_oxygen > 0 ? 1 : 0)}, EMU2 Power {(wsUiaDataMsg.data.emu2_power > 0 ? 1 : 0)}, EV2 Supply {(wsUiaDataMsg.data.ev2_supply > 0 ? 1 : 0)}, EV2 Waste {(wsUiaDataMsg.data.ev2_waste > 0 ? 1 : 0)}, EV2 Oxygen {(wsUiaDataMsg.data.ev2_oxygen > 0 ? 1 : 0)}, O2 Vent {(wsUiaDataMsg.data.o2_vent > 0 ? 1 : 0)}, Depress Pump {(wsUiaDataMsg.data.depress_pump > 0 ? 1 : 0)}");
                         HandleUiaDataMessage(wsUiaDataMsg.data);
                     }
                 }
@@ -286,7 +286,7 @@ public class WebSocketClient : MonoBehaviour
         DcuData dcuData = data as DcuData;
         if (dcuData != null)
         {
-            Debug.Log($"[HandleDcuDataMessage] EVA {dcuData.evaId}, Battery {dcuData.battery}%, Oxygen {dcuData.oxygen}%, Comm {dcuData.comm}%, Fan {dcuData.fan}%, Pump {dcuData.pump}%, CO2 {dcuData.co2}%");
+            Debug.Log($"[HandleDcuDataMessage] EVA {dcuData.evaId}, Battery {(dcuData.battery > 0 ? 1 : 0)}, Oxygen {(dcuData.oxygen > 0 ? 1 : 0)}, Comm {(dcuData.comm > 0 ? 1 : 0)}, Fan {(dcuData.fan > 0 ? 1 : 0)}, Pump {(dcuData.pump > 0 ? 1 : 0)}, CO2 {(dcuData.co2 > 0 ? 1 : 0)}");
         }
         else
         {
@@ -301,7 +301,7 @@ public class WebSocketClient : MonoBehaviour
         UiaData uiaData = data as UiaData;
         if (uiaData != null)
         {
-            Debug.Log($"[HandleUiaDataMessage] EMU1 Power {uiaData.emu1_power}%, EV1 Supply {uiaData.ev1_supply}%, EV1 Waste {uiaData.ev1_waste}%, EV1 Oxygen {uiaData.ev1_oxygen}%, EMU2 Power {uiaData.emu2_power}%, EV2 Supply {uiaData.ev2_supply}%, EV2 Waste {uiaData.ev2_waste}%, EV2 Oxygen {uiaData.ev2_oxygen}%, O2 Vent {uiaData.o2_vent}%, Depress Pump {uiaData.depress_pump}%");
+            Debug.Log($"[HandleUiaDataMessage] EMU1 Power {(uiaData.emu1_power > 0 ? 1 : 0)}, EV1 Supply {(uiaData.ev1_supply > 0 ? 1 : 0)}, EV1 Waste {(uiaData.ev1_waste > 0 ? 1 : 0)}, EV1 Oxygen {(uiaData.ev1_oxygen > 0 ? 1 : 0)}, EMU2 Power {(uiaData.emu2_power > 0 ? 1 : 0)}, EV2 Supply {(uiaData.ev2_supply > 0 ? 1 : 0)}, EV2 Waste {(uiaData.ev2_waste > 0 ? 1 : 0)}, EV2 Oxygen {(uiaData.ev2_oxygen > 0 ? 1 : 0)}, O2 Vent {(uiaData.o2_vent > 0 ? 1 : 0)}, Depress Pump {(uiaData.depress_pump > 0 ? 1 : 0)}");
         }
         else
         {
