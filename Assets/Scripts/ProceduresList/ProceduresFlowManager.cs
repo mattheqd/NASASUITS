@@ -46,6 +46,10 @@ public class ProceduresFlowManager : MonoBehaviour
         }
     }
 
+    //* ---- Starting screens----//
+    // the starting screen for procedures and geo sampling are the same
+    // show the task preview panel for a single procedure (ex: egress)
+    // private void ShowProcedurePreview()
     // Show first panel (TasksList)
     private void ShowTasksList()
     {
