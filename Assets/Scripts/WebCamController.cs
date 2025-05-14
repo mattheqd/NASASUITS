@@ -13,7 +13,8 @@ public class WebCamController : MonoBehaviour
     private TextMeshProUGUI debugText;
 
     private Texture2D cameraTexture;
-    private const int CAMERA_SIZE = 640; // Square resolution
+    private int cameraWidth;
+    private int cameraHeight;
 
     private void LogToScreen(string message)
     {
@@ -56,13 +57,15 @@ public class WebCamController : MonoBehaviour
         // Set up the display image
         if (displayImage != null)
         {
-            // Make RawImage square
-            displayImage.rectTransform.sizeDelta = new Vector2(CAMERA_SIZE, CAMERA_SIZE);
+            // Get the actual size of the RawImage
+            cameraWidth = Mathf.RoundToInt(displayImage.rectTransform.rect.width);
+            cameraHeight = Mathf.RoundToInt(displayImage.rectTransform.rect.height);
+            
             // Center the RawImage
             displayImage.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             displayImage.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             displayImage.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            LogToScreen($"RawImage size set to {CAMERA_SIZE}x{CAMERA_SIZE}");
+            LogToScreen($"RawImage size set to {cameraWidth}x{cameraHeight}");
         }
     }
 
@@ -76,8 +79,8 @@ public class WebCamController : MonoBehaviour
         {
             if (path != null)
             {
-                // Load the captured image
-                Texture2D texture = NativeCamera.LoadImageAtPath(path, CAMERA_SIZE);
+                // Load the captured image with the RawImage's dimensions
+                Texture2D texture = NativeCamera.LoadImageAtPath(path, Mathf.Max(cameraWidth, cameraHeight));
                 if (texture != null)
                 {
                     // Update the display
@@ -98,7 +101,7 @@ public class WebCamController : MonoBehaviour
             {
                 LogToScreen("Camera capture cancelled");
             }
-        }, CAMERA_SIZE);
+        }, Mathf.Max(cameraWidth, cameraHeight));
     }
 
     void OnDestroy()
