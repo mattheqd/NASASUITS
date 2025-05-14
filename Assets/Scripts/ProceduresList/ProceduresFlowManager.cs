@@ -12,6 +12,8 @@ public class ProceduresFlowManager : MonoBehaviour
     
     [Header("UI Elements")]
     [SerializeField] private Button egressButton;          // Button to go from TasksList to TasksInfo
+
+    [SerializeField] private Button samplingButton;   
     [SerializeField] private Button backButton;            // Button to go back from TasksInfo to TasksList
     [SerializeField] private Button startButton;           // Button to go from TasksInfo to Procedures
     [SerializeField] private Button verifyManuallyButton;  // Button to manually verify umbilical connection
@@ -38,12 +40,18 @@ public class ProceduresFlowManager : MonoBehaviour
         egressButton.onClick.AddListener(ShowTasksInfo);
         backButton.onClick.AddListener(ShowTasksList);
         startButton.onClick.AddListener(ShowProcedures);
+        samplingButton.onClick.AddListener(ShowSampling);
         
         // Connect manual verification button if available
         if (verifyManuallyButton != null)
         {
             verifyManuallyButton.onClick.AddListener(VerifyManualStep);
         }
+    }
+
+    private void ShowSampling()
+    {
+        proceduresListPanel.SetActive(false);
     }
 
     // Show first panel (TasksList)

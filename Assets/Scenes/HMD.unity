@@ -13510,6 +13510,7 @@ MonoBehaviour:
   proceduresInfoPanel: {fileID: 1311624314}
   proceduresPanel: {fileID: 2098142302}
   egressButton: {fileID: 1407975909}
+  samplingButton: {fileID: 2101594099}
   backButton: {fileID: 718302586}
   startButton: {fileID: 1896941593}
   verifyManuallyButton: {fileID: 0}
