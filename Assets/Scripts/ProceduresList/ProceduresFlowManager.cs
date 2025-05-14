@@ -14,6 +14,7 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private Button egressButton;          // Button to go from TasksList to TasksInfo
     [SerializeField] private Button backButton;            // Button to go back from TasksInfo to TasksList
     [SerializeField] private Button startButton;           // Button to go from TasksInfo to Procedures
+    [SerializeField] private Button verifyManuallyButton;  // Button to manually verify umbilical connection
 
     [SerializeField] private Transform stepsContainer;     // Contains series of steps in TasksInfo
     [SerializeField] private StepItem stepItemPrefab;      // Prefab for each step
@@ -21,6 +22,10 @@ public class ProceduresFlowManager : MonoBehaviour
     [Header("Procedure References")]
     [SerializeField] private ProcedureDisplay procedureDisplay; // Main procedure handler
     [SerializeField] private ProcedureAutomation procedureAutomation; // Handles automation of steps
+
+    // Target task name for this MVP
+    private const string PROCEDURE_NAME = "EVA Egress";
+    private const string TARGET_TASK_NAME = "Connect UIA to DCU and start Depress";
 
     private void Awake()
     {
@@ -33,6 +38,12 @@ public class ProceduresFlowManager : MonoBehaviour
         egressButton.onClick.AddListener(ShowTasksInfo);
         backButton.onClick.AddListener(ShowTasksList);
         startButton.onClick.AddListener(ShowProcedures);
+        
+        // Connect manual verification button if available
+        if (verifyManuallyButton != null)
+        {
+            verifyManuallyButton.onClick.AddListener(VerifyManualStep);
+        }
     }
 
     // Show first panel (TasksList)
@@ -50,8 +61,8 @@ public class ProceduresFlowManager : MonoBehaviour
         proceduresPanel.SetActive(false);
         proceduresInfoPanel.SetActive(true);
         
-        // Populate steps for the selected procedure
-        PopulateFirstSteps("Egress");
+        // Populate steps for the selected task only
+        PopulateTaskSteps();
     }
 
     // Show third panel (Procedures) when pressing Start
@@ -61,23 +72,43 @@ public class ProceduresFlowManager : MonoBehaviour
         proceduresInfoPanel.SetActive(false);
         proceduresPanel.SetActive(true);
         
-        // Initialize procedure in the procedure display
+        // Initialize procedure in the procedure display with only the target task
         if (procedureDisplay != null)
         {
-            procedureDisplay.LoadProcedure("EVA Egress");
+            // Get only the specific task instead of the whole procedure
+            Procedure taskProcedure = ProcedureManager.Instance.GetSpecificTask(PROCEDURE_NAME, TARGET_TASK_NAME);
             
-            // Set up automation for the first task
-            if (procedureAutomation != null)
+            if (taskProcedure != null)
             {
-                procedureAutomation.SetProcedureState("EVA Egress", "Connect UIA to DCU and start Depress", 0);
+                // Load only this task's steps
+                procedureDisplay.LoadCustomProcedure(taskProcedure);
+                
+                // Set up automation for this task
+                if (procedureAutomation != null)
+                {
+                    procedureAutomation.SetProcedureState(PROCEDURE_NAME, TARGET_TASK_NAME, 0);
+                    Debug.Log($"ProceduresFlowManager: Setup automation for task '{TARGET_TASK_NAME}'");
+                }
+                else
+                {
+                    Debug.LogError("ProceduresFlowManager: procedureAutomation reference is missing");
+                }
             }
+            else
+            {
+                Debug.LogError($"ProceduresFlowManager: Failed to load task '{TARGET_TASK_NAME}'");
+            }
+        }
+        else
+        {
+            Debug.LogError("ProceduresFlowManager: procedureDisplay reference is missing");
         }
     }
 
     // Populate the steps in the TasksInfo panel
-    private void PopulateFirstSteps(string procedureName)
+    private void PopulateTaskSteps()
     {
-        Debug.Log($"ProceduresFlowManager: PopulateFirstSteps called for '{procedureName}'");
+        Debug.Log($"ProceduresFlowManager: Populating steps for '{TARGET_TASK_NAME}'");
         
         if (ProcedureManager.Instance == null)
         {
@@ -85,10 +116,11 @@ public class ProceduresFlowManager : MonoBehaviour
             return;
         }
         
-        var proc = ProcedureManager.Instance.GetProcedure(procedureName);
-        if (proc == null)
+        // Get only the specific task
+        var taskProc = ProcedureManager.Instance.GetSpecificTask(PROCEDURE_NAME, TARGET_TASK_NAME);
+        if (taskProc == null)
         {
-            Debug.LogError($"ProceduresFlowManager: Procedure '{procedureName}' not found");
+            Debug.LogError($"ProceduresFlowManager: Task '{TARGET_TASK_NAME}' not found");
             return;
         }
         
@@ -102,12 +134,20 @@ public class ProceduresFlowManager : MonoBehaviour
         foreach (Transform child in stepsContainer) 
             Destroy(child.gameObject);
         
-        // Populate steps for this procedure
-        int count = Mathf.Min(5, proc.instructionSteps.Count); // Show first 5 steps or less
-        for (int i = 0; i < count; i++)
+        // Populate steps for this task
+        for (int i = 0; i < taskProc.instructionSteps.Count; i++)
         {
             var item = Instantiate(stepItemPrefab, stepsContainer);
-            item.SetStep(i + 1, proc.instructionSteps[i].instructionText);
+            item.SetStep(i + 1, taskProc.instructionSteps[i].instructionText);
+        }
+    }
+
+    // Method to manually verify the first step (umbilical connection)
+    private void VerifyManualStep()
+    {
+        if (procedureAutomation != null)
+        {
+            procedureAutomation.ManualCompleteStep();
         }
     }
 } 

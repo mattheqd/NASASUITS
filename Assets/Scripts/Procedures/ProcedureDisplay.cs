@@ -119,13 +119,27 @@ using TMPro;
         {
             if (ProcedureManager.Instance == null)
             {
-                Debug.LogError("ProcedureManager instance not found!");
-                return;
+                Debug.Log("No ProcedureManager instance found. Creating one now.");
+                ProcedureManager.GetOrCreateInstance();
+                
+                if (ProcedureManager.Instance == null)
+                {
+                    Debug.LogError("Failed to create ProcedureManager instance!");
+                    return;
+                }
             }
 
             // get the procedure from the manager
             Procedure procedure = ProcedureManager.Instance.GetProcedure(procedureName);
-            if (procedure != null) DisplayProcedure(procedure);
+            if (procedure != null) 
+            {
+                Debug.Log($"LoadProcedure: Found procedure '{procedureName}' with {procedure.instructionSteps?.Count ?? 0} steps");
+                DisplayProcedure(procedure);
+            }
+            else
+            {
+                Debug.LogError($"LoadProcedure: Procedure '{procedureName}' not found");
+            }
         }
 
         // display procedure
@@ -154,6 +168,19 @@ using TMPro;
             
             // Display current state (no step highlighted)
             DisplayCurrentStep();
+        }
+        
+        // Load a custom procedure object directly (used to load specific tasks)
+        public void LoadCustomProcedure(Procedure customProcedure)
+        {
+            if (customProcedure == null)
+            {
+                Debug.LogError("LoadCustomProcedure: Null procedure provided");
+                return;
+            }
+            
+            Debug.Log($"LoadCustomProcedure: Loading custom procedure '{customProcedure.procedureName}' with {customProcedure.instructionSteps?.Count ?? 0} steps");
+            DisplayProcedure(customProcedure);
         }
         
         //*------ Navigation Functions ------*/

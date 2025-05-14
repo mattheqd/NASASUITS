@@ -129,13 +129,17 @@ public class WebSocketClient : MonoBehaviour
 {
     private WebSocket ws;
     private Dictionary<string, List<Action<object>>> messageHandlers = new Dictionary<string, List<Action<object>>>();
-    private string serverUrl = "ws://localhost:3000/ws";
+    private string serverUrl = "wss://479c-128-195-95-17.ngrok-free.app/ws";
     private bool isConnected = false;
     private float reconnectDelay = 5f;
     private float lastReconnectAttempt = 0f;
     private bool isReconnecting = false;
 
     public static WebSocketClient Instance { get; private set; } // create a single instance of the websocket client
+
+    // Latest data properties that other components can access
+    public static UiaData LatestUiaData { get; private set; }
+    public static DcuData LatestDcuData { get; private set; }
 
     private void Awake() {
         if (Instance != null && Instance != this) {
@@ -181,14 +185,13 @@ public class WebSocketClient : MonoBehaviour
 
             ws.OnMessage += (sender, e) => {
                 string message = e.Data;
-                Debug.Log($"[WS RAW] {message}");
                 
                 if (message.Contains("\"type\":\"rock_data\"") || message.Contains("\"type\": \"rock_data\""))
                 {
                     WsRockDataMessage wsRockDataMsg = JsonUtility.FromJson<WsRockDataMessage>(message);
                     if (wsRockDataMsg != null && wsRockDataMsg.data != null)
                     {
-                        Debug.Log($"[RockData] EVA {wsRockDataMsg.data.evaId}, SPEC {wsRockDataMsg.data.specId}, O2 {wsRockDataMsg.data.oxygen}%, Water {wsRockDataMsg.data.water}%, CO2 {wsRockDataMsg.data.co2}%, H2 {wsRockDataMsg.data.h2}%, N2 {wsRockDataMsg.data.n2}%, Other {wsRockDataMsg.data.other}%, Temp {wsRockDataMsg.data.temperature}°C, Pressure {wsRockDataMsg.data.pressure}Pa, Humidity {wsRockDataMsg.data.humidity}%, Light {wsRockDataMsg.data.light}lux");
+                        Debug.Log($"[RockData] Received rock data for EVA {wsRockDataMsg.data.evaId}");
                         HandleRockDataMessage(wsRockDataMsg.data);
                     }
                 }
@@ -197,7 +200,7 @@ public class WebSocketClient : MonoBehaviour
                     WsDcuDataMessage wsDcuDataMsg = JsonUtility.FromJson<WsDcuDataMessage>(message);
                     if (wsDcuDataMsg != null && wsDcuDataMsg.data != null)
                     {
-                        Debug.Log($"[DcuData] EVA {wsDcuDataMsg.data.evaId}, Battery {(wsDcuDataMsg.data.battery > 0 ? 1 : 0)}, Oxygen {(wsDcuDataMsg.data.oxygen > 0 ? 1 : 0)}, Comm {(wsDcuDataMsg.data.comm > 0 ? 1 : 0)}, Fan {(wsDcuDataMsg.data.fan > 0 ? 1 : 0)}, Pump {(wsDcuDataMsg.data.pump > 0 ? 1 : 0)}, CO2 {(wsDcuDataMsg.data.co2 > 0 ? 1 : 0)}");
+                        Debug.Log($"[DCU_DATA] EVA {wsDcuDataMsg.data.evaId}, Battery: {wsDcuDataMsg.data.battery}");
                         HandleDcuDataMessage(wsDcuDataMsg.data);
                     }
                 }
@@ -206,7 +209,7 @@ public class WebSocketClient : MonoBehaviour
                     WsUiaDataMessage wsUiaDataMsg = JsonUtility.FromJson<WsUiaDataMessage>(message);
                     if (wsUiaDataMsg != null && wsUiaDataMsg.data != null)
                     {
-                        Debug.Log($"[UiaData] EMU1 Power {(wsUiaDataMsg.data.emu1_power > 0 ? 1 : 0)}, EV1 Supply {(wsUiaDataMsg.data.ev1_supply > 0 ? 1 : 0)}, EV1 Waste {(wsUiaDataMsg.data.ev1_waste > 0 ? 1 : 0)}, EV1 Oxygen {(wsUiaDataMsg.data.ev1_oxygen > 0 ? 1 : 0)}, EMU2 Power {(wsUiaDataMsg.data.emu2_power > 0 ? 1 : 0)}, EV2 Supply {(wsUiaDataMsg.data.ev2_supply > 0 ? 1 : 0)}, EV2 Waste {(wsUiaDataMsg.data.ev2_waste > 0 ? 1 : 0)}, EV2 Oxygen {(wsUiaDataMsg.data.ev2_oxygen > 0 ? 1 : 0)}, O2 Vent {(wsUiaDataMsg.data.o2_vent > 0 ? 1 : 0)}, Depress Pump {(wsUiaDataMsg.data.depress_pump > 0 ? 1 : 0)}");
+                        Debug.Log($"[UIA_DATA] EMU1 Power: {wsUiaDataMsg.data.emu1_power}, Depress Pump: {wsUiaDataMsg.data.depress_pump}");
                         HandleUiaDataMessage(wsUiaDataMsg.data);
                     }
                 }
@@ -264,11 +267,10 @@ public class WebSocketClient : MonoBehaviour
 
     private void HandleRockDataMessage(object data)
     {
-        Debug.Log($"[HandleRockDataMessage] Data: {data}");
         RockData rockData = data as RockData;
         if (rockData != null)
         {
-            Debug.Log($"[HandleRockDataMessage] EVA {rockData.evaId}, SPEC {rockData.specId}, O2 {rockData.oxygen}, Water {rockData.water}, CO2 {rockData.co2}, H2 {rockData.h2}, N2 {rockData.n2}, Other {rockData.other}, Temp {rockData.temperature}, Pressure {rockData.pressure}, Humidity {rockData.humidity}, Light {rockData.light}");
+            // Remove redundant detailed logs
         }
         else
         {
@@ -282,32 +284,34 @@ public class WebSocketClient : MonoBehaviour
 
     private void HandleDcuDataMessage(object data)
     {
-        Debug.Log($"[HandleDcuDataMessage] Data: {data}");
         DcuData dcuData = data as DcuData;
-        if (dcuData != null)
+        if (dcuData == null)
         {
-            Debug.Log($"[HandleDcuDataMessage] EVA {dcuData.evaId}, Battery {(dcuData.battery > 0 ? 1 : 0)}, Oxygen {(dcuData.oxygen > 0 ? 1 : 0)}, Comm {(dcuData.comm > 0 ? 1 : 0)}, Fan {(dcuData.fan > 0 ? 1 : 0)}, Pump {(dcuData.pump > 0 ? 1 : 0)}, CO2 {(dcuData.co2 > 0 ? 1 : 0)}");
+            Debug.LogError($"[DCU] Data is not a DcuData object: {data?.GetType()}");
+            return;
         }
-        else
-        {
-            Debug.LogError($"[HandleDcuDataMessage] Data is not a DcuData object, it is {data?.GetType()}");
-        }
-        // You can add additional handling here later
+        
+        // Store the latest DCU data
+        LatestDcuData = dcuData;
+        
+        // Keep only essential log info
+        Debug.Log($"[DCU_UPDATE] EVA: {dcuData.evaId}, Battery: {dcuData.battery}");
     }
 
     private void HandleUiaDataMessage(object data)
     {
-        Debug.Log($"[HandleUiaDataMessage] Data: {data}");
         UiaData uiaData = data as UiaData;
-        if (uiaData != null)
+        if (uiaData == null)
         {
-            Debug.Log($"[HandleUiaDataMessage] EMU1 Power {(uiaData.emu1_power > 0 ? 1 : 0)}, EV1 Supply {(uiaData.ev1_supply > 0 ? 1 : 0)}, EV1 Waste {(uiaData.ev1_waste > 0 ? 1 : 0)}, EV1 Oxygen {(uiaData.ev1_oxygen > 0 ? 1 : 0)}, EMU2 Power {(uiaData.emu2_power > 0 ? 1 : 0)}, EV2 Supply {(uiaData.ev2_supply > 0 ? 1 : 0)}, EV2 Waste {(uiaData.ev2_waste > 0 ? 1 : 0)}, EV2 Oxygen {(uiaData.ev2_oxygen > 0 ? 1 : 0)}, O2 Vent {(uiaData.o2_vent > 0 ? 1 : 0)}, Depress Pump {(uiaData.depress_pump > 0 ? 1 : 0)}");
+            Debug.LogError($"[UIA] Data is not a UiaData object: {data?.GetType()}");
+            return;
         }
-        else
-        {
-            Debug.LogError($"[HandleUiaDataMessage] Data is not a UiaData object, it is {data?.GetType()}");
-        }
-        // You can add additional handling here later
+        
+        // Store the latest UIA data
+        LatestUiaData = uiaData;
+        
+        // Keep only essential log info
+        Debug.Log($"[UIA_UPDATE] EMU1 Power: {uiaData.emu1_power}, Depress Pump: {uiaData.depress_pump}");
     }
 
     public void Send(string type, object data)
@@ -348,5 +352,23 @@ public class WebSocketClient : MonoBehaviour
         if (ws != null) {
             ws.Close();
         }
+    }
+
+    // Debug method to set UIA data for testing
+    public static void SetTestUiaData(UiaData testData)
+    {
+        if (testData == null) return;
+        
+        LatestUiaData = testData;
+        Debug.Log($"[TEST_UIA] EMU1 Power: {testData.emu1_power}, Depress Pump: {testData.depress_pump}");
+    }
+    
+    // Debug method to set DCU data for testing
+    public static void SetTestDcuData(DcuData testData)
+    {
+        if (testData == null) return;
+        
+        LatestDcuData = testData;
+        Debug.Log($"[TEST_DCU] EVA ID: {testData.evaId}, Battery: {testData.battery}");
     }
 }
