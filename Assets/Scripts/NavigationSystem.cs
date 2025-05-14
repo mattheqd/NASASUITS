@@ -47,6 +47,18 @@ public class NavigationSystem : MonoBehaviour
     private int currentCoordinateIndex = 0;
     private float moveTimer = 0f;
 
+    [Header("Path Visualization")]
+    public float pathLineWidth = 2f;
+    public float pathLineScale = 1f;
+    public float hazardDotSize = 4f;
+    public float worldScaleReference = 1f;
+    [Tooltip("Use this to make more aggressive scaling adjustments")]
+    public float worldScaleMultiplier = 10f;
+    [Tooltip("Additional multiplier for line width in world space")]
+    public float lineWidthWorldSpaceMultiplier = 0.1f;
+    [Tooltip("Additional multiplier for line length in world space")]
+    public float lineLengthWorldSpaceMultiplier = 0.2f;
+
     // Predefined coordinates for movement
     private readonly Vector2[] movementCoordinates = new Vector2[]
     {
@@ -419,6 +431,13 @@ public class NavigationSystem : MonoBehaviour
         }
     }
 
+    private float GetMinimapWorldScale()
+    {
+        // Get the overall world scale factor (average of x and y scale)
+        // Multiply by the multiplier to make scaling more aggressive
+        return (minimapRect.lossyScale.x + minimapRect.lossyScale.y) * 0.5f / worldScaleReference * worldScaleMultiplier;
+    }
+
     void DrawPathUI(List<Node> path)
     {
         // Clear old dots
@@ -433,6 +452,9 @@ public class NavigationSystem : MonoBehaviour
 
         // Start with the start node position
         Vector2 previousPos = WorldToMinimap(startNode.position);
+
+        // Get the world scale factor
+        float worldScale = GetMinimapWorldScale();
 
         // Process each node in the path
         for (int i = 0; i < path.Count; i++)
@@ -457,12 +479,17 @@ public class NavigationSystem : MonoBehaviour
 
             // Calculate line properties
             Vector2 direction = currentPos - previousPos;
-            float distance = direction.magnitude * 0.5f; // Halve the distance
+            
+            // Apply more aggressive scaling to the length
+            float distance = direction.magnitude * pathLineScale * lineLengthWorldSpaceMultiplier;
             float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+
+            // Scale line width based on world scale with additional multiplier
+            float scaledLineWidth = pathLineWidth / worldScale * lineWidthWorldSpaceMultiplier;
 
             // Set line properties
             lineRect.anchoredPosition = previousPos;
-            lineRect.sizeDelta = new Vector2(distance, 6f);
+            lineRect.sizeDelta = new Vector2(distance, scaledLineWidth);
             lineRect.localRotation = Quaternion.Euler(0, 0, angle);
             pathDots.Add(lineObj);
 
@@ -483,6 +510,12 @@ public class NavigationSystem : MonoBehaviour
         hazardTexture.Apply();
         Sprite hazardSprite = Sprite.Create(hazardTexture, new Rect(0, 0, 1, 1), new Vector2(0, 0));
 
+        // Get the world scale factor
+        float worldScale = GetMinimapWorldScale();
+        
+        // Scale dot size based on world scale with much more aggressive scaling
+        float scaledDotSize = hazardDotSize / worldScale * lineWidthWorldSpaceMultiplier;
+
         // Create hazard dots for each hazard node
         foreach (Node node in allNodes)
         {
@@ -501,7 +534,7 @@ public class NavigationSystem : MonoBehaviour
                 hazardRect.pivot = Vector2.zero;
 
                 // Set size and position
-                hazardRect.sizeDelta = new Vector2(4f, 4f);
+                hazardRect.sizeDelta = new Vector2(scaledDotSize, scaledDotSize);
                 hazardRect.anchoredPosition = WorldToMinimap(node.position);
                 hazardDots.Add(hazardObj);
             }

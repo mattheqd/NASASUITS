@@ -114,54 +114,81 @@ public class ProcedureDisplay : MonoBehaviour
             procedureNextButton.onClick.RemoveListener(GoToNextStep);
     }
 
-    // load sets of instructions based on a procedure name
-    public void LoadProcedure(string procedureName)
-    {
-        if (ProcedureManager.Instance == null)
+        // load sets of instructions based on a procedure name
+        public void LoadProcedure(string procedureName)
         {
-            Debug.LogError("ProcedureManager instance not found!");
-            return;
+            if (ProcedureManager.Instance == null)
+            {
+                Debug.Log("No ProcedureManager instance found. Creating one now.");
+                ProcedureManager.GetOrCreateInstance();
+                
+                if (ProcedureManager.Instance == null)
+                {
+                    Debug.LogError("Failed to create ProcedureManager instance!");
+                    return;
+                }
+            }
+
+            // get the procedure from the manager
+            Procedure procedure = ProcedureManager.Instance.GetProcedure(procedureName);
+            if (procedure != null) 
+            {
+                Debug.Log($"LoadProcedure: Found procedure '{procedureName}' with {procedure.instructionSteps?.Count ?? 0} steps");
+                DisplayProcedure(procedure);
+            }
+            else
+            {
+                Debug.LogError($"LoadProcedure: Procedure '{procedureName}' not found");
+            }
         }
 
-        // get the procedure from the manager
-        Procedure procedure = ProcedureManager.Instance.GetProcedure(procedureName);
-        if (procedure != null) DisplayProcedure(procedure);
-    }
-
-    // display procedure
-    public void DisplayProcedure(Procedure procedure)
-    {
-        // Store the current procedure
-        currentProcedure = procedure;
-        currentStepIndex = -1; // Start with no step highlighted
-        
-        // Reset all steps
-        foreach (var step in currentProcedure.instructionSteps)
+        // display procedure
+        public void DisplayProcedure(Procedure procedure)
         {
-            step.status = InstructionStatus.NotStarted;
+            // Store the current procedure
+            currentProcedure = procedure;
+            currentStepIndex = -1; // Start with no step highlighted
+            
+            // Reset all steps
+            foreach (var step in currentProcedure.instructionSteps)
+            {
+                step.status = InstructionStatus.NotStarted;
+            }
+            
+            // Setup UI
+            procedureTitleText.text = procedure.procedureName;
+            procedureStepText.text = "";
+            procedureProgressText.text = $"0/{procedure.instructionSteps.Count} steps completed";
+            
+            CreateProcedureStepIndicators(procedure.instructionSteps.Count);
+            CreateProcedureStepItems(procedure.instructionSteps);
+            
+            // Make sure panel is visible
+            procedureDisplayPanel.SetActive(true);
+            
+            // Display current state (no step highlighted)
+            DisplayCurrentStep();
         }
         
-        // Setup UI
-        procedureTitleText.text = procedure.procedureName;
-        procedureStepText.text = "";
-        procedureProgressText.text = $"0/{procedure.instructionSteps.Count} steps completed";
+        // Load a custom procedure object directly (used to load specific tasks)
+        public void LoadCustomProcedure(Procedure customProcedure)
+        {
+            if (customProcedure == null)
+            {
+                Debug.LogError("LoadCustomProcedure: Null procedure provided");
+                return;
+            }
+            
+            Debug.Log($"LoadCustomProcedure: Loading custom procedure '{customProcedure.procedureName}' with {customProcedure.instructionSteps?.Count ?? 0} steps");
+            DisplayProcedure(customProcedure);
+        }
         
-        CreateProcedureStepIndicators(procedure.instructionSteps.Count);
-        CreateProcedureStepItems(procedure.instructionSteps);
-        
-        // Make sure panel is visible
-        procedureDisplayPanel.SetActive(true);
-        
-        // Display current state (no step highlighted)
-        DisplayCurrentStep();
-    }
-    
-    //*------ Navigation Functions ------*/
-    // Go to the next step in the procedure
-    // called when user presses on the next button 
-    public void GoToNextStep()
-    {
-        if (currentProcedure == null) return;
+        //*------ Navigation Functions ------*/
+        // Go to the next step in the procedure
+        // called when user presses on the next button 
+        public void GoToNextStep()
+        {
+            if (currentProcedure == null) return;
 
         // If we're at the last step, go back to the first step
         if (currentStepIndex >= currentProcedure.instructionSteps.Count - 1)
