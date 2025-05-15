@@ -50,7 +50,8 @@ public class ProcedureDisplay : MonoBehaviour
     [SerializeField] private TextMeshProUGUI TaskStepText; // ex: "Step 1 of 3"
     [SerializeField] private TextMeshProUGUI TaskProgressText; // Shows "X/Y steps completed"
     [SerializeField] private Transform TaskStepsPanel; // Container for all steps
-    [SerializeField] private StepItem TaskStepItemPrefab; // Prefab for individual step items
+    [SerializeField] private GameObject StepPanel; // Container for a single step
+    [SerializeField] private GameObject StepItemPrefab; // Prefab for a single step
 
     // Navigation buttons to move next or start procedure
     [Header("Navigation Controls")]
@@ -63,7 +64,7 @@ public class ProcedureDisplay : MonoBehaviour
     // Progress indicators (i.e. progress bar)
     [Header("Progress Indicators")]
     [SerializeField] private Transform TaskStepIndicatorContainer;
-    [SerializeField] private GameObject TaskStepIndicatorPrefab;
+    [SerializeField] private GameObject StepIndicatorTemplate;
     [SerializeField] private Color ActiveStepColor = Color.cyan;
     [SerializeField] private Color InactiveStepColor = Color.gray;
     [SerializeField] private Color CompletedStepColor = Color.cyan;
@@ -84,8 +85,8 @@ public class ProcedureDisplay : MonoBehaviour
         // Check for required components
         if (TitleText == null || TaskStepText == null || 
             TaskNextButton == null ||
-            TaskStepIndicatorContainer == null || TaskStepIndicatorPrefab == null ||
-            TaskProgressText == null || TaskStepsPanel == null || TaskStepItemPrefab == null)
+            TaskStepIndicatorContainer == null || StepIndicatorTemplate == null ||
+            TaskProgressText == null || TaskStepsPanel == null || StepIndicatorTemplate == null)
         {
             Debug.LogError("ProcedureDisplay: Missing required UI component references!");
         }
@@ -117,6 +118,7 @@ public class ProcedureDisplay : MonoBehaviour
             TaskSkipStepButton.onClick.RemoveListener(SkipStep);
     }
 
+    //* -------- Extract procedure data from JSON --------*//
     // Load a procedure with all its steps from the JSON file
     public void LoadProcedure(ProcedureSystem.Procedure procedure)
     {
@@ -130,14 +132,14 @@ public class ProcedureDisplay : MonoBehaviour
         CurrentProcedure = procedure;
         currentStepIndex = 0;
 
-        // Set procedure title
+        // Set title (procedure name or task name)
         if (TitleText != null)
         {
-            TitleText.text = $"Procedure: {procedure.procedureName}";
-            // If taskName exists and is different from procedureName, add it
+            TitleText.text = $"{procedure.procedureName}";
+            // If we are displaying a task instead of a procedure, display the task name
             if (!string.IsNullOrEmpty(procedure.taskName) && procedure.taskName != procedure.procedureName)
             {
-                TitleText.text += $" - {procedure.taskName}";
+                TitleText.text = $"{procedure.taskName}";
             }
         }
 
@@ -154,15 +156,17 @@ public class ProcedureDisplay : MonoBehaviour
         // Create new step items
         for (int i = 0; i < procedure.instructionSteps.Count; i++)
         {
-            StepItem stepItem = Instantiate(TaskStepItemPrefab, TaskStepsPanel);
-            string stepText = procedure.instructionSteps[i].instructionText;
-            stepItem.SetStep(i + 1, stepText);
+            GameObject stepObj = Instantiate(StepItemPrefab, TaskStepsPanel);
+            StepItem stepItem = stepObj.GetComponent<StepItem>();
             
-            // Store the game object
-            TaskStepItems.Add(stepItem.gameObject);
+            if (stepItem != null)
+            {
+                stepItem.SetStep(i + 1, procedure.instructionSteps[i].instructionText);
+                TaskStepItems.Add(stepObj);
+            }
             
             // Initially hide all steps except the first one
-            stepItem.gameObject.SetActive(i == 0);
+            stepObj.SetActive(i == 0);
         }
 
         // Update step text and progress
@@ -189,7 +193,7 @@ public class ProcedureDisplay : MonoBehaviour
         // Check if this is the last step
         if (currentStepIndex >= CurrentProcedure.instructionSteps.Count - 1)
         {
-            // We're at the last step, mark procedure as complete
+            // We're at the last step, mark this procedure as complete
             Debug.Log("ProcedureDisplay: Procedure complete!");
             onProcedureCompleted?.Invoke();
             return;
@@ -199,7 +203,7 @@ public class ProcedureDisplay : MonoBehaviour
         currentStepIndex++;
         DisplayCurrentStep();
         
-        Debug.Log($"ProcedureDisplay: Advanced to step {currentStepIndex + 1} of {CurrentProcedure.instructionSteps.Count}");
+        Debug.Log($"ProcedureDisplay: Advanced to step {currentStepIndex + 1} of {CurrentProcedure.instructionSteps.Count}P: {CurrentProcedure.procedureName}, Step Text: {CurrentProcedure.instructionSteps[currentStepIndex].instructionText}");
     }
 
     // Skip the current step
@@ -245,7 +249,7 @@ public class ProcedureDisplay : MonoBehaviour
         if (CurrentProcedure == null || currentStepIndex < 0)
         {
             // No step is active
-            TaskStepText.text = "";
+            TaskStepText.text = "No steps available";
             TaskProgressText.text = $"0/{CurrentProcedure?.instructionSteps.Count ?? 0} steps completed";
             return;
         }
@@ -255,7 +259,7 @@ public class ProcedureDisplay : MonoBehaviour
 
         // Update step text
         TaskStepText.text = CurrentProcedure.instructionSteps[currentStepIndex].instructionText;
-        TaskProgressText.text = $"{currentStepIndex + 1}/{CurrentProcedure.instructionSteps.Count} steps completed";
+        TaskProgressText.text = $"{currentStepIndex}/{CurrentProcedure.instructionSteps.Count} steps completed";
 
         // Update step indicators
         for (int i = 0; i < TaskStepIndicators.Count; i++)
@@ -275,26 +279,25 @@ public class ProcedureDisplay : MonoBehaviour
             }
         }
 
-        // Update step items
+        // Show only the current step, hide others
         for (int i = 0; i < TaskStepItems.Count; i++)
         {
             if (TaskStepItems[i] != null)
             {
+                // Only show the current step
+                TaskStepItems[i].SetActive(i == currentStepIndex);
+                
+                // Update visual state
                 StepItem stepItem = TaskStepItems[i].GetComponent<StepItem>();
                 if (stepItem != null)
                 {
-                    if (i < currentStepIndex)
-                        stepItem.MarkCompleted(true);
-                    else if (i == currentStepIndex)
-                        stepItem.SetActiveStep(true);
-                    else
-                    {
-                        stepItem.MarkCompleted(false);
-                        stepItem.SetActiveStep(false);
-                    }
+                    stepItem.SetActiveStep(i == currentStepIndex);
                 }
             }
         }
+        
+        // Update progress indicators
+        UpdateProgressIndicators();
     }
 
     // step count is based on number of steps required in current procedure
@@ -310,7 +313,7 @@ public class ProcedureDisplay : MonoBehaviour
         // Create new indicators
         for (int i = 0; i < stepCount; i++)
         {
-            GameObject indicator = Instantiate(TaskStepIndicatorPrefab, TaskStepIndicatorContainer);
+            GameObject indicator = Instantiate(StepItemPrefab, TaskStepIndicatorContainer);
             Image indicatorImage = indicator.GetComponent<Image>();
             if (indicatorImage != null)
             {
@@ -343,13 +346,18 @@ public class ProcedureDisplay : MonoBehaviour
         for (int i = 0; i < steps.Count; i++)
         {
             // Create the step item and ensure it's properly parented
-            StepItem stepItem = Instantiate(TaskStepItemPrefab);
-            stepItem.transform.SetParent(TaskStepsPanel, false);
-            TaskStepItems.Add(stepItem.gameObject);
-
-            // Set step number and text
-            stepItem.ConfigureStep(i + 1, steps[i].instructionText);
-            stepItem.SetStepColor(InactiveStepColor);
+            GameObject stepObj = Instantiate(StepItemPrefab, TaskStepsPanel);
+            StepItem stepItem = stepObj.GetComponent<StepItem>();
+            
+            if (stepItem != null)
+            {
+                stepItem.SetStep(i + 1, steps[i].instructionText);
+                TaskStepItems.Add(stepObj);
+            }
+            else
+            {
+                Debug.LogError("StepItem component not found on instantiated prefab");
+            }
         }
 
         // Force multiple canvas updates
@@ -380,8 +388,71 @@ public class ProcedureDisplay : MonoBehaviour
 
     public void LoadCustomProcedure(ProcedureSystem.Procedure procedure)
     {
-        // Simply redirect to the existing LoadProcedure method
-        LoadProcedure(procedure);
+        if (procedure == null)
+        {
+            Debug.LogError("ProcedureDisplay: Cannot load null procedure");
+            return;
+        }
+
+        // Store reference to current procedure
+        CurrentProcedure = procedure;
+        currentStepIndex = 0;
+
+        // Set procedure title
+        if (TitleText != null)
+        {
+            TitleText.text = $"Procedure: {procedure.procedureName}";
+            if (!string.IsNullOrEmpty(procedure.taskName) && procedure.taskName != procedure.procedureName)
+            {
+                TitleText.text += $" - {procedure.taskName}";
+            }
+        }
+
+        // Set up step indicators
+        CreateTaskStepIndicators(procedure.instructionSteps.Count);
+
+        // Clear any existing step items
+        foreach (GameObject item in TaskStepItems)
+        {
+            Destroy(item);
+        }
+        TaskStepItems.Clear();
+
+        // Create new step items
+        for (int i = 0; i < procedure.instructionSteps.Count; i++)
+        {
+            GameObject stepObj = Instantiate(StepItemPrefab, TaskStepsPanel);
+            StepItem stepItem = stepObj.GetComponent<StepItem>();
+            
+            if (stepItem != null)
+            {
+                stepItem.SetStep(i + 1, procedure.instructionSteps[i].instructionText);
+                TaskStepItems.Add(stepObj);
+            }
+            else
+            {
+                Debug.LogError("StepItem component not found on instantiated prefab");
+            }
+            
+            // Make all steps visible for now - we'll hide them later if needed
+            stepObj.SetActive(true);
+        }
+
+        // Update step text and progress
+        UpdateStepText();
+        UpdateProgressIndicators();
+
+        // Make sure the display panel is active
+        if (DisplayPanel != null) 
+        {
+            DisplayPanel.SetActive(true);
+        }
+        else
+        {
+            Debug.LogError("ProcedureDisplay: DisplayPanel reference is missing!");
+        }
+        
+        Debug.Log($"ProcedureDisplay: Loaded procedure '{procedure.procedureName}' with {procedure.instructionSteps.Count} steps");
     }
 
     //---------------Procedure Check Functions ---------------//

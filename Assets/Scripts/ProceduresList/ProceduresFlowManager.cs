@@ -60,7 +60,7 @@ public class ProceduresFlowManager : MonoBehaviour
         // Set up button listeners
         egressButton.onClick.AddListener(ShowTasksInfo);
         backButton.onClick.AddListener(ShowTasksList);
-        startButton.onClick.AddListener(ShowProcedures);
+        startButton.onClick.AddListener(ShowProcedure);
         samplingButton.onClick.AddListener(ShowSampling);
         samplingStart.onClick.AddListener(StartScan);
         completeScanning.onClick.AddListener(CompleteScan);
@@ -135,7 +135,7 @@ public class ProceduresFlowManager : MonoBehaviour
     }
 
     // Show third panel (Procedures) when pressing Start
-    private void ShowProcedures()
+    private void ShowProcedure()
     {
         proceduresListPanel.SetActive(false);
         proceduresInfoPanel.SetActive(false);
@@ -149,8 +149,14 @@ public class ProceduresFlowManager : MonoBehaviour
             
             if (taskProcedure != null)
             {
+                Debug.Log($"ProceduresFlowManager: Loading task '{TARGET_TASK_NAME}' with {taskProcedure.instructionSteps.Count} steps");
+                
                 // Load only this task's steps
                 procedureDisplay.LoadCustomProcedure(taskProcedure);
+                
+                // Explicitly make the display panel active
+                if (procedureDisplay.transform.Find("DisplayPanel") != null)
+                    procedureDisplay.transform.Find("DisplayPanel").gameObject.SetActive(true);
                 
                 // Set up automation for this task
                 if (procedureAutomation != null)

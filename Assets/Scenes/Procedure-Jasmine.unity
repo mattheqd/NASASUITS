@@ -6577,7 +6577,7 @@ GameObject:
   - component: {fileID: 849414174}
   - component: {fileID: 849414173}
   m_Layer: 0
-  m_Name: Button (1)
+  m_Name: SkipButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -12621,7 +12621,7 @@ GameObject:
   - component: {fileID: 1513406010}
   - component: {fileID: 1513406009}
   m_Layer: 0
-  m_Name: Button
+  m_Name: NextButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -18090,19 +18090,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 164a06ffc1cc73045b8599996378fe67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  procedureDisplayPanel: {fileID: 2098142302}
-  procedureTitleText: {fileID: 2135224973}
-  procedureStepText: {fileID: 578094232}
-  procedureProgressText: {fileID: 1577010884}
-  procedureStepsPanel: {fileID: 1738828798}
-  procedureStepItemPrefab: {fileID: 6351564619727853700, guid: 19cc34da8d01d184fb8b4100b82f1fdd, type: 3}
-  procedureNextButton: {fileID: 1513406009}
-  procedureSkipStepButton: {fileID: 849414173}
-  procedureStepIndicatorContainer: {fileID: 1922660579}
-  procedureStepIndicatorPrefab: {fileID: 5503085778686888209, guid: e96ff953a1625874ba367f2025a27b89, type: 3}
-  activeStepColor: {r: 0, g: 1, b: 1, a: 1}
-  inactiveStepColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-  completedStepColor: {r: 0, g: 1, b: 1, a: 1}
+  DisplayPanel: {fileID: 2098142302}
+  TitleText: {fileID: 2135224973}
+  TaskStepText: {fileID: 578094232}
+  TaskProgressText: {fileID: 1577010884}
+  TaskStepsPanel: {fileID: 1738828798}
+  TaskStepItemPrefab: {fileID: 0}
+  TaskNextButton: {fileID: 1513406009}
+  TaskSkipStepButton: {fileID: 849414173}
+  TaskStepIndicatorContainer: {fileID: 1922660579}
+  TaskStepIndicatorPrefab: {fileID: 0}
+  ActiveStepColor: {r: 0, g: 1, b: 1, a: 1}
+  InactiveStepColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  CompletedStepColor: {r: 0, g: 1, b: 1, a: 1}
   onProcedureCompleted:
     m_PersistentCalls:
       m_Calls: []
