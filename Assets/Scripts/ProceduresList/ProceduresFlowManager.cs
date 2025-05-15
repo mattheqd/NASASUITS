@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Linq;
 using System.Collections.Generic;
+using ProcedureSystem;
 
 public class ProceduresFlowManager : MonoBehaviour
 {
@@ -144,7 +145,7 @@ public class ProceduresFlowManager : MonoBehaviour
         if (procedureDisplay != null)
         {
             // Get only the specific task instead of the whole procedure
-            Procedure taskProcedure = ProcedureManager.Instance.GetSpecificTask(PROCEDURE_NAME, TARGET_TASK_NAME);
+            Procedure taskProcedure = ProcedureManager.Instance.GetProcedureTask(PROCEDURE_NAME, TARGET_TASK_NAME);
             
             if (taskProcedure != null)
             {
@@ -185,7 +186,7 @@ public class ProceduresFlowManager : MonoBehaviour
         }
         
         // Get only the specific task
-        var taskProc = ProcedureManager.Instance.GetSpecificTask(PROCEDURE_NAME, TARGET_TASK_NAME);
+        var taskProc = ProcedureManager.Instance.GetProcedureTask(PROCEDURE_NAME, TARGET_TASK_NAME);
         if (taskProc == null)
         {
             Debug.LogError($"ProceduresFlowManager: Task '{TARGET_TASK_NAME}' not found");

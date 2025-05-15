@@ -4276,7 +4276,7 @@ GameObject:
   - component: {fileID: 578094233}
   - component: {fileID: 578094232}
   m_Layer: 0
-  m_Name: ProceduresStep
+  m_Name: TaskStep
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -13411,7 +13411,7 @@ GameObject:
   - component: {fileID: 1577010885}
   - component: {fileID: 1577010884}
   m_Layer: 0
-  m_Name: ProceduresProgress
+  m_Name: TaskProgress
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -14866,7 +14866,7 @@ GameObject:
   - component: {fileID: 1738828799}
   - component: {fileID: 1738828801}
   m_Layer: 0
-  m_Name: ProceduresStepsPanel
+  m_Name: TaskStepsPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -18007,7 +18007,7 @@ GameObject:
   - component: {fileID: 2098142306}
   - component: {fileID: 2098142307}
   m_Layer: 0
-  m_Name: Procedures
+  m_Name: Task Display
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -18928,7 +18928,7 @@ GameObject:
   - component: {fileID: 2135224974}
   - component: {fileID: 2135224973}
   m_Layer: 0
-  m_Name: ProceduresTitle
+  m_Name: TaskTitle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

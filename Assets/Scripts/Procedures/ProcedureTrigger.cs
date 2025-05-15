@@ -5,11 +5,12 @@
 
 using UnityEngine;
 using UnityEngine.UI;
+using ProcedureSystem;
 
 public class ProcedureTrigger : MonoBehaviour
 {
     [Header("Procedure Settings")]
-    [SerializeField] private string procedureName = "Egress";
+    [SerializeField] private string procedureName = "EVA Egress";
     [SerializeField] private ProcedureDisplay procedureDisplay;
     
     [Header("Trigger Type")]
@@ -59,7 +60,7 @@ public class ProcedureTrigger : MonoBehaviour
                 playerInLocation = true;
                 ActivateProcedure();
             }
-            else
+            else if (!inRange && playerInLocation)
                 playerInLocation = false;
         }
     }
@@ -73,7 +74,20 @@ public class ProcedureTrigger : MonoBehaviour
     // activate procedure if not already active
     private void ActivateProcedure() {
         if (procedureDisplay != null && !procedureDisplay.IsProcedureActive())
-            procedureDisplay.LoadProcedure(procedureName);
+        {
+            // Hard-coded to "EVA Egress" to ensure we get a valid procedure
+            Procedure procedure = ProcedureManager.Instance.GetProcedure("EVA Egress");
+            
+            if (procedure != null)
+            {
+                Debug.Log("Successfully loaded EVA Egress procedure");
+                procedureDisplay.LoadProcedure(procedure);
+            }
+            else
+            {
+                Debug.LogError("Failed to load EVA Egress procedure - check if it exists in procedure_data.json");
+            }
+        }
     }
     
     // when player leaves station location, set playerInLocation to false

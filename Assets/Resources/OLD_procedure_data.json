@@ -1,0 +1,215 @@
+{
+    "procedures": [
+      {
+        "procedureName": "EVA Egress",
+        "procedureDescription": "Emergency exit procedure from the station",
+        "tasks": [
+          {
+            "taskName": "Verify LTV Coordination",
+            "taskDescription": "Verify coordination with Lunar Terrain Vehicle",
+            "steps": [
+              {
+                "instructionText": "Verify ping has been received from LTV",
+                "location": "PR",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "Verify worksite POI locations have been provided by LTV",
+                "location": "PR",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "Verify that EV1 has received LTV POIs",
+                "location": "PR",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "Announce that PR operations are complete, will now begin monitoring EVA. Turning operations over to EVA.",
+                "location": "PR",
+                "status": "NotStarted"
+              }
+            ]
+          },
+          {
+            "taskName": "Connect UIA to DCU and start Depress",
+            "taskDescription": "Connect UIA to DCU and begin depressurization",
+            "steps": [
+              {
+                "instructionText": "EV1 verify umbilical connection from UIA to DCU",
+                "location": "UIA and DCU",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "EV-1, EMU PWR – ON",
+                "location": "UIA",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "BATT – UMB",
+                "location": "DCU",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "DEPRESS PUMP PWR – ON",
+                "location": "UIA",
+                "status": "NotStarted"
+              }
+            ]
+          },
+          {
+            "taskName": "Prep O2 Tanks",
+            "taskDescription": "Prepare oxygen tanks for EVA",
+            "steps": [
+              {
+                "instructionText": "OXYGEN O2 VENT – OPEN",
+                "location": "UIA",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "Wait until both Primary and Secondary OXY tanks are < 10psi",
+                "location": "HMD",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "OXYGEN O2 VENT – CLOSE",
+                "location": "UIA",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "OXY – PRI",
+                "location": "DCU",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "OXYGEN EMU-1 – OPEN",
+                "location": "UIA",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "Wait until EV1 Primary O2 tank > 3000 psi",
+                "location": "HMD",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "OXYGEN EMU-1 – CLOSE",
+                "location": "UIA",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "OXY – SEC",
+                "location": "DCU",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "OXYGEN EMU-1 – OPEN",
+                "location": "UIA",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "Wait until EV1 Secondary O2 tank > 3000 psi",
+                "location": "HMD",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "OXYGEN EMU-1 – CLOSE",
+                "location": "UIA",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "OXY – PRI",
+                "location": "DCU",
+                "status": "NotStarted"
+              }
+            ]
+          },
+          {
+            "taskName": "END Depress, Check Switches and Disconnect",
+            "taskDescription": "End depressurization, check switches and disconnect",
+            "steps": [
+              {
+                "instructionText": "Wait until SUIT PRESSURE and O2 Pressure = 4",
+                "location": "HMD",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "DEPRESS PUMP PWR – OFF",
+                "location": "UIA",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "BATT – LOCAL",
+                "location": "DCU",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "EV-1 EMU PWR - OFF",
+                "location": "UIA",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "Verify OXY – PRI",
+                "location": "DCU",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "Verify COMMS – A",
+                "location": "DCU",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "Verify FAN – PRI",
+                "location": "DCU",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "Verify PUMP – CLOSE",
+                "location": "DCU",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "Verify CO2 – A",
+                "location": "DCU",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "EV1 disconnect UIA and DCU umbilical",
+                "location": "UIA and DCU",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "Verify Comms are working between DCU and PR. \"EV1 to PR, comm check, can you hear me?\" PR respond appropriately.",
+                "location": "DCU",
+                "status": "NotStarted"
+              }
+            ]
+          },
+          {
+            "taskName": "Determine Navigation Path",
+            "taskDescription": "Determine the navigation path for EVA operations",
+            "steps": [
+              {
+                "instructionText": "Drop pins and determine best path for each POI provided by LTV",
+                "location": "EV1",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "Verify the path has been generated. Wait for go from PR",
+                "location": "EV1",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "Unlock Airlock, announce all clear for EV",
+                "location": "PR",
+                "status": "NotStarted"
+              },
+              {
+                "instructionText": "Exit airlock and begin navigation to worksite",
+                "location": "EV",
+                "status": "NotStarted"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
