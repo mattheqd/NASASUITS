@@ -36,8 +36,6 @@ public class NavigationSystem : MonoBehaviour
     private RectTransform playerIcon;
     public GameObject pathDotPrefab;
     private List<GameObject> pathDots = new List<GameObject>();
-    public GameObject hazardDotPrefab;
-    private List<GameObject> hazardDots = new List<GameObject>();
 
     public Vector2 startLocation = new Vector2(-5720, -10060);
     public Vector2 endLocation = new Vector2(-5600, -9940);
@@ -46,18 +44,6 @@ public class NavigationSystem : MonoBehaviour
     private bool shouldRecalculatePath = false;
     private int currentCoordinateIndex = 0;
     private float moveTimer = 0f;
-
-    [Header("Path Visualization")]
-    public float pathLineWidth = 2f;
-    public float pathLineScale = 1f;
-    public float hazardDotSize = 4f;
-    public float worldScaleReference = 1f;
-    [Tooltip("Use this to make more aggressive scaling adjustments")]
-    public float worldScaleMultiplier = 10f;
-    [Tooltip("Additional multiplier for line width in world space")]
-    public float lineWidthWorldSpaceMultiplier = 0.1f;
-    [Tooltip("Additional multiplier for line length in world space")]
-    public float lineLengthWorldSpaceMultiplier = 0.2f;
 
     // Predefined coordinates for movement
     private readonly Vector2[] movementCoordinates = new Vector2[]
@@ -113,7 +99,6 @@ public class NavigationSystem : MonoBehaviour
         InitializeNodes();
         UpdateMinimap();
         CalculateAndDrawPath();
-        VisualizeHazardNodes();
     }
 
     void Update()
@@ -434,8 +419,7 @@ public class NavigationSystem : MonoBehaviour
     private float GetMinimapWorldScale()
     {
         // Get the overall world scale factor (average of x and y scale)
-        // Multiply by the multiplier to make scaling more aggressive
-        return (minimapRect.lossyScale.x + minimapRect.lossyScale.y) * 0.5f / worldScaleReference * worldScaleMultiplier;
+        return (minimapRect.lossyScale.x + minimapRect.lossyScale.y) * 0.5f;
     }
 
     void DrawPathUI(List<Node> path)
@@ -444,17 +428,8 @@ public class NavigationSystem : MonoBehaviour
         foreach (var dot in pathDots) Destroy(dot);
         pathDots.Clear();
 
-        // Create a simple white sprite for the line
-        Texture2D lineTexture = new Texture2D(1, 1);
-        lineTexture.SetPixel(0, 0, Color.white);
-        lineTexture.Apply();
-        Sprite lineSprite = Sprite.Create(lineTexture, new Rect(0, 0, 1, 1), new Vector2(0, 0));
-
         // Start with the start node position
         Vector2 previousPos = WorldToMinimap(startNode.position);
-
-        // Get the world scale factor
-        float worldScale = GetMinimapWorldScale();
 
         // Process each node in the path
         for (int i = 0; i < path.Count; i++)
@@ -464,13 +439,10 @@ public class NavigationSystem : MonoBehaviour
             Vector2 currentPos = WorldToMinimap(node.position);
 
             // Create line from previous position to current position
-            GameObject lineObj = new GameObject($"Line");
-            lineObj.transform.SetParent(minimapRect);
-            RectTransform lineRect = lineObj.AddComponent<RectTransform>();
-            Image line = lineObj.AddComponent<Image>();
-            line.sprite = lineSprite;
+            GameObject lineObj = Instantiate(pathDotPrefab, minimapRect);
+            RectTransform lineRect = lineObj.GetComponent<RectTransform>();
+            Image line = lineObj.GetComponent<Image>();
             line.color = Color.yellow;
-            line.type = Image.Type.Simple;
 
             // Set anchors and pivot to (0,0)
             lineRect.anchorMin = Vector2.zero;
@@ -479,65 +451,17 @@ public class NavigationSystem : MonoBehaviour
 
             // Calculate line properties
             Vector2 direction = currentPos - previousPos;
-            
-            // Apply more aggressive scaling to the length
-            float distance = direction.magnitude * pathLineScale * lineLengthWorldSpaceMultiplier;
+            float distance = direction.magnitude;
             float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-
-            // Scale line width based on world scale with additional multiplier
-            float scaledLineWidth = pathLineWidth / worldScale * lineWidthWorldSpaceMultiplier;
 
             // Set line properties
             lineRect.anchoredPosition = previousPos;
-            lineRect.sizeDelta = new Vector2(distance, scaledLineWidth);
+            lineRect.sizeDelta = new Vector2(distance, lineRect.sizeDelta.y); // Use prefab's natural height
             lineRect.localRotation = Quaternion.Euler(0, 0, angle);
             pathDots.Add(lineObj);
 
             // Update previous position for next iteration
             previousPos = currentPos;
-        }
-    }
-
-    private void VisualizeHazardNodes()
-    {
-        // Clear existing hazard dots
-        foreach (var dot in hazardDots) Destroy(dot);
-        hazardDots.Clear();
-
-        // Create a simple red sprite for the hazard dots
-        Texture2D hazardTexture = new Texture2D(1, 1);
-        hazardTexture.SetPixel(0, 0, Color.red);
-        hazardTexture.Apply();
-        Sprite hazardSprite = Sprite.Create(hazardTexture, new Rect(0, 0, 1, 1), new Vector2(0, 0));
-
-        // Get the world scale factor
-        float worldScale = GetMinimapWorldScale();
-        
-        // Scale dot size based on world scale with much more aggressive scaling
-        float scaledDotSize = hazardDotSize / worldScale * lineWidthWorldSpaceMultiplier;
-
-        // Create hazard dots for each hazard node
-        foreach (Node node in allNodes)
-        {
-            if (node.isObstacle)
-            {
-                GameObject hazardObj = new GameObject("HazardDot");
-                hazardObj.transform.SetParent(minimapRect);
-                RectTransform hazardRect = hazardObj.AddComponent<RectTransform>();
-                Image hazardImage = hazardObj.AddComponent<Image>();
-                hazardImage.sprite = hazardSprite;
-                hazardImage.color = Color.red;
-
-                // Set anchors and pivot to (0,0)
-                hazardRect.anchorMin = Vector2.zero;
-                hazardRect.anchorMax = Vector2.zero;
-                hazardRect.pivot = Vector2.zero;
-
-                // Set size and position
-                hazardRect.sizeDelta = new Vector2(scaledDotSize, scaledDotSize);
-                hazardRect.anchoredPosition = WorldToMinimap(node.position);
-                hazardDots.Add(hazardObj);
-            }
         }
     }
 

@@ -577,7 +577,7 @@ MonoBehaviour:
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
-  m_PresetInfoIsWorld: 0
+  m_PresetInfoIsWorld: 1
 --- !u!223 &947883861
 Canvas:
   m_ObjectHideFlags: 0
@@ -638,6 +638,13 @@ MonoBehaviour:
   hazardDotPrefab: {fileID: 0}
   startLocation: {x: -5700, y: -10030}
   endLocation: {x: -5620, y: -9960}
+  pathLineWidth: 2
+  pathLineScale: 1
+  hazardDotSize: 4
+  worldScaleReference: 1
+  worldScaleMultiplier: 10
+  lineWidthWorldSpaceMultiplier: 0.1
+  lineLengthWorldSpaceMultiplier: 0.2
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
