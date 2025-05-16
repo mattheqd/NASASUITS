@@ -135,6 +135,9 @@ public class ProceduresFlowManager : MonoBehaviour
 
             // Save the complete sample to storage
             GeoSampleStorage.Instance.AddSample(currentSample);
+            
+            // Clear the current sample to prevent duplicates
+            currentSample = null;
         }
         gpsPanel.SetActive(false);
         proceduresListPanel.SetActive(true);
