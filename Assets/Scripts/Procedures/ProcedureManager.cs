@@ -4,107 +4,66 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using ProcedureSystem;
 
 public class ProcedureManager : MonoBehaviour
 {
     private static ProcedureManager _instance;
     public static ProcedureManager Instance { get { return _instance; } }
 
-    // Container for all procedures
-    private ProcedureContainer procedureContainer;
+    // Container for all procedures when the user first loads the procedures list
+    private ProcedureCollection procedureContainer;
     
     // Raw JSON data for task extraction
-    private JsonProcedureContainer rawJsonData;
+    private ProcedureCollection rawJsonData;
     
-    // JSON structure that matches the structure in procedure_data.json
-    [System.Serializable]
-    private class JsonProcedure
-    {
-        public string procedureName;
-        public string procedureDescription;
-        public List<JsonTask> tasks = new List<JsonTask>();
-    }
-    
-    [System.Serializable]
-    private class JsonTask
-    {
-        public string taskName;
-        public string taskDescription;
-        public List<JsonStep> steps = new List<JsonStep>();
-    }
-    
-    [System.Serializable]
-    private class JsonStep
-    {
-        public string instructionText;
-        public string location;
-        public string status;
-    }
-    
+    // JSON structures that match the format in procedure_data.json
     [System.Serializable]
     private class JsonProcedureContainer
     {
-        public List<JsonProcedure> procedures = new List<JsonProcedure>();
+        public List<Procedure> procedures;
     }
     
-    //*------ Functions ------*/
     private void Awake()
     {
+        // Singleton pattern
         if (_instance != null && _instance != this)
         {
-            Destroy(gameObject);
+            Destroy(this.gameObject);
             return;
         }
         
         _instance = this;
-        DontDestroyOnLoad(gameObject);
+        DontDestroyOnLoad(this.gameObject);
         
-        // Load procedures from JSON
-        LoadProceduresFromJSON();
+        // Load procedures
+        LoadProcedures();
     }
     
-    // Load procedures from JSON file in Resources folder
-    private void LoadProceduresFromJSON()
+    private void LoadProcedures()
     {
         TextAsset jsonFile = Resources.Load<TextAsset>("procedure_data");
         
         if (jsonFile)
         {
-            // Parse JSON to intermediate structure and store for task extraction
-            rawJsonData = JsonUtility.FromJson<JsonProcedureContainer>(jsonFile.text);
+            // Parse JSON to intermediate structure
+            JsonProcedureContainer jsonContainer = JsonUtility.FromJson<JsonProcedureContainer>(jsonFile.text);
             
-            // Convert to our runtime structure
-            procedureContainer = new ProcedureContainer();
+            // Create our runtime structure
+            procedureContainer = new ProcedureCollection();
             procedureContainer.procedures = new List<Procedure>();
             
-            foreach (var jsonProc in rawJsonData.procedures)
+            // Copy procedures from JSON container to our runtime container
+            if (jsonContainer != null && jsonContainer.procedures != null)
             {
-                Procedure procedure = new Procedure();
-                procedure.procedureName = jsonProc.procedureName;
-                procedure.procedureDescription = jsonProc.procedureDescription;
-                procedure.instructionSteps = new List<InstructionStep>();
-                
-                // Flatten tasks and steps into instructionSteps
-                foreach (var task in jsonProc.tasks)
+                foreach (var proc in jsonContainer.procedures)
                 {
-                    // For each task, add all its steps to the procedure's instructionSteps
-                    foreach (var step in task.steps)
-                    {
-                        InstructionStep instructionStep = new InstructionStep();
-                        instructionStep.instructionText = step.instructionText;
-                        
-                        // Convert status if needed
-                        instructionStep.status = InstructionStatus.NotStarted;
-                        
-                        procedure.instructionSteps.Add(instructionStep);
-                    }
+                    procedureContainer.procedures.Add(proc);
                 }
                 
-                procedureContainer.procedures.Add(procedure);
+                Debug.Log($"Loaded {procedureContainer.procedures.Count} procedures with a total of " +
+                        $"{procedureContainer.procedures.Sum(p => p.instructionSteps.Count)} steps");
             }
-            
-            Debug.Log($"Loaded {procedureContainer.procedures.Count} procedures with a total of " +
-                      $"{procedureContainer.procedures.Sum(p => p.instructionSteps.Count)} steps");
         }
         else
         {
@@ -121,72 +80,48 @@ public class ProcedureManager : MonoBehaviour
             return null;
         }
         
-        foreach (Procedure procedure in procedureContainer.procedures)
+        // Find the procedure by name
+        Procedure matchingProcedure = procedureContainer.procedures.Find(p => p.procedureName == procedureName);
+        
+        if (matchingProcedure != null)
         {
-            if (procedure.procedureName == procedureName)
-            {
-                Debug.Log($"Found procedure '{procedureName}' with {procedure.instructionSteps.Count} steps");
-                return procedure;
-            }
+            Debug.Log($"Found procedure '{procedureName}' with {matchingProcedure.instructionSteps.Count} steps");
+            return matchingProcedure;
         }
         
         Debug.LogWarning($"Procedure '{procedureName}' not found");
         return null;
     }
     
-    // Get only a specific task from a procedure
-    public Procedure GetSpecificTask(string procedureName, string taskName)
+    // Get a specific task from a procedure
+    public Procedure GetProcedureTask(string procedureName, string taskName)
     {
-        if (rawJsonData == null || rawJsonData.procedures == null)
+        if (procedureContainer == null || procedureContainer.procedures == null)
         {
-            Debug.LogError("JSON data not initialized");
+            Debug.LogError("Procedure container not initialized");
             return null;
         }
         
-        // Find the specific procedure
-        foreach (var jsonProc in rawJsonData.procedures)
+        // In the new structure, each "task" is its own procedure with a taskName property
+        Procedure taskProcedure = procedureContainer.procedures.Find(p => 
+            p.procedureName == procedureName && p.taskName == taskName);
+        
+        if (taskProcedure != null)
         {
-            if (jsonProc.procedureName == procedureName)
-            {
-                // Find the specific task
-                foreach (var task in jsonProc.tasks)
-                {
-                    if (task.taskName == taskName)
-                    {
-                        // Create a new procedure with just this task's steps
-                        Procedure taskProcedure = new Procedure();
-                        taskProcedure.procedureName = procedureName + ": " + taskName;
-                        taskProcedure.procedureDescription = task.taskDescription;
-                        taskProcedure.instructionSteps = new List<InstructionStep>();
-                        
-                        // Add only this task's steps
-                        foreach (var step in task.steps)
-                        {
-                            InstructionStep instructionStep = new InstructionStep();
-                            instructionStep.instructionText = step.instructionText;
-                            instructionStep.status = InstructionStatus.NotStarted;
-                            taskProcedure.instructionSteps.Add(instructionStep);
-                        }
-                        
-                        Debug.Log($"Extracted task '{taskName}' from procedure '{procedureName}' with {taskProcedure.instructionSteps.Count} steps");
-                        return taskProcedure;
-                    }
-                }
-                
-                Debug.LogWarning($"Task '{taskName}' not found in procedure '{procedureName}'");
-                return null;
-            }
+            Debug.Log($"Found task '{taskName}' in procedure '{procedureName}' with {taskProcedure.instructionSteps.Count} steps");
+            return taskProcedure;
         }
         
-        Debug.LogWarning($"Procedure '{procedureName}' not found for task extraction");
+        Debug.LogWarning($"Task '{taskName}' not found in procedure '{procedureName}'");
         return null;
     }
     
     // Get all available procedures
     public List<Procedure> GetAllProcedures()
     {
-        if (procedureContainer == null)
+        if (procedureContainer == null || procedureContainer.procedures == null)
         {
+            Debug.LogError("Procedure container not initialized");
             return new List<Procedure>();
         }
         

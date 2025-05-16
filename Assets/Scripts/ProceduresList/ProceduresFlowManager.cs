@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Linq;
 using System.Collections.Generic;
+using ProcedureSystem;
 
 public class ProceduresFlowManager : MonoBehaviour
 {
@@ -39,7 +40,7 @@ public class ProceduresFlowManager : MonoBehaviour
         // Set up button listeners
         egressButton.onClick.AddListener(ShowTasksInfo);
         backButton.onClick.AddListener(ShowTasksList);
-        startButton.onClick.AddListener(ShowProcedures);
+        startButton.onClick.AddListener(ShowProcedure);
         samplingButton.onClick.AddListener(ShowSampling);
         
         // Connect manual verification button if available
@@ -78,7 +79,7 @@ public class ProceduresFlowManager : MonoBehaviour
     }
 
     // Show third panel (Procedures) when pressing Start
-    private void ShowProcedures()
+    private void ShowProcedure()
     {
         proceduresListPanel.SetActive(false);
         proceduresInfoPanel.SetActive(false);
@@ -88,12 +89,18 @@ public class ProceduresFlowManager : MonoBehaviour
         if (procedureDisplay != null)
         {
             // Get only the specific task instead of the whole procedure
-            Procedure taskProcedure = ProcedureManager.Instance.GetSpecificTask(PROCEDURE_NAME, TARGET_TASK_NAME);
+            Procedure taskProcedure = ProcedureManager.Instance.GetProcedureTask(PROCEDURE_NAME, TARGET_TASK_NAME);
             
             if (taskProcedure != null)
             {
+                Debug.Log($"ProceduresFlowManager: Loading task '{TARGET_TASK_NAME}' with {taskProcedure.instructionSteps.Count} steps");
+                
                 // Load only this task's steps
                 procedureDisplay.LoadCustomProcedure(taskProcedure);
+                
+                // Explicitly make the display panel active
+                if (procedureDisplay.transform.Find("DisplayPanel") != null)
+                    procedureDisplay.transform.Find("DisplayPanel").gameObject.SetActive(true);
                 
                 // Set up automation for this task
                 if (procedureAutomation != null)
@@ -129,7 +136,7 @@ public class ProceduresFlowManager : MonoBehaviour
         }
         
         // Get only the specific task
-        var taskProc = ProcedureManager.Instance.GetSpecificTask(PROCEDURE_NAME, TARGET_TASK_NAME);
+        var taskProc = ProcedureManager.Instance.GetProcedureTask(PROCEDURE_NAME, TARGET_TASK_NAME);
         if (taskProc == null)
         {
             Debug.LogError($"ProceduresFlowManager: Task '{TARGET_TASK_NAME}' not found");
