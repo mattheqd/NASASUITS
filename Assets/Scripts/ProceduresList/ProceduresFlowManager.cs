@@ -10,29 +10,14 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private GameObject proceduresListPanel;     // First screen - ProceduresList in hierarchy
     [SerializeField] private GameObject proceduresInfoPanel;     // Second screen - ProceduresInfo in hierarchy
     [SerializeField] private GameObject proceduresPanel;    // Third screen - Procedures in hierarchy
-    [SerializeField] private GameObject samplingPanel;    // Fourth screen - Sampling in hierarchy
-    [SerializeField] private GameObject scanningPanel;    // Fifth screen - Scanning in hierarchy
-    [SerializeField] private GameObject picturePanel;    // Sixth screen - Picture in hierarchy
-    [SerializeField] private GameObject voicePanel;    // Seventh screen - Video in hierarchy
-
-    [SerializeField] private GameObject gpsPanel;    // Eighth screen - Video in hierarchy
-
+    
     [Header("UI Elements")]
     [SerializeField] private Button egressButton;          // Button to go from TasksList to TasksInfo
 
     [SerializeField] private Button samplingButton;   
-    [SerializeField] private Button samplingStart; 
     [SerializeField] private Button backButton;            // Button to go back from TasksInfo to TasksList
     [SerializeField] private Button startButton;           // Button to go from TasksInfo to Procedures
     [SerializeField] private Button verifyManuallyButton;  // Button to manually verify umbilical connection
-
-    [SerializeField] private Button completeScanning;  // Button to manually verify umbilical connection
-
-    [SerializeField] private Button completePicture;  // Button to manually verify umbilical connection
-
-    [SerializeField] private Button completeVoice;  // Button to manually verify umbilical connection
-
-    [SerializeField] private Button completeGps;  // Button to manually verify umbilical connection
 
     [SerializeField] private Transform stepsContainer;     // Contains series of steps in TasksInfo
     [SerializeField] private StepItem stepItemPrefab;      // Prefab for each step
@@ -51,22 +36,12 @@ public class ProceduresFlowManager : MonoBehaviour
         proceduresListPanel.SetActive(true);
         proceduresInfoPanel.SetActive(false);
         proceduresPanel.SetActive(false);
-        samplingPanel.SetActive(false);
-        scanningPanel.SetActive(false);
-        picturePanel.SetActive(false);
-        voicePanel.SetActive(false);
-        gpsPanel.SetActive(false);
-
+        
         // Set up button listeners
         egressButton.onClick.AddListener(ShowTasksInfo);
         backButton.onClick.AddListener(ShowTasksList);
         startButton.onClick.AddListener(ShowProcedure);
         samplingButton.onClick.AddListener(ShowSampling);
-        samplingStart.onClick.AddListener(StartScan);
-        completeScanning.onClick.AddListener(CompleteScan);
-        completePicture.onClick.AddListener(CompletePicture);
-        completeVoice.onClick.AddListener(CompleteVoice);
-        completeGps.onClick.AddListener(CompleteGps);
         
         // Connect manual verification button if available
         if (verifyManuallyButton != null)
@@ -75,40 +50,9 @@ public class ProceduresFlowManager : MonoBehaviour
         }
     }
 
-    private void CompleteGps()
-    {
-        gpsPanel.SetActive(false);
-        proceduresListPanel.SetActive(true);
-    }
-
-    private void CompleteVoice()
-    {
-        voicePanel.SetActive(false);
-        gpsPanel.SetActive(true);
-    }
-
-    private void CompletePicture()
-    {
-        picturePanel.SetActive(false);
-        voicePanel.SetActive(true);
-    }
-
-    private void CompleteScan()
-    {
-        scanningPanel.SetActive(false);
-        picturePanel.SetActive(true);
-    }
-
-    private void StartScan()
-    {
-        samplingPanel.SetActive(false);
-        scanningPanel.SetActive(true);
-    }
-
     private void ShowSampling()
     {
         proceduresListPanel.SetActive(false);
-        samplingPanel.SetActive(true);
     }
 
     //* ---- Starting screens----//
