@@ -13,36 +13,34 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private GameObject scanningPanel;    // Fifth screen - Scanning in hierarchy
     [SerializeField] private GameObject picturePanel;    // Sixth screen - Picture in hierarchy
     [SerializeField] private GameObject voicePanel;    // Seventh screen - Video in hierarchy
-
     [SerializeField] private GameObject gpsPanel;    // Eighth screen - Video in hierarchy
 
     [Header("UI Elements")]
     [SerializeField] private Button egressButton;          // Button to go from TasksList to TasksInfo
-
     [SerializeField] private Button samplingButton;   
     [SerializeField] private Button samplingStart; 
     [SerializeField] private Button backButton;            // Button to go back from TasksInfo to TasksList
     [SerializeField] private Button startButton;           // Button to go from TasksInfo to Procedures
     [SerializeField] private Button verifyManuallyButton;  // Button to manually verify umbilical connection
-
     [SerializeField] private Button completeScanning;  // Button to manually verify umbilical connection
-
     [SerializeField] private Button completePicture;  // Button to manually verify umbilical connection
-
     [SerializeField] private Button completeVoice;  // Button to manually verify umbilical connection
-
     [SerializeField] private Button completeGps;  // Button to manually verify umbilical connection
 
+    [Header("Component References")]
     [SerializeField] private Transform stepsContainer;     // Contains series of steps in TasksInfo
     [SerializeField] private StepItem stepItemPrefab;      // Prefab for each step
-    
-    [Header("Procedure References")]
     [SerializeField] private ProcedureDisplay procedureDisplay; // Main procedure handler
     [SerializeField] private ProcedureAutomation procedureAutomation; // Handles automation of steps
+    [SerializeField] private WebCamController webCamController; // Reference to camera controller
+    [SerializeField] private AudioRecorder audioRecorder; // Reference to audio recorder
 
     // Target task name for this MVP
     private const string PROCEDURE_NAME = "EVA Egress";
     private const string TARGET_TASK_NAME = "Connect UIA to DCU and start Depress";
+
+    // Current geosample being collected
+    private GeoSampleData currentSample;
 
     private void Awake()
     {
@@ -74,40 +72,73 @@ public class ProceduresFlowManager : MonoBehaviour
         }
     }
 
-    private void CompleteGps()
-    {
-        gpsPanel.SetActive(false);
-        proceduresListPanel.SetActive(true);
-    }
-
-    private void CompleteVoice()
-    {
-        voicePanel.SetActive(false);
-        gpsPanel.SetActive(true);
-    }
-
-    private void CompletePicture()
-    {
-        picturePanel.SetActive(false);
-        voicePanel.SetActive(true);
-    }
-
-    private void CompleteScan()
-    {
-        scanningPanel.SetActive(false);
-        picturePanel.SetActive(true);
-    }
-
     private void StartScan()
     {
+        // Create a new sample when starting the geosampling process
+        currentSample = GeoSampleData.CreateNew("", "", "");
         samplingPanel.SetActive(false);
         scanningPanel.SetActive(true);
     }
 
-    private void ShowSampling()
+    private void CompleteScan()
     {
-        proceduresListPanel.SetActive(false);
-        samplingPanel.SetActive(true);
+        // Save scanning data to current sample
+        if (currentSample != null)
+        {
+            // Set the sample type based on scanning results
+            currentSample.sampleType = "Rock Sample"; // Or whatever type is determined from scanning
+        }
+        scanningPanel.SetActive(false);
+        picturePanel.SetActive(true);
+    }
+
+    private void CompletePicture()
+    {
+        // Save picture data to current sample
+        if (currentSample != null && webCamController != null)
+        {
+            // Get the image path from WebCamController
+            string imagePath = webCamController.GetCurrentImagePath();
+            currentSample.imagePath = imagePath;
+        }
+        picturePanel.SetActive(false);
+        voicePanel.SetActive(true);
+    }
+
+    private void CompleteVoice()
+    {
+        // Save voice transcription to current sample
+        if (currentSample != null && audioRecorder != null)
+        {
+            // Get the transcription from AudioRecorder
+            string transcription = audioRecorder.GetCurrentTranscription();
+            currentSample.voiceTranscription = transcription;
+        }
+        voicePanel.SetActive(false);
+        gpsPanel.SetActive(true);
+    }
+
+    private void CompleteGps()
+    {
+        // Save GPS data to current sample
+        if (currentSample != null)
+        {
+            // Get GPS coordinates from your GPS system
+            string gpsCoordinates = GetCurrentGPSLocation();
+            currentSample.location = gpsCoordinates;
+
+            // Save the complete sample to storage
+            GeoSampleStorage.Instance.AddSample(currentSample);
+        }
+        gpsPanel.SetActive(false);
+        proceduresListPanel.SetActive(true);
+    }
+
+    private string GetCurrentGPSLocation()
+    {
+        // TODO: Implement GPS location retrieval
+        // For now, return a placeholder
+        return "0,0";
     }
 
     // Show first panel (TasksList)
@@ -213,5 +244,11 @@ public class ProceduresFlowManager : MonoBehaviour
         {
             procedureAutomation.ManualCompleteStep();
         }
+    }
+
+    private void ShowSampling()
+    {
+        proceduresListPanel.SetActive(false);
+        samplingPanel.SetActive(true);
     }
 } 

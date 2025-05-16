@@ -295,6 +295,12 @@ public class AudioRecorder : MonoBehaviour
         });
     }
 
+    // Get the current transcription
+    public string GetCurrentTranscription()
+    {
+        return currentTranscription;
+    }
+
     private void SaveTranscription(string transcription) {
         if (string.IsNullOrEmpty(transcription)) return;
         
