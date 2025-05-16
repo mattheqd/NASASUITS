@@ -45,6 +45,11 @@ public class ProceduresFlowManager : MonoBehaviour
 
     private void Awake()
     {
+        InitializeUI();
+    }
+    
+    public void InitializeUI()
+    {
         // Make sure only the first panel is active at start
         proceduresListPanel.SetActive(true);
         proceduresInfoPanel.SetActive(false);
