@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Linq;
 using System.Collections.Generic;
+using ProcedureSystem;
 
 public class ProceduresFlowManager : MonoBehaviour
 {
@@ -18,7 +19,7 @@ public class ProceduresFlowManager : MonoBehaviour
     [Header("UI Elements")]
     [SerializeField] private Button egressButton;          // Button to go from TasksList to TasksInfo
     [SerializeField] private Button samplingButton;   
-    [SerializeField] private Button samplingStart; 
+     [SerializeField] private Button samplingStart; 
     [SerializeField] private Button backButton;            // Button to go back from TasksInfo to TasksList
     [SerializeField] private Button startButton;           // Button to go from TasksInfo to Procedures
     [SerializeField] private Button verifyManuallyButton;  // Button to manually verify umbilical connection
@@ -53,11 +54,11 @@ public class ProceduresFlowManager : MonoBehaviour
         picturePanel.SetActive(false);
         voicePanel.SetActive(false);
         gpsPanel.SetActive(false);
-
+        
         // Set up button listeners
         egressButton.onClick.AddListener(ShowTasksInfo);
         backButton.onClick.AddListener(ShowTasksList);
-        startButton.onClick.AddListener(ShowProcedures);
+        startButton.onClick.AddListener(ShowProcedure);
         samplingButton.onClick.AddListener(ShowSampling);
         samplingStart.onClick.AddListener(StartScan);
         completeScanning.onClick.AddListener(CompleteScan);
@@ -141,6 +142,10 @@ public class ProceduresFlowManager : MonoBehaviour
         return "0,0";
     }
 
+    //* ---- Starting screens----//
+    // the starting screen for procedures and geo sampling are the same
+    // show the task preview panel for a single procedure (ex: egress)
+    // private void ShowProcedurePreview()
     // Show first panel (TasksList)
     private void ShowTasksList()
     {
@@ -161,7 +166,7 @@ public class ProceduresFlowManager : MonoBehaviour
     }
 
     // Show third panel (Procedures) when pressing Start
-    private void ShowProcedures()
+    private void ShowProcedure()
     {
         proceduresListPanel.SetActive(false);
         proceduresInfoPanel.SetActive(false);
@@ -171,12 +176,18 @@ public class ProceduresFlowManager : MonoBehaviour
         if (procedureDisplay != null)
         {
             // Get only the specific task instead of the whole procedure
-            Procedure taskProcedure = ProcedureManager.Instance.GetSpecificTask(PROCEDURE_NAME, TARGET_TASK_NAME);
+            Procedure taskProcedure = ProcedureManager.Instance.GetProcedureTask(PROCEDURE_NAME, TARGET_TASK_NAME);
             
             if (taskProcedure != null)
             {
+                Debug.Log($"ProceduresFlowManager: Loading task '{TARGET_TASK_NAME}' with {taskProcedure.instructionSteps.Count} steps");
+                
                 // Load only this task's steps
                 procedureDisplay.LoadCustomProcedure(taskProcedure);
+                
+                // Explicitly make the display panel active
+                if (procedureDisplay.transform.Find("DisplayPanel") != null)
+                    procedureDisplay.transform.Find("DisplayPanel").gameObject.SetActive(true);
                 
                 // Set up automation for this task
                 if (procedureAutomation != null)
@@ -212,7 +223,7 @@ public class ProceduresFlowManager : MonoBehaviour
         }
         
         // Get only the specific task
-        var taskProc = ProcedureManager.Instance.GetSpecificTask(PROCEDURE_NAME, TARGET_TASK_NAME);
+        var taskProc = ProcedureManager.Instance.GetProcedureTask(PROCEDURE_NAME, TARGET_TASK_NAME);
         if (taskProc == null)
         {
             Debug.LogError($"ProceduresFlowManager: Task '{TARGET_TASK_NAME}' not found");

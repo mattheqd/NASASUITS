@@ -46,6 +46,7 @@ namespace Unity.XR.XREAL.Samples
 
         /// <summary>
         /// Waits asynchronously until the dialog is closed.
+        // Return void
         /// </summary>
         /// <returns>A task that completes when the dialog is closed.</returns>
         public async Task WaitUntilClosed()

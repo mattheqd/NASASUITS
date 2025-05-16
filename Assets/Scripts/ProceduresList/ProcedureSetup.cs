@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.IO;
 using System.Collections.Generic;
+using ProcedureSystem;
 
 public class ProcedureSetup : MonoBehaviour
 {
@@ -17,76 +18,38 @@ public class ProcedureSetup : MonoBehaviour
     
     private void LoadTargetTask()
     {
-        // Try to load the JSON file directly
-        TextAsset jsonFile = Resources.Load<TextAsset>("procedure_data");
-        
-        if (jsonFile == null)
-        {
-            Debug.LogError("Could not find procedure_data.json in Resources folder");
-            return;
-        }
-        
         try
         {
-            // Parse JSON
-            var rootJson = JsonUtility.FromJson<JsonRootObject>(jsonFile.text);
-            if (rootJson == null || rootJson.procedures == null || rootJson.procedures.Count == 0)
+            // Get the task procedure using the updated ProcedureManager method
+            Procedure taskProcedure = ProcedureManager.Instance.GetProcedureTask(
+                "EVA Egress", "Connect UIA to DCU and start Depress");
+                
+            if (taskProcedure != null)
             {
-                Debug.LogError("Failed to parse procedures from JSON");
-                return;
-            }
-            
-            // Look for EVA Egress procedure
-            foreach (var procedure in rootJson.procedures)
-            {
-                if (procedure.procedureName == "EVA Egress" && procedure.tasks != null)
+                Debug.Log($"Found target task: {taskProcedure.taskName} with {taskProcedure.instructionSteps.Count} steps");
+                
+                // Initialize the procedureAutomation with the full procedure
+                if (procedureAutomation != null)
                 {
-                    Debug.Log($"Found EVA Egress procedure with {procedure.tasks.Count} tasks");
+                    // Pass the task steps to the automation system
+                    procedureAutomation.UpdateTaskIndices(0, taskProcedure.instructionSteps.Count - 1);
                     
-                    // Find the "Connect UIA to DCU and start Depress" task
-                    int taskIndex = 0;
-                    int stepStartIndex = 0;
+                    Debug.Log($"Initialized automation for task '{taskProcedure.taskName}' (steps 0-{taskProcedure.instructionSteps.Count - 1})");
                     
-                    for (int i = 0; i < procedure.tasks.Count; i++)
+                    // Log steps for debugging
+                    for (int j = 0; j < taskProcedure.instructionSteps.Count; j++)
                     {
-                        var task = procedure.tasks[i];
-                        
-                        if (task.taskName == "Connect UIA to DCU and start Depress")
-                        {
-                            Debug.Log($"Found target task: {task.taskName} with {task.steps.Count} steps");
-                            
-                            // Calculate absolute step indices (flattened across all tasks)
-                            int taskStartIndex = stepStartIndex;
-                            int taskEndIndex = stepStartIndex + task.steps.Count - 1;
-                            
-                            // Update the procedureAutomation with correct indices
-                            if (procedureAutomation != null)
-                            {
-                                procedureAutomation.UpdateTaskIndices(taskStartIndex, taskEndIndex);
-                                
-                                // Pass the task steps to the automation system
-                                Debug.Log($"Initialized automation for task '{task.taskName}' (steps {taskStartIndex}-{taskEndIndex})");
-                                
-                                // Log steps for debugging
-                                for (int j = 0; j < task.steps.Count; j++)
-                                {
-                                    Debug.Log($"Step {j + 1}: {task.steps[j].instructionText}");
-                                }
-                            }
-                            else
-                            {
-                                Debug.LogError("ProcedureAutomation reference is missing!");
-                            }
-                            
-                            break;
-                        }
-                        
-                        // Add the step count to our running total before moving to next task
-                        stepStartIndex += task.steps.Count;
+                        Debug.Log($"Step {j + 1}: {taskProcedure.instructionSteps[j].instructionText}");
                     }
-                    
-                    break;
                 }
+                else
+                {
+                    Debug.LogError("ProcedureAutomation reference is missing!");
+                }
+            }
+            else
+            {
+                Debug.LogError("Failed to find the 'Connect UIA to DCU and start Depress' task in 'EVA Egress' procedure");
             }
         }
         catch (System.Exception e)
