@@ -35,6 +35,9 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private ProcedureAutomation procedureAutomation; // Handles automation of steps
     [SerializeField] private WebCamController webCamController; // Reference to camera controller
     [SerializeField] private AudioRecorder audioRecorder; // Reference to audio recorder
+    
+    [Header("WebSocket")]
+    [SerializeField] private WebSocketClient webSocketClient;
 
     // Target task name for this MVP
     private const string PROCEDURE_NAME = "EVA Egress";
@@ -42,10 +45,31 @@ public class ProceduresFlowManager : MonoBehaviour
 
     // Current geosample being collected
     private GeoSampleData currentSample;
+    
+    // Current EVA position data
+    private Vector2 eva1Position = Vector2.zero;
+    private float eva1Heading = 0f;
+    private int currentEvaId = 1; // Default to EVA 1
 
     private void Awake()
     {
         InitializeUI();
+        
+        // Find WebSocketClient if not set in inspector
+        if (webSocketClient == null)
+        {
+            webSocketClient = FindObjectOfType<WebSocketClient>();
+        }
+        
+        if (webSocketClient != null)
+        {
+            // Subscribe to high frequency data for position updates
+            webSocketClient.Subscribe("high_frequency", OnHighFrequencyDataReceived);
+        }
+        else
+        {
+            Debug.LogWarning("WebSocketClient not found. Position data will not be available.");
+        }
     }
     
     public void InitializeUI()
@@ -76,6 +100,41 @@ public class ProceduresFlowManager : MonoBehaviour
         {
             verifyManuallyButton.onClick.AddListener(VerifyManualStep);
         }
+    }
+    
+    // Handle high frequency data from WebSocket (position updates)
+    private void OnHighFrequencyDataReceived(object data)
+    {
+        if (data is HighFrequencyData highFreqData)
+        {
+            // Check if the EVA position data exists in the dictionary
+            if (highFreqData.data.TryGetValue("eva1_imu_posx", out float posX) && 
+                highFreqData.data.TryGetValue("eva1_imu_posy", out float posY))
+            {
+                // Update EVA 1 position
+                eva1Position = new Vector2(posX, posY);
+                
+                // Update heading if available
+                if (highFreqData.data.TryGetValue("eva1_imu_heading", out float heading))
+                {
+                    eva1Heading = heading;
+                }
+                
+                Debug.Log($"Updated EVA 1 position: {eva1Position}, heading: {eva1Heading}");
+            }
+        }
+    }
+    
+    // Get the current EVA position
+    public Vector2 GetCurrentEVAPosition()
+    {
+        return eva1Position;
+    }
+    
+    // Get the current EVA heading
+    public float GetCurrentEVAHeading()
+    {
+        return eva1Heading;
     }
 
     private void StartScan()
@@ -142,8 +201,14 @@ public class ProceduresFlowManager : MonoBehaviour
 
     private string GetCurrentGPSLocation()
     {
-        // TODO: Implement GPS location retrieval
-        // For now, return a placeholder
+        // Use the position data from WebSocket if available
+        if (eva1Position != Vector2.zero)
+        {   
+            Debug.Log($"EVA 1 position: {eva1Position}");
+            return $"{eva1Position.x},{eva1Position.y}";
+        }
+        
+        // Fallback to a placeholder
         return "0,0";
     }
 
