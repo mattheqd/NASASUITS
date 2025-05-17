@@ -31,19 +31,21 @@ public class NavigationSystem : MonoBehaviour
     private Node startNode;
     private Node endNode;
 
+    [Header("UI References")]
     public RectTransform minimapRect;
     public GameObject playerIconPrefab;
-    private RectTransform playerIcon;
     public GameObject pathDotPrefab;
+    public Button startNavigationButton; // New button reference
+    private RectTransform playerIcon;
     private List<GameObject> pathDots = new List<GameObject>();
 
-    public Vector2 startLocation = new Vector2(-5720, -10060);
     public Vector2 endLocation = new Vector2(-5600, -9940);
     private List<Node> currentPath = new List<Node>();
     private bool isMoving = false;
     private bool shouldRecalculatePath = false;
-    private int currentCoordinateIndex = 0;
     private float moveTimer = 0f;
+    private WebSocketClient webSocketClient;
+    private bool isInitialized = false;
 
     // Predefined coordinates for movement
     private readonly Vector2[] movementCoordinates = new Vector2[]
@@ -92,17 +94,83 @@ public class NavigationSystem : MonoBehaviour
 
     void Start()
     {
+        // Find WebSocketClient
+        webSocketClient = FindObjectOfType<WebSocketClient>();
+        if (webSocketClient == null)
+        {
+            Debug.LogError("WebSocketClient not found. Navigation system will not work properly.");
+            return;
+        }
+
+        // Set up button listener
+        if (startNavigationButton != null)
+        {
+            startNavigationButton.onClick.AddListener(OnStartNavigationPressed);
+        }
+        else
+        {
+            Debug.LogError("Start Navigation Button not assigned in inspector!");
+        }
+    }
+
+    private void OnStartNavigationPressed()
+    {
+        Debug.Log("Starting navigation system initialization...");
+        StartCoroutine(InitializeNavigationSystem());
+    }
+
+    private void CleanupExistingSystem()
+    {
+        // Clean up existing player icon
+        if (playerIcon != null)
+        {
+            Destroy(playerIcon.gameObject);
+            playerIcon = null;
+        }
+
+        // Clean up existing path dots
+        foreach (var dot in pathDots)
+        {
+            if (dot != null)
+            {
+                Destroy(dot);
+            }
+        }
+        pathDots.Clear();
+
+        // Reset state
+        allNodes.Clear();
+        minimap.visibleNodes.Clear();
+        currentPath.Clear();
+        isMoving = false;
+        shouldRecalculatePath = false;
+        moveTimer = 0f;
+        isInitialized = false;
+    }
+
+    private System.Collections.IEnumerator InitializeNavigationSystem()
+    {
+        // Clean up any existing system
+        CleanupExistingSystem();
+
         // Create player icon
         GameObject iconObj = Instantiate(playerIconPrefab, minimapRect);
         playerIcon = iconObj.GetComponent<RectTransform>();
         
         InitializeNodes();
         UpdateMinimap();
-        CalculateAndDrawPath();
+        
+        // Wait for initial IMU data before calculating path
+        yield return StartCoroutine(WaitForInitialImuData());
+        
+        isInitialized = true;
+        Debug.Log("Navigation system initialized successfully!");
     }
 
     void Update()
     {
+        if (!isInitialized) return;
+
         // Check for path recalculation toggle (e.g., space bar)
         if (Input.GetKeyDown(KeyCode.Space))
         {
@@ -112,37 +180,33 @@ public class NavigationSystem : MonoBehaviour
         // Recalculate path if needed
         if (shouldRecalculatePath)
         {
-            CalculateAndDrawPath();
+            if (WebSocketClient.LatestImuData != null && 
+                WebSocketClient.LatestImuData.eva1 != null && 
+                WebSocketClient.LatestImuData.eva1.position != null)
+            {
+                Vector2 currentPos = new Vector2(
+                    WebSocketClient.LatestImuData.eva1.position.x,
+                    WebSocketClient.LatestImuData.eva1.position.y
+                );
+                CalculateAndDrawPath(currentPos);
+            }
             shouldRecalculatePath = false;
         }
 
-        // Handle movement
-        if (Input.GetKeyDown(KeyCode.M))
+        // Update agent position from IMU data every second
+        moveTimer += Time.deltaTime;
+        if (moveTimer >= 1f)
         {
-            isMoving = !isMoving;
-            if (isMoving)
+            moveTimer = 0f;
+            if (WebSocketClient.LatestImuData != null && 
+                WebSocketClient.LatestImuData.eva1 != null && 
+                WebSocketClient.LatestImuData.eva1.position != null)
             {
-                currentCoordinateIndex = 0;
-                moveTimer = 0f;
-            }
-        }
-
-        if (isMoving)
-        {
-            moveTimer += Time.deltaTime;
-            if (moveTimer >= 1f)
-            {
-                moveTimer = 0f;
-                if (currentCoordinateIndex < movementCoordinates.Length)
-                {
-                    UpdateAgentUI(movementCoordinates[currentCoordinateIndex]);
-                    currentCoordinateIndex++;
-                }
-                else
-                {
-                    isMoving = false;
-                    Debug.Log("Completed movement sequence");
-                }
+                Vector2 currentPos = new Vector2(
+                    WebSocketClient.LatestImuData.eva1.position.x,
+                    WebSocketClient.LatestImuData.eva1.position.y
+                );
+                UpdateAgentUI(currentPos);
             }
         }
     }
@@ -465,19 +529,41 @@ public class NavigationSystem : MonoBehaviour
         }
     }
 
-    void CalculateAndDrawPath()
+    void CalculateAndDrawPath(Vector2 startPos)
     {
-        Debug.Log($"Calculating path from ({startLocation.x}, {startLocation.y}) to ({endLocation.x}, {endLocation.y})");
-        currentPath = FindPath(startLocation, endLocation);
+        Debug.Log($"Calculating path from ({startPos.x}, {startPos.y}) to ({endLocation.x}, {endLocation.y})");
+        currentPath = FindPath(startPos, endLocation);
         if (currentPath != null && currentPath.Count > 0)
         {
             Debug.Log($"Path found with {currentPath.Count} nodes");
             DrawPathUI(currentPath);
-            UpdateAgentUI(startLocation);
+            UpdateAgentUI(startPos);
         }
         else
         {
             Debug.LogWarning("No path found!");
         }
+    }
+
+    private System.Collections.IEnumerator WaitForInitialImuData()
+    {
+        // Wait until we have valid IMU data
+        while (WebSocketClient.LatestImuData == null || 
+               WebSocketClient.LatestImuData.eva1 == null || 
+               WebSocketClient.LatestImuData.eva1.position == null)
+        {
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        // Get initial position from IMU
+        Vector2 startPos = new Vector2(
+            WebSocketClient.LatestImuData.eva1.position.x,
+            WebSocketClient.LatestImuData.eva1.position.y
+        );
+        
+        Debug.Log($"Got initial EVA1 position from IMU: ({startPos.x}, {startPos.y})");
+        
+        // Calculate initial path
+        CalculateAndDrawPath(startPos);
     }
 } 
