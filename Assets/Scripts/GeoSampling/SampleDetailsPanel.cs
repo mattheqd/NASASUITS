@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.IO;
+using GeoSampling;
 
 public class SampleDetailsPanel : MonoBehaviour
 {
@@ -12,6 +13,19 @@ public class SampleDetailsPanel : MonoBehaviour
     [SerializeField] private RawImage sampleImage;
     [SerializeField] private Button closeButton;
     [SerializeField] private Button deleteButton;
+
+    [Header("Rock Composition UI")]
+    [SerializeField] private TextMeshProUGUI rockNameText;
+    [SerializeField] private TextMeshProUGUI rockSiO2Text;
+    [SerializeField] private TextMeshProUGUI rockAl2O3Text;
+    [SerializeField] private TextMeshProUGUI rockMnOText;
+    [SerializeField] private TextMeshProUGUI rockCaOText;
+    [SerializeField] private TextMeshProUGUI rockP2O3Text;
+    [SerializeField] private TextMeshProUGUI rockTiO2Text;
+    [SerializeField] private TextMeshProUGUI rockFeOText;
+    [SerializeField] private TextMeshProUGUI rockMgOText;
+    [SerializeField] private TextMeshProUGUI rockK2OText;
+    [SerializeField] private TextMeshProUGUI rockOtherText;
 
     private GeoSampleData currentSample;
     private GeoSamplesListUI samplesListUI;
@@ -65,6 +79,58 @@ public class SampleDetailsPanel : MonoBehaviour
         
         if (transcriptionText != null)
             transcriptionText.text = $"Notes: {currentSample.voiceTranscription}";
+
+        // Update rock composition data if available
+        if (currentSample.rockComposition != null)
+        {
+            if (rockNameText != null)
+                rockNameText.text = currentSample.rockComposition.rockName;
+            
+            if (rockSiO2Text != null)
+                rockSiO2Text.text = currentSample.rockComposition.SiO2.ToString();
+            
+            if (rockAl2O3Text != null)
+                rockAl2O3Text.text = currentSample.rockComposition.Al2O3.ToString();
+            
+            if (rockMnOText != null)
+                rockMnOText.text = currentSample.rockComposition.MnO.ToString();
+            
+            if (rockCaOText != null)
+                rockCaOText.text = currentSample.rockComposition.CaO.ToString();
+            
+            if (rockP2O3Text != null)
+                rockP2O3Text.text = currentSample.rockComposition.P2O3.ToString();
+            
+            if (rockTiO2Text != null)
+                rockTiO2Text.text = currentSample.rockComposition.TiO2.ToString();
+            
+            if (rockFeOText != null)
+                rockFeOText.text = currentSample.rockComposition.FeO.ToString();
+            
+            if (rockMgOText != null)
+                rockMgOText.text = currentSample.rockComposition.MgO.ToString();
+            
+            if (rockK2OText != null)
+                rockK2OText.text = currentSample.rockComposition.K2O.ToString();
+            
+            if (rockOtherText != null)
+                rockOtherText.text = currentSample.rockComposition.Other.ToString();
+        }
+        else
+        {
+            // Clear rock composition fields if no data
+            if (rockNameText != null) rockNameText.text = "---";
+            if (rockSiO2Text != null) rockSiO2Text.text = "---";
+            if (rockAl2O3Text != null) rockAl2O3Text.text = "---";
+            if (rockMnOText != null) rockMnOText.text = "---";
+            if (rockCaOText != null) rockCaOText.text = "---";
+            if (rockP2O3Text != null) rockP2O3Text.text = "---";
+            if (rockTiO2Text != null) rockTiO2Text.text = "---";
+            if (rockFeOText != null) rockFeOText.text = "---";
+            if (rockMgOText != null) rockMgOText.text = "---";
+            if (rockK2OText != null) rockK2OText.text = "---";
+            if (rockOtherText != null) rockOtherText.text = "---";
+        }
 
         // Load and display sample image if available
         if (sampleImage != null)

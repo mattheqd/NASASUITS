@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using ProcedureSystem;
 using TMPro;
 using System.Collections;
+using GeoSampling;
 
 public class ProceduresFlowManager : MonoBehaviour
 {
@@ -285,6 +286,27 @@ public class ProceduresFlowManager : MonoBehaviour
             if (string.IsNullOrEmpty(currentSample.sampleType) || currentSample.sampleType == "Rock Sample")
             {
                 currentSample.sampleType = "Rock Sample"; // Or whatever type is determined from scanning
+            }
+
+            // Get the latest rock data
+            RockData currentRockData = WebSocketClient.GetRockDataForEva(currentEvaId);
+            if (currentRockData != null && currentRockData.composition != null)
+            {
+                // Save rock composition data
+                currentSample.rockComposition = new RockComposition
+                {
+                    SiO2 = currentRockData.composition.SiO2,
+                    Al2O3 = currentRockData.composition.Al2O3,
+                    MnO = currentRockData.composition.MnO,
+                    CaO = currentRockData.composition.CaO,
+                    P2O3 = currentRockData.composition.P2O3,
+                    TiO2 = currentRockData.composition.TiO2,
+                    FeO = currentRockData.composition.FeO,
+                    MgO = currentRockData.composition.MgO,
+                    K2O = currentRockData.composition.K2O,
+                    Other = currentRockData.composition.Other,
+                    rockName = currentRockData.name
+                };
             }
         }
         scanningPanel.SetActive(false);
