@@ -14,16 +14,17 @@ public class RockDataDisplay : MonoBehaviour
 
     [Header("EVA 1 Display")]
     public TextMeshProUGUI eva1SpecId;
-    public TextMeshProUGUI eva1Oxygen;
-    public TextMeshProUGUI eva1Water;
-    public TextMeshProUGUI eva1CO2;
-    public TextMeshProUGUI eva1H2;
-    public TextMeshProUGUI eva1N2;
+    public TextMeshProUGUI eva1NameText;
+    public TextMeshProUGUI eva1SiO2Text;
+    public TextMeshProUGUI eva1Al2O3Text;
+    public TextMeshProUGUI eva1MnOText;
+    public TextMeshProUGUI eva1CaOText;
+    public TextMeshProUGUI eva1P2O3Text;
+    public TextMeshProUGUI eva1TiO2Text;
+    public TextMeshProUGUI eva1FeOText;
+    public TextMeshProUGUI eva1MgOText;
+    public TextMeshProUGUI eva1K2OText;
     public TextMeshProUGUI eva1Other;
-    public TextMeshProUGUI eva1Temperature;
-    public TextMeshProUGUI eva1Pressure;
-    public TextMeshProUGUI eva1Humidity;
-    public TextMeshProUGUI eva1Light;
 
     private ConcurrentQueue<RockData> pendingUpdates = new ConcurrentQueue<RockData>();
 
@@ -44,16 +45,17 @@ public class RockDataDisplay : MonoBehaviour
     {
         Debug.Log("RockDataDisplay: Validating TextMeshPro components...");
         if (eva1SpecId == null) Debug.LogError("eva1SpecId is not assigned!");
-        if (eva1Oxygen == null) Debug.LogError("eva1Oxygen is not assigned!");
-        if (eva1Water == null) Debug.LogError("eva1Water is not assigned!");
-        if (eva1CO2 == null) Debug.LogError("eva1CO2 is not assigned!");
-        if (eva1H2 == null) Debug.LogError("eva1H2 is not assigned!");
-        if (eva1N2 == null) Debug.LogError("eva1N2 is not assigned!");
-        if (eva1Other == null) Debug.LogError("eva1Other is not assigned!");
-        if (eva1Temperature == null) Debug.LogError("eva1Temperature is not assigned!");
-        if (eva1Pressure == null) Debug.LogError("eva1Pressure is not assigned!");
-        if (eva1Humidity == null) Debug.LogError("eva1Humidity is not assigned!");
-        if (eva1Light == null) Debug.LogError("eva1Light is not assigned!");
+        if (eva1NameText == null) Debug.LogError("eva1NameText is not assigned!");
+        if (eva1SiO2Text == null) Debug.LogError("eva1SiO2Text is not assigned!");
+        if (eva1Al2O3Text == null) Debug.LogError("eva1Al2O3Text is not assigned!");
+        if (eva1MnOText == null) Debug.LogError("eva1MnOText is not assigned!");
+        if (eva1CaOText == null) Debug.LogError("eva1CaOText is not assigned!");
+        if (eva1P2O3Text == null) Debug.LogError("eva1P2O3Text is not assigned!");
+        if (eva1TiO2Text == null) Debug.LogError("eva1TiO2Text is not assigned!");
+        if (eva1FeOText == null) Debug.LogError("eva1FeOText is not assigned!");
+        if (eva1MgOText == null) Debug.LogError("eva1MgOText is not assigned!");
+        if (eva1K2OText == null) Debug.LogError("eva1K2OText is not assigned!");
+        if (eva1Other == null) Debug.LogError("eva1Other (composition) is not assigned!");
     }
 
     private void OnDestroy()
@@ -68,7 +70,7 @@ public class RockDataDisplay : MonoBehaviour
     {
         while (pendingUpdates.TryDequeue(out RockData rockData))
         {
-            Debug.Log($"RockDataDisplay: [MainThread] Checking specId {rockData.specId}");
+            Debug.Log($"RockDataDisplay: [MainThread] Checking specId {rockData.specId}, Name: {rockData.name}");
             if (rockData.specId != 0)
             {
                 UpdateEVA1Display(rockData);
@@ -80,27 +82,23 @@ public class RockDataDisplay : MonoBehaviour
     {
         try
         {
-            Debug.Log($"RockDataDisplay: Received rock data: {data}");
-            Debug.Log($"RockDataDisplay: EVA ID: {((RockData)data).evaId}");
-            Debug.Log($"RockDataDisplay: SPEC ID: {((RockData)data).specId}");
-            Debug.Log($"RockDataDisplay: Oxygen: {((RockData)data).oxygen}%");
-            Debug.Log($"RockDataDisplay: Water: {((RockData)data).water}%");
-            Debug.Log($"RockDataDisplay: CO2: {((RockData)data).co2}%");
-            Debug.Log($"RockDataDisplay: H2: {((RockData)data).h2}%");
-            Debug.Log($"RockDataDisplay: N2: {((RockData)data).n2}%");
-            Debug.Log($"RockDataDisplay: Other: {((RockData)data).other}%");
-            Debug.Log($"RockDataDisplay: Temperature: {((RockData)data).temperature}°C");
-            Debug.Log($"RockDataDisplay: Pressure: {((RockData)data).pressure} Pa");
-            Debug.Log($"RockDataDisplay: Humidity: {((RockData)data).humidity}%");
-            Debug.Log($"RockDataDisplay: Light: {((RockData)data).light} lux");
             RockData rockData = data as RockData;
             if (rockData == null)
             {
                 Debug.LogError("RockDataDisplay: Data is not a RockData object");
                 return;
             }
-            Debug.Log($"RockDataDisplay: Parsed data for EVA {rockData.evaId}");
-            Debug.Log($"RockDataDisplay: EVA {rockData.evaId}, SPEC {rockData.specId}, O2 {rockData.oxygen}, Water {rockData.water}, CO2 {rockData.co2}, H2 {rockData.h2}, N2 {rockData.n2}, Other {rockData.other}, Temp {rockData.temperature}, Pressure {rockData.pressure}, Humidity {rockData.humidity}, Light {rockData.light}");
+
+            Debug.Log($"RockDataDisplay: Received rock data for EVA {rockData.evaId}, SpecID: {rockData.specId}, Name: {rockData.name}");
+            if (rockData.composition != null)
+            {
+                Debug.Log($"RockDataDisplay: Composition - SiO2: {rockData.composition.SiO2}%, Other: {rockData.composition.Other}%");
+            }
+            else
+            {
+                Debug.Log("RockDataDisplay: Composition data is null.");
+            }
+            
             pendingUpdates.Enqueue(rockData);
         }
         catch (System.Exception e)
@@ -111,17 +109,39 @@ public class RockDataDisplay : MonoBehaviour
 
     private void UpdateEVA1Display(RockData data)
     {
-        Debug.Log($"UpdateEVA1Display called with: EVA {data.evaId}, SPEC {data.specId}, O2 {data.oxygen}, Water {data.water}, CO2 {data.co2}, H2 {data.h2}, N2 {data.n2}, Other {data.other}, Temp {data.temperature}, Pressure {data.pressure}, Humidity {data.humidity}, Light {data.light}");
+        string placeholder = "---";
+        Debug.Log($"UpdateEVA1Display called with: EVA {data.evaId}, SPEC {data.specId}, Name: {data.name}");
+
         if (eva1SpecId != null) eva1SpecId.text = $"SPEC ID: {data.specId}";
-        if (eva1Oxygen != null) eva1Oxygen.text = $"Oxygen: {data.oxygen:F2}%";
-        if (eva1Water != null) eva1Water.text = $"Water: {data.water:F2}%";
-        if (eva1CO2 != null) eva1CO2.text = $"CO2: {data.co2:F2}%";
-        if (eva1H2 != null) eva1H2.text = $"H2: {data.h2:F2}%";
-        if (eva1N2 != null) eva1N2.text = $"N2: {data.n2:F2}%";
-        if (eva1Other != null) eva1Other.text = $"Other: {data.other:F2}%";
-        if (eva1Temperature != null) eva1Temperature.text = $"Temperature: {data.temperature:F2}°C";
-        if (eva1Pressure != null) eva1Pressure.text = $"Pressure: {data.pressure:F2} Pa";
-        if (eva1Humidity != null) eva1Humidity.text = $"Humidity: {data.humidity:F2}%";
-        if (eva1Light != null) eva1Light.text = $"Light: {data.light:F2} lux";
+        if (eva1NameText != null) eva1NameText.text = $"Name: {data.name ?? placeholder}";
+
+        if (data.composition != null)
+        {
+            Debug.Log("UpdateEVA1Display: Updating composition fields.");
+            if (eva1SiO2Text != null) eva1SiO2Text.text = $"SiO2: {data.composition.SiO2:F2}%";
+            if (eva1Al2O3Text != null) eva1Al2O3Text.text = $"Al2O3: {data.composition.Al2O3:F2}%";
+            if (eva1MnOText != null) eva1MnOText.text = $"MnO: {data.composition.MnO:F2}%";
+            if (eva1CaOText != null) eva1CaOText.text = $"CaO: {data.composition.CaO:F2}%";
+            if (eva1P2O3Text != null) eva1P2O3Text.text = $"P2O3: {data.composition.P2O3:F2}%";
+            if (eva1TiO2Text != null) eva1TiO2Text.text = $"TiO2: {data.composition.TiO2:F2}%";
+            if (eva1FeOText != null) eva1FeOText.text = $"FeO: {data.composition.FeO:F2}%";
+            if (eva1MgOText != null) eva1MgOText.text = $"MgO: {data.composition.MgO:F2}%";
+            if (eva1K2OText != null) eva1K2OText.text = $"K2O: {data.composition.K2O:F2}%";
+            if (eva1Other != null) eva1Other.text = $"Other: {data.composition.Other:F2}%";
+        }
+        else
+        {
+            Debug.LogWarning("UpdateEVA1Display: RockData.composition is null. Clearing composition fields.");
+            if (eva1SiO2Text != null) eva1SiO2Text.text = $"SiO2: {placeholder}";
+            if (eva1Al2O3Text != null) eva1Al2O3Text.text = $"Al2O3: {placeholder}";
+            if (eva1MnOText != null) eva1MnOText.text = $"MnO: {placeholder}";
+            if (eva1CaOText != null) eva1CaOText.text = $"CaO: {placeholder}";
+            if (eva1P2O3Text != null) eva1P2O3Text.text = $"P2O3: {placeholder}";
+            if (eva1TiO2Text != null) eva1TiO2Text.text = $"TiO2: {placeholder}";
+            if (eva1FeOText != null) eva1FeOText.text = $"FeO: {placeholder}";
+            if (eva1MgOText != null) eva1MgOText.text = $"MgO: {placeholder}";
+            if (eva1K2OText != null) eva1K2OText.text = $"K2O: {placeholder}";
+            if (eva1Other != null) eva1Other.text = $"Other: {placeholder}";
+        }
     }
 } 

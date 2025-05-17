@@ -30,8 +30,20 @@ public class WebSocketTest : MonoBehaviour
     {
         try
         {
-            RockData rockData = JsonUtility.FromJson<RockData>(data.ToString());
-            Debug.Log($"Received Rock Data - EVA ID: {rockData.evaId}, Temperature: {rockData.temperature}, Pressure: {rockData.pressure}");
+            RockData rockData = data as RockData; // Directly cast, as WebSocketClient should handle deserialization
+            if (rockData != null)
+            {
+                string compositionInfo = "Composition: N/A";
+                if (rockData.composition != null)
+                {
+                    compositionInfo = $"SiO2: {rockData.composition.SiO2:F2}%, Other: {rockData.composition.Other:F2}%"; // Example composition fields
+                }
+                Debug.Log($"Received Rock Data - EVA ID: {rockData.evaId}, Name: {rockData.name ?? "N/A"}, {compositionInfo}");
+            }
+            else
+            {
+                Debug.LogError("HandleRockData: Received data is not of type RockData or is null.");
+            }
         }
         catch (Exception e)
         {

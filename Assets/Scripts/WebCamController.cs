@@ -15,6 +15,7 @@ public class WebCamController : MonoBehaviour
     private Texture2D cameraTexture;
     private int cameraWidth;
     private int cameraHeight;
+    private string currentImagePath; // Store the path of the current image
 
     private void LogToScreen(string message)
     {
@@ -79,6 +80,9 @@ public class WebCamController : MonoBehaviour
         {
             if (path != null)
             {
+                // Store the path of the captured image
+                currentImagePath = path;
+                
                 // Load the captured image with the RawImage's dimensions
                 Texture2D texture = NativeCamera.LoadImageAtPath(path, Mathf.Max(cameraWidth, cameraHeight));
                 if (texture != null)
@@ -102,6 +106,12 @@ public class WebCamController : MonoBehaviour
                 LogToScreen("Camera capture cancelled");
             }
         }, Mathf.Max(cameraWidth, cameraHeight));
+    }
+
+    // Get the path of the current image
+    public string GetCurrentImagePath()
+    {
+        return currentImagePath;
     }
 
     void OnDestroy()

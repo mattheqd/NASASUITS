@@ -31,33 +31,25 @@ public class NavigationSystem : MonoBehaviour
     private Node startNode;
     private Node endNode;
 
+    [Header("UI References")]
     public RectTransform minimapRect;
     public GameObject playerIconPrefab;
-    private RectTransform playerIcon;
     public GameObject pathDotPrefab;
+    public Button startNavigationButton; // New button reference
+    private RectTransform playerIcon;
     private List<GameObject> pathDots = new List<GameObject>();
-    public GameObject hazardDotPrefab;
-    private List<GameObject> hazardDots = new List<GameObject>();
+    public GameObject poiIconPrefab; // Prefab for POI icons
+    private List<GameObject> poiIcons = new List<GameObject>();
+    public GameObject pinPrefab; // Prefab for dropped pins
+    private List<GameObject> droppedPins = new List<GameObject>();
 
-    public Vector2 startLocation = new Vector2(-5720, -10060);
     public Vector2 endLocation = new Vector2(-5600, -9940);
     private List<Node> currentPath = new List<Node>();
     private bool isMoving = false;
     private bool shouldRecalculatePath = false;
-    private int currentCoordinateIndex = 0;
     private float moveTimer = 0f;
-
-    [Header("Path Visualization")]
-    public float pathLineWidth = 2f;
-    public float pathLineScale = 1f;
-    public float hazardDotSize = 4f;
-    public float worldScaleReference = 1f;
-    [Tooltip("Use this to make more aggressive scaling adjustments")]
-    public float worldScaleMultiplier = 10f;
-    [Tooltip("Additional multiplier for line width in world space")]
-    public float lineWidthWorldSpaceMultiplier = 0.1f;
-    [Tooltip("Additional multiplier for line length in world space")]
-    public float lineLengthWorldSpaceMultiplier = 0.2f;
+    private WebSocketClient webSocketClient;
+    private bool isInitialized = false;
 
     // Predefined coordinates for movement
     private readonly Vector2[] movementCoordinates = new Vector2[]
@@ -106,18 +98,111 @@ public class NavigationSystem : MonoBehaviour
 
     void Start()
     {
+        // Find WebSocketClient
+        webSocketClient = FindObjectOfType<WebSocketClient>();
+        if (webSocketClient == null)
+        {
+            Debug.LogError("WebSocketClient not found. Navigation system will not work properly.");
+            return;
+        }
+
+        // Set up button listener
+        if (startNavigationButton != null)
+        {
+            startNavigationButton.onClick.AddListener(OnStartNavigationPressed);
+        }
+        else
+        {
+            Debug.LogError("Start Navigation Button not assigned in inspector!");
+        }
+
+        // Initialize the system immediately
+        Debug.Log("[NavigationSystem] Starting initial system setup");
+        StartCoroutine(InitializeNavigationSystem());
+    }
+
+    public void StartNavigation()
+    {
+        Debug.Log("[NavigationSystem] Starting navigation via public method");
+        StartCoroutine(InitializeNavigationSystem());
+    }
+
+    private void OnStartNavigationPressed()
+    {
+        Debug.Log("[NavigationSystem] Start Navigation button pressed");
+        StartNavigation();
+    }
+
+    private void CleanupExistingSystem()
+    {
+        Debug.Log("[NavigationSystem] Cleaning up existing system...");
+        
+        // Clean up existing player icon
+        if (playerIcon != null)
+        {
+            Debug.Log("[NavigationSystem] Destroying existing player icon");
+            Destroy(playerIcon.gameObject);
+            playerIcon = null;
+        }
+
+        // Clean up existing path dots
+        Debug.Log($"[NavigationSystem] Cleaning up {pathDots.Count} path dots");
+        foreach (var dot in pathDots)
+        {
+            if (dot != null)
+            {
+                Destroy(dot);
+            }
+        }
+        pathDots.Clear();
+
+        // Reset state
+        Debug.Log("[NavigationSystem] Resetting system state");
+        allNodes.Clear();
+        minimap.visibleNodes.Clear();
+        currentPath.Clear();
+        isMoving = false;
+        shouldRecalculatePath = false;
+        moveTimer = 0f;
+        isInitialized = false;
+    }
+
+    private System.Collections.IEnumerator InitializeNavigationSystem()
+    {
+        Debug.Log("[NavigationSystem] Starting initialization...");
+        
+        // Clean up any existing system
+        CleanupExistingSystem();
+
         // Create player icon
+        Debug.Log("[NavigationSystem] Creating new player icon");
         GameObject iconObj = Instantiate(playerIconPrefab, minimapRect);
         playerIcon = iconObj.GetComponent<RectTransform>();
+        if (playerIcon == null)
+        {
+            Debug.LogError("[NavigationSystem] Failed to get RectTransform from player icon!");
+        }
         
+        Debug.Log("[NavigationSystem] Initializing nodes");
         InitializeNodes();
+        Debug.Log($"[NavigationSystem] Initialized {allNodes.Count} nodes");
+        
+        Debug.Log("[NavigationSystem] Updating minimap");
         UpdateMinimap();
-        CalculateAndDrawPath();
-        VisualizeHazardNodes();
+        Debug.Log($"[NavigationSystem] Minimap has {minimap.visibleNodes.Count} visible nodes");
+        
+        // Wait for initial IMU data to position the player icon
+        Debug.Log("[NavigationSystem] Waiting for initial IMU data...");
+        yield return StartCoroutine(WaitForInitialImuData());
+        
+        isInitialized = true;
+        Debug.Log("[NavigationSystem] Initialization complete!");
     }
 
     void Update()
     {
+        if (!isInitialized) return;
+
         // Check for path recalculation toggle (e.g., space bar)
         if (Input.GetKeyDown(KeyCode.Space))
         {
@@ -127,37 +212,33 @@ public class NavigationSystem : MonoBehaviour
         // Recalculate path if needed
         if (shouldRecalculatePath)
         {
-            CalculateAndDrawPath();
+            if (WebSocketClient.LatestImuData != null && 
+                WebSocketClient.LatestImuData.eva1 != null && 
+                WebSocketClient.LatestImuData.eva1.position != null)
+            {
+                Vector2 currentPos = new Vector2(
+                    WebSocketClient.LatestImuData.eva1.position.x,
+                    WebSocketClient.LatestImuData.eva1.position.y
+                );
+                CalculateAndDrawPath(currentPos);
+            }
             shouldRecalculatePath = false;
         }
 
-        // Handle movement
-        if (Input.GetKeyDown(KeyCode.M))
+        // Update agent position from IMU data every second
+        moveTimer += Time.deltaTime;
+        if (moveTimer >= 1f)
         {
-            isMoving = !isMoving;
-            if (isMoving)
+            moveTimer = 0f;
+            if (WebSocketClient.LatestImuData != null && 
+                WebSocketClient.LatestImuData.eva1 != null && 
+                WebSocketClient.LatestImuData.eva1.position != null)
             {
-                currentCoordinateIndex = 0;
-                moveTimer = 0f;
-            }
-        }
-
-        if (isMoving)
-        {
-            moveTimer += Time.deltaTime;
-            if (moveTimer >= 1f)
-            {
-                moveTimer = 0f;
-                if (currentCoordinateIndex < movementCoordinates.Length)
-                {
-                    UpdateAgentUI(movementCoordinates[currentCoordinateIndex]);
-                    currentCoordinateIndex++;
-                }
-                else
-                {
-                    isMoving = false;
-                    Debug.Log("Completed movement sequence");
-                }
+                Vector2 currentPos = new Vector2(
+                    WebSocketClient.LatestImuData.eva1.position.x,
+                    WebSocketClient.LatestImuData.eva1.position.y
+                );
+                UpdateAgentUI(currentPos);
             }
         }
     }
@@ -332,7 +413,15 @@ public class NavigationSystem : MonoBehaviour
             }
         }
 
-        Debug.Log($"Finding nearest node to ({position.x}, {position.y}). Found node at ({nearest.position.x}, {nearest.position.y})");
+        if (nearest == null)
+        {
+            Debug.LogError($"[NavigationSystem] No nearest node found for position ({position.x}, {position.y})");
+        }
+        else
+        {
+            Debug.Log($"[NavigationSystem] Found nearest node at ({nearest.position.x}, {nearest.position.y}) with distance {minDistance}");
+        }
+        
         return nearest;
     }
 
@@ -427,15 +516,14 @@ public class NavigationSystem : MonoBehaviour
     {
         if (playerIcon != null)
         {
-            playerIcon.anchoredPosition = WorldToMinimap(agentWorldPos);
+            Vector2 minimapPos = WorldToMinimap(agentWorldPos);
+            Debug.Log($"[NavigationSystem] Updating agent UI from world pos ({agentWorldPos.x}, {agentWorldPos.y}) to minimap pos ({minimapPos.x}, {minimapPos.y})");
+            playerIcon.anchoredPosition = minimapPos;
         }
-    }
-
-    private float GetMinimapWorldScale()
-    {
-        // Get the overall world scale factor (average of x and y scale)
-        // Multiply by the multiplier to make scaling more aggressive
-        return (minimapRect.lossyScale.x + minimapRect.lossyScale.y) * 0.5f / worldScaleReference * worldScaleMultiplier;
+        else
+        {
+            Debug.LogWarning("[NavigationSystem] Cannot update agent UI - playerIcon is null!");
+        }
     }
 
     void DrawPathUI(List<Node> path)
@@ -444,17 +532,8 @@ public class NavigationSystem : MonoBehaviour
         foreach (var dot in pathDots) Destroy(dot);
         pathDots.Clear();
 
-        // Create a simple white sprite for the line
-        Texture2D lineTexture = new Texture2D(1, 1);
-        lineTexture.SetPixel(0, 0, Color.white);
-        lineTexture.Apply();
-        Sprite lineSprite = Sprite.Create(lineTexture, new Rect(0, 0, 1, 1), new Vector2(0, 0));
-
         // Start with the start node position
         Vector2 previousPos = WorldToMinimap(startNode.position);
-
-        // Get the world scale factor
-        float worldScale = GetMinimapWorldScale();
 
         // Process each node in the path
         for (int i = 0; i < path.Count; i++)
@@ -464,13 +543,10 @@ public class NavigationSystem : MonoBehaviour
             Vector2 currentPos = WorldToMinimap(node.position);
 
             // Create line from previous position to current position
-            GameObject lineObj = new GameObject($"Line");
-            lineObj.transform.SetParent(minimapRect);
-            RectTransform lineRect = lineObj.AddComponent<RectTransform>();
-            Image line = lineObj.AddComponent<Image>();
-            line.sprite = lineSprite;
+            GameObject lineObj = Instantiate(pathDotPrefab, minimapRect);
+            RectTransform lineRect = lineObj.GetComponent<RectTransform>();
+            Image line = lineObj.GetComponent<Image>();
             line.color = Color.yellow;
-            line.type = Image.Type.Simple;
 
             // Set anchors and pivot to (0,0)
             lineRect.anchorMin = Vector2.zero;
@@ -479,17 +555,12 @@ public class NavigationSystem : MonoBehaviour
 
             // Calculate line properties
             Vector2 direction = currentPos - previousPos;
-            
-            // Apply more aggressive scaling to the length
-            float distance = direction.magnitude * pathLineScale * lineLengthWorldSpaceMultiplier;
+            float distance = direction.magnitude;
             float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-
-            // Scale line width based on world scale with additional multiplier
-            float scaledLineWidth = pathLineWidth / worldScale * lineWidthWorldSpaceMultiplier;
 
             // Set line properties
             lineRect.anchoredPosition = previousPos;
-            lineRect.sizeDelta = new Vector2(distance, scaledLineWidth);
+            lineRect.sizeDelta = new Vector2(distance, lineRect.sizeDelta.y); // Use prefab's natural height
             lineRect.localRotation = Quaternion.Euler(0, 0, angle);
             pathDots.Add(lineObj);
 
@@ -498,62 +569,212 @@ public class NavigationSystem : MonoBehaviour
         }
     }
 
-    private void VisualizeHazardNodes()
+    void CalculateAndDrawPath(Vector2 startPos)
     {
-        // Clear existing hazard dots
-        foreach (var dot in hazardDots) Destroy(dot);
-        hazardDots.Clear();
-
-        // Create a simple red sprite for the hazard dots
-        Texture2D hazardTexture = new Texture2D(1, 1);
-        hazardTexture.SetPixel(0, 0, Color.red);
-        hazardTexture.Apply();
-        Sprite hazardSprite = Sprite.Create(hazardTexture, new Rect(0, 0, 1, 1), new Vector2(0, 0));
-
-        // Get the world scale factor
-        float worldScale = GetMinimapWorldScale();
+        Debug.Log($"[NavigationSystem] Calculating path from ({startPos.x}, {startPos.y}) to ({endLocation.x}, {endLocation.y})");
         
-        // Scale dot size based on world scale with much more aggressive scaling
-        float scaledDotSize = hazardDotSize / worldScale * lineWidthWorldSpaceMultiplier;
-
-        // Create hazard dots for each hazard node
-        foreach (Node node in allNodes)
+        // Find nearest nodes for start and end positions
+        startNode = FindNearestNode(startPos);
+        endNode = FindNearestNode(endLocation);
+        
+        if (startNode == null || endNode == null)
         {
-            if (node.isObstacle)
-            {
-                GameObject hazardObj = new GameObject("HazardDot");
-                hazardObj.transform.SetParent(minimapRect);
-                RectTransform hazardRect = hazardObj.AddComponent<RectTransform>();
-                Image hazardImage = hazardObj.AddComponent<Image>();
-                hazardImage.sprite = hazardSprite;
-                hazardImage.color = Color.red;
-
-                // Set anchors and pivot to (0,0)
-                hazardRect.anchorMin = Vector2.zero;
-                hazardRect.anchorMax = Vector2.zero;
-                hazardRect.pivot = Vector2.zero;
-
-                // Set size and position
-                hazardRect.sizeDelta = new Vector2(scaledDotSize, scaledDotSize);
-                hazardRect.anchoredPosition = WorldToMinimap(node.position);
-                hazardDots.Add(hazardObj);
-            }
+            Debug.LogError("[NavigationSystem] Failed to find valid start or end nodes!");
+            if (startNode == null) Debug.LogError("[NavigationSystem] Start node is null");
+            if (endNode == null) Debug.LogError("[NavigationSystem] End node is null");
+            return;
         }
-    }
-
-    void CalculateAndDrawPath()
-    {
-        Debug.Log($"Calculating path from ({startLocation.x}, {startLocation.y}) to ({endLocation.x}, {endLocation.y})");
-        currentPath = FindPath(startLocation, endLocation);
+        
+        Debug.Log($"[NavigationSystem] Found start node at ({startNode.position.x}, {startNode.position.y})");
+        Debug.Log($"[NavigationSystem] Found end node at ({endNode.position.x}, {endNode.position.y})");
+        
+        currentPath = FindPath(startPos, endLocation);
         if (currentPath != null && currentPath.Count > 0)
         {
-            Debug.Log($"Path found with {currentPath.Count} nodes");
+            Debug.Log($"[NavigationSystem] Path found with {currentPath.Count} nodes");
             DrawPathUI(currentPath);
-            UpdateAgentUI(startLocation);
+            UpdateAgentUI(startPos);
         }
         else
         {
-            Debug.LogWarning("No path found!");
+            Debug.LogWarning("[NavigationSystem] No path found!");
         }
+    }
+
+    private System.Collections.IEnumerator WaitForInitialImuData()
+    {
+        Debug.Log("[NavigationSystem] Starting to wait for IMU data...");
+        int waitCount = 0;
+        
+        // Wait until we have valid IMU data
+        while (WebSocketClient.LatestImuData == null || 
+               WebSocketClient.LatestImuData.eva1 == null || 
+               WebSocketClient.LatestImuData.eva1.position == null)
+        {
+            waitCount++;
+            if (waitCount % 10 == 0) // Log every 10 attempts
+            {
+                Debug.Log($"[NavigationSystem] Still waiting for IMU data... (attempt {waitCount})");
+                if (WebSocketClient.LatestImuData == null)
+                    Debug.Log("[NavigationSystem] LatestImuData is null");
+                else if (WebSocketClient.LatestImuData.eva1 == null)
+                    Debug.Log("[NavigationSystem] eva1 data is null");
+                else if (WebSocketClient.LatestImuData.eva1.position == null)
+                    Debug.Log("[NavigationSystem] eva1 position is null");
+            }
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        // Get initial position from IMU
+        Vector2 startPos = new Vector2(
+            WebSocketClient.LatestImuData.eva1.position.x,
+            WebSocketClient.LatestImuData.eva1.position.y
+        );
+        
+        Debug.Log($"[NavigationSystem] Got initial EVA1 position from IMU: ({startPos.x}, {startPos.y})");
+        
+        // Update player position
+        UpdateAgentUI(startPos);
+    }
+
+    public void UpdatePathToLocation(Vector2 newEndLocation)
+    {
+        Debug.Log($"[NavigationSystem] Updating path to new location: ({newEndLocation.x}, {newEndLocation.y})");
+        
+        if (!isInitialized)
+        {
+            Debug.LogWarning("[NavigationSystem] System not initialized yet, cannot update path");
+            return;
+        }
+
+        endLocation = newEndLocation;
+        
+        // Get current position from IMU
+        if (WebSocketClient.LatestImuData != null && 
+            WebSocketClient.LatestImuData.eva1 != null && 
+            WebSocketClient.LatestImuData.eva1.position != null)
+        {
+            Vector2 currentPos = new Vector2(
+                WebSocketClient.LatestImuData.eva1.position.x,
+                WebSocketClient.LatestImuData.eva1.position.y
+            );
+            CalculateAndDrawPath(currentPos);
+        }
+        else
+        {
+            Debug.LogWarning("[NavigationSystem] No IMU data available for path update");
+        }
+    }
+
+    public void ClearCurrentPath()
+    {
+        Debug.Log("[NavigationSystem] Clearing current path");
+        
+        // Clear path dots
+        foreach (var dot in pathDots)
+        {
+            if (dot != null)
+            {
+                Destroy(dot);
+            }
+        }
+        pathDots.Clear();
+        
+        // Clear path data
+        currentPath.Clear();
+    }
+
+    /// <summary>
+    /// Places POI icons on the minimap at the given world positions.
+    /// </summary>
+    /// <param name="poiPositions">List of world positions for POIs</param>
+    public void PlacePOIIcons(List<Vector2> poiPositions)
+    {
+        ClearPOIIcons();
+        if (poiIconPrefab == null)
+        {
+            Debug.LogError("[NavigationSystem] POI Icon Prefab not assigned!");
+            return;
+        }
+        foreach (var pos in poiPositions)
+        {
+            GameObject poiObj = Instantiate(poiIconPrefab, minimapRect);
+            RectTransform poiRect = poiObj.GetComponent<RectTransform>();
+            if (poiRect != null)
+            {
+                Vector2 minimapPos = WorldToMinimap(pos);
+                poiRect.anchoredPosition = minimapPos;
+                poiRect.anchorMin = Vector2.zero;
+                poiRect.anchorMax = Vector2.zero;
+                poiRect.pivot = new Vector2(0.5f, 0.5f);
+            }
+            // Set color to cyan if Image component exists
+            var img = poiObj.GetComponent<UnityEngine.UI.Image>();
+            if (img != null)
+            {
+                img.color = Color.cyan;
+            }
+            poiIcons.Add(poiObj);
+        }
+    }
+
+    /// <summary>
+    /// Clears all POI icons from the minimap.
+    /// </summary>
+    public void ClearPOIIcons()
+    {
+        foreach (var icon in poiIcons)
+        {
+            if (icon != null)
+                Destroy(icon);
+        }
+        poiIcons.Clear();
+    }
+
+    /// <summary>
+    /// Drops a pin at the current IMU position.
+    /// </summary>
+    public void DropPin()
+    {
+        if (pinPrefab == null)
+        {
+            Debug.LogError("[NavigationSystem] Pin Prefab not assigned!");
+            return;
+        }
+        if (WebSocketClient.LatestImuData == null || 
+            WebSocketClient.LatestImuData.eva1 == null || 
+            WebSocketClient.LatestImuData.eva1.position == null)
+        {
+            Debug.LogWarning("[NavigationSystem] No IMU data available for dropping pin.");
+            return;
+        }
+        Vector2 currentPos = new Vector2(
+            WebSocketClient.LatestImuData.eva1.position.x,
+            WebSocketClient.LatestImuData.eva1.position.y
+        );
+        GameObject pinObj = Instantiate(pinPrefab, minimapRect);
+        RectTransform pinRect = pinObj.GetComponent<RectTransform>();
+        if (pinRect != null)
+        {
+            Vector2 minimapPos = WorldToMinimap(currentPos);
+            pinRect.anchoredPosition = minimapPos;
+            pinRect.anchorMin = Vector2.zero;
+            pinRect.anchorMax = Vector2.zero;
+            pinRect.pivot = new Vector2(0.5f, 0.5f);
+        }
+        droppedPins.Add(pinObj);
+    }
+
+    /// <summary>
+    /// Clears all dropped pins from the minimap.
+    /// </summary>
+    public void ClearDroppedPins()
+    {
+        foreach (var pin in droppedPins)
+        {
+            if (pin != null)
+                Destroy(pin);
+        }
+        droppedPins.Clear();
     }
 } 
