@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using WebSocketSharp;
 using System.Text;
+using GeoSampling;
 
 // Message sent to the server
 [Serializable]
@@ -18,21 +19,6 @@ public class WsError
 {
     public string message;
     public int code;
-}
-
-[Serializable]
-public class RockComposition
-{
-    public float SiO2;
-    public float Al2O3;
-    public float MnO;
-    public float CaO;
-    public float P2O3;
-    public float TiO2;
-    public float FeO;
-    public float MgO;
-    public float K2O;
-    public float Other;
 }
 
 [Serializable]

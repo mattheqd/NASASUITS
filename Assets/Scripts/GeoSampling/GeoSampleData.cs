@@ -1,23 +1,44 @@
 using System;
 
-[Serializable]
-public class GeoSampleData
+namespace GeoSampling
 {
-    public string sampleId;
-    public string sampleType;
-    public string location;
-    public string imagePath;
-    public string voiceTranscription;
-
-    public static GeoSampleData CreateNew(string location, string imagePath, string voiceTranscription)
+    [Serializable]
+    public class RockComposition
     {
-        return new GeoSampleData
+        public float SiO2;
+        public float Al2O3;
+        public float MnO;
+        public float CaO;
+        public float P2O3;
+        public float TiO2;
+        public float FeO;
+        public float MgO;
+        public float K2O;
+        public float Other;
+        public string rockName;
+    }
+
+    [Serializable]
+    public class GeoSampleData
+    {
+        public string sampleId;
+        public string sampleType;
+        public string location;
+        public string imagePath;
+        public string voiceTranscription;
+        public RockComposition rockComposition;
+
+        public static GeoSampleData CreateNew(string location, string imagePath, string voiceTranscription)
         {
-            sampleId = Guid.NewGuid().ToString(),
-            sampleType = "Rock Sample", // Default type
-            location = location,
-            imagePath = imagePath,
-            voiceTranscription = voiceTranscription
-        };
+            return new GeoSampleData
+            {
+                sampleId = Guid.NewGuid().ToString(),
+                sampleType = "Rock Sample", // Default type
+                location = location,
+                imagePath = imagePath,
+                voiceTranscription = voiceTranscription,
+                rockComposition = new RockComposition()
+            };
+        }
     }
 } 
