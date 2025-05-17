@@ -195,25 +195,49 @@ public class TelemetryMonitor : MonoBehaviour
 
         // trigger event to create a new alert
         if (newStatus != prevStatus) {
-        // Create alert
-        TelemetryAlert alert = new TelemetryAlert {
-            astronautId = astronautId,
-            parameterName = errorName,
-            value = isError ? 1 : 0,
-            status = newStatus,
-            message = GetErrorMessage(astronautId, errorName, isError),
-            timestamp = DateTime.Now
-        };
-        
-        // Store the alert
-        alerts[astronautId][errorName] = alert;
-        
-        // Trigger appropriate event
-        if (isError) {
-            onCriticalDetected.Invoke(alert);
-        } else {
-            onReturnToNominal.Invoke(alert);
+            // Create alert
+            TelemetryAlert alert = new TelemetryAlert {
+                astronautId = astronautId,
+                parameterName = errorName,
+                value = isError ? 1 : 0,
+                status = newStatus,
+                message = GetErrorMessage(astronautId, errorName, isError),
+                timestamp = DateTime.Now
+            };
+            
+            // Store the alert
+            alerts[astronautId][errorName] = alert;
+            
+            // Trigger appropriate event
+            if (isError) {
+                onCriticalDetected.Invoke(alert);
+            } else {
+                onReturnToNominal.Invoke(alert);
+            }
         }
     }
+
+    //* ----- Generate UI components -----
+    // human readable alert message displayed in the UI
+    private string GetAlertMessage(string astronautId, string paramName, float value, TelemetryThresholds.Status status) {
+        string severity = status == TelemetryThresholds.Status.Caution ? "CAUTION" : 
+                    (status == TelemetryThresholds.Status.Critical ? "WARNING" : "NORMAL");
+
+        string paramDisplayName = paramName.Replace("_", " "); // ex: eva1_oxy -> Oxygen
+        string valueText = FormatParameter(paramName, value);
+
+        return $"{severity} error: {astronautId} {displayName} at {valueText}";
+    }
+
+    // format the parameters
+    private string FormatParameter(string paramName, float value) {
+        switch (paramName) {
+            case "battery": return $"{value:F1}%";
+            case "oxygen": return $"{value:F1}%";
+            case "co2": return $"{value:F2} kPa";
+            case "heart_rate": return $"{value:F0} BPM";
+            case "temperature": return $"{value:F1}°C";
+            default: return $"{value:F1}";
+        }
     }
 }
