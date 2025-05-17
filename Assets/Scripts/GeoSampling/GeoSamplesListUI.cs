@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
+using GeoSampling;
 
 public class GeoSamplesListUI : MonoBehaviour
 {
@@ -10,14 +11,6 @@ public class GeoSamplesListUI : MonoBehaviour
     [SerializeField] private GameObject sampleButtonPrefab; // Prefab for sample buttons
     [SerializeField] private GameObject sampleDetailsPanel; // Panel to show sample details
     [SerializeField] private Button closeDetailsButton; // Button to close details panel
-
-    [Header("Sample Details UI")]
-    [SerializeField] private TextMeshProUGUI sampleTypeText;
-    [SerializeField] private TextMeshProUGUI sampleDescriptionText;
-    [SerializeField] private TextMeshProUGUI locationText;
-    [SerializeField] private TextMeshProUGUI timestampText;
-    [SerializeField] private TextMeshProUGUI transcriptionText;
-    [SerializeField] private RawImage sampleImage;
 
     private List<GameObject> sampleButtons = new List<GameObject>();
 

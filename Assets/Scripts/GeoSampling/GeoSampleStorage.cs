@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using GeoSampling;
 
 public class GeoSampleStorage : MonoBehaviour
 {
