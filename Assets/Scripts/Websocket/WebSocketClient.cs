@@ -544,10 +544,13 @@ public class WebSocketClient : MonoBehaviour
             }
         }
         
-        // When spec ID changes, update the tracking but don't reset the flag
+        // When spec ID changes, reset the "new data" flag state to ensure we detect this change
         if (rockData.specId != lastProcessedSpecId)
         {
             Debug.Log($"[ROCK_RESET] Detected new spec ID: {rockData.specId} (was {lastProcessedSpecId})");
+            
+            // Reset processed state for this new rock sample
+            hasNewRockData = false; // Will be set to true below if this is not the first time we've seen this spec ID
             lastProcessedSpecId = rockData.specId;
         }
         
