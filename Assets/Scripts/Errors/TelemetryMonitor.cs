@@ -17,7 +17,8 @@ public class TelemetryMonitor : MonoBehaviour
         public float value; // Value of the telemetry parameter
         public TelemetryThresholds.Status status; // nominal, caution, critical
         public string message; // Message to display to the user
-        public DateTime timestamp; // Time the alert was created    }
+        public DateTime timestamp; // Time the alert was created    
+    }
 
     // events systems can subscribe to to be notified when a telemetry value falls under that range
     // create a new unity event that is notified when a telemetry value falls under the caution range
@@ -133,9 +134,49 @@ public class TelemetryMonitor : MonoBehaviour
         if (threshold == null) return;
 
         // get the prev alert status
+        // this will be used to determine if the alert should be updated (i.e. if its the same or different)
+        // if it is different, then update it
         // set to nominal automatically if not found;
         TelemetryThresholds.Status prevStatus = TelemetryThresholds.Status.Nominal;
-        string alertKey = $"{astronautId}_{paramName}"; // ex: EVA1_oxygen
+        string alertKey = $"{astronautId}_{paramName}"; // ex: eva1_o2
+        if (alerts[astronautId].ContainsKey(paramName)) {
+            TelemetryAlert prevAlert = alerts[astronautId][paramName];
+            if (prevAlert != null) prevStatus = prevAlert.status; 
+        }
+
+        // call the checker which sees if the telemetry value is within nominal range
+        TelemetryThresholds.Status newStatus = threshold.CheckValue(value);
+
+        // if the status changes, trigger events to store the new alert data, store the alert, 
+        if (newStatus != prevStatus) {
+            // create a new alert data struct
+            TelemetryAlert alert = new TelemetryAlert {
+                astronautId = astronautId,
+                parameterName = paramName,
+                value = value,
+                status = newStatus,
+                message = GetAlertMessage(astronautId, paramName, value, newStatus), 
+                timestamp = DateTime.Now
+            };
+
+            // store the alert into the dictionary
+            alerts[astronautId][paramName] = alert;
+
+            // trigger event based on new status
+            switch (newStatus) {
+                case TelemetryThresholds.Status.Nominal:
+                    onReturnToNominal.Invoke(alert);
+                    break;
+                    
+                case TelemetryThresholds.Status.Caution:
+                    onCautionDetected.Invoke(alert);
+                    break;
+                    
+                case TelemetryThresholds.Status.Critical:
+                    onCriticalDetected.Invoke(alert);
+                    break;
+            }
+        }
     }
 
     // processes the error states for pump, o2, and fan
@@ -143,4 +184,4 @@ public class TelemetryMonitor : MonoBehaviour
        
     }
 }
-}
+
