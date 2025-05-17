@@ -199,7 +199,7 @@ public class WebSocketClient : MonoBehaviour
 {
     private WebSocket ws;
     private Dictionary<string, List<Action<object>>> messageHandlers = new Dictionary<string, List<Action<object>>>();
-    private string serverUrl = "wss://468d-76-78-137-102.ngrok-free.app/ws";
+    private string serverUrl = "wss://a7c4-76-78-137-104.ngrok-free.app/ws";
     
 
     private bool isConnected = false;
