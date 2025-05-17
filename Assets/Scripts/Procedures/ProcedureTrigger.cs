@@ -6,42 +6,79 @@
 using UnityEngine;
 using UnityEngine.UI;
 using ProcedureSystem;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine.Events;
+using System.Collections;
 
 public class ProcedureTrigger : MonoBehaviour
 {
     [Header("Procedure Settings")]
-    [SerializeField] private string procedureName = "EVA Egress";
+    [SerializeField] private string procedureName;
     [SerializeField] private ProcedureDisplay procedureDisplay;
     
     [Header("Trigger Type")]
     [SerializeField] private bool triggerOnButtonClick = true;
     [SerializeField] private bool triggerOnLocationEnter = false;
     
-    [Header("Button Reference (if using button trigger)")]  // button that triggers the start of a procedure
+    [Header("Button Trigger")]  // button that triggers the start of a procedure
     [SerializeField] private Button triggerButton;
     
-    [Header("Location Trigger (if using location trigger)")]
+    [Header("Location Trigger")]
     [SerializeField] private string locationTag = "Station";
     [SerializeField] private float triggerRadius = 2.0f;
     
+    [Header("Dynamic Procedure Control")]
+    [SerializeField] private bool enableDynamicProgression = true;
+    private List<Procedure> allProcedures = new List<Procedure>();
+    private int currentProcedureIndex = 0;
+    private int currentTaskIndex = 0;
+    
     private bool playerInLocation = false;
     
-    //*------ Functions ------*/
+    // Add these fields to help track tasks within procedures
+    private List<string> currentProcedureTasks = new List<string>();
+    
+    //*------ Initialization ------*/
     private void Start()
     {       
         if (triggerOnButtonClick && triggerButton != null)
-            triggerButton.onClick.AddListener(OnTriggerButtonClicked);
+            triggerButton.onClick.AddListener(() => OnTriggerButtonClicked(procedureName));
+        
+        LoadAllProcedures();
+        
+        // Connect to procedure display's next button
+        if (procedureDisplay != null && procedureDisplay.TaskNextButton != null)
+        {
+            procedureDisplay.TaskNextButton.onClick.AddListener(HandleNextButtonClick);
+        }
     }
-    
+    private void LoadAllProcedures()
+    {
+        allProcedures = ProcedureManager.Instance.GetAllProcedures();
+        if (allProcedures != null && allProcedures.Count > 0) {
+            Debug.Log($"Loaded {allProcedures.Count} procedures");
+            
+            // Group the procedures by procedureName to get tasks
+            Dictionary<string, List<Procedure>> procedureGroups = new Dictionary<string, List<Procedure>>();
+            foreach (var procedure in allProcedures) {
+                if (!procedureGroups.ContainsKey(procedure.procedureName)) {
+                    procedureGroups[procedure.procedureName] = new List<Procedure>();
+                }
+                procedureGroups[procedure.procedureName].Add(procedure);
+            }
+            
+            // Sort allProcedures by procedureName and then by task order
+            allProcedures = procedureGroups.Values.SelectMany(group => group).ToList();
+        } else {
+            Debug.LogError("Failed to load procedures from JSON");
+        }
+    }
+    //*------ Functions ------*/
     private void OnDestroy()
     {
         if (triggerButton != null)
-            triggerButton.onClick.RemoveListener(OnTriggerButtonClicked);
-    }
-    
-    private void Update()
-    {
-        if (triggerOnLocationEnter) CheckLocationTrigger();
+            triggerButton.onClick.RemoveListener(() => OnTriggerButtonClicked(procedureName));
     }
     
     // check if player is in a specific location
@@ -58,41 +95,182 @@ public class ProcedureTrigger : MonoBehaviour
             if (inRange && !playerInLocation)
             {
                 playerInLocation = true;
-                ActivateProcedure();
+                ActivateProcedure(procedureName);
             }
             else if (!inRange && playerInLocation)
                 playerInLocation = false;
         }
     }
     
-    // activate procedure if button is clicked
-    private void OnTriggerButtonClicked()
+    // activate procedure if the respective button is clicked (ex: "EVA Egress" button)
+    private void OnTriggerButtonClicked(string procedureName)
     {
-        ActivateProcedure();
+        ActivateProcedure(procedureName);
     }
+    //TODO: replace this with the automation script
+    private void OnNextButtonClicked()
+    {
+        // iterate through the procedure steps until there are no more steps
+        if(procedureDisplay.HasNextStep())
+            procedureDisplay.NextStep();
+        // move on to the next task or procedure
+        else
+            OnCurrentProcedureCompleted(); 
+    }
+
+    //*----- Manage Procedure activation and progression -----*/
     
-    // activate procedure if not already active
-    private void ActivateProcedure() {
-        if (procedureDisplay != null && !procedureDisplay.IsProcedureActive())
+    // Activate procedure
+    private void ActivateProcedure(string procedureName, string taskName = null) 
+    {
+        if (procedureDisplay != null)
         {
-            // Hard-coded to "EVA Egress" to ensure we get a valid procedure
-            Procedure procedure = ProcedureManager.Instance.GetProcedure("EVA Egress");
+            // First remove any existing listeners to avoid duplicates
+            procedureDisplay.onProcedureCompleted.RemoveAllListeners();
             
-            if (procedure != null)
+            // Get the current procedure
+            Procedure procedure;
+            
+            // Display the current task
+            if (taskName != null)
             {
-                Debug.Log("Successfully loaded EVA Egress procedure");
-                procedureDisplay.LoadProcedure(procedure);
+                procedure = ProcedureManager.Instance.GetProcedureTask(procedureName, taskName);
             }
             else
             {
-                Debug.LogError("Failed to load EVA Egress procedure - check if it exists in procedure_data.json");
+                procedure = ProcedureManager.Instance.GetProcedure(procedureName);
+            }
+            
+            if (procedure != null)
+            {
+                Debug.Log($"Loading {procedureName} - {taskName ?? "all tasks"}");
+                procedureDisplay.LoadProcedure(procedure);
+                
+                // Add listener for procedure completion
+                procedureDisplay.onProcedureCompleted.AddListener(OnCurrentProcedureCompleted);
+            }
+            else
+            {
+                Debug.LogError($"Failed to load {procedureName} procedure/task");
             }
         }
     }
     
-    // when player leaves station location, set playerInLocation to false
-    private void OnTriggerExit(Collider other) {
-        if (triggerOnLocationEnter && other.CompareTag("Player"))
-            playerInLocation = false;
+    // Activate the first task in the procedure
+    // Activated after user confirms the procedure on the preview page
+    public void StartTasks()
+    {
+        // Safety check
+        if (allProcedures == null || allProcedures.Count == 0)
+        {
+            Debug.LogError("StartTasks: Cannot start - no procedures loaded");
+            return;
+        }
+        
+        currentProcedureIndex = 0;
+        
+        // Load all tasks for the first procedure
+        string firstProcedure = allProcedures[0].procedureName;
+        LoadProcedureTasks(firstProcedure);
+        
+        // Start with the first task of the first procedure
+        if (currentProcedureTasks.Count > 0)
+        {
+            currentTaskIndex = 0;
+            ActivateProcedure(firstProcedure, currentProcedureTasks[0]);
+            Debug.Log($"Starting with procedure: {firstProcedure}, task: {currentProcedureTasks[0]}");
+        }
+        else
+        {
+            Debug.LogError($"No tasks found for procedure: {firstProcedure}");
+        }
+    }
+
+    // Update this method to track all tasks within a procedure
+    private void LoadProcedureTasks(string procedureName)
+    {
+        // Get all tasks for the current procedure
+        currentProcedureTasks = ProcedureManager.Instance.LoadProcedureTasks(procedureName);
+        currentTaskIndex = 0;
+        
+        Debug.Log($"Loaded {currentProcedureTasks.Count} tasks for procedure '{procedureName}'");
+        foreach (string task in currentProcedureTasks)
+        {
+            Debug.Log($"- Task: {task}");
+        }
+    }
+
+    // Modify OnCurrentProcedureCompleted to handle task navigation
+    public void OnCurrentProcedureCompleted()
+    {
+        Debug.Log("Task completed!");
+        
+        // Check if there are more tasks in the current procedure
+        if (currentProcedureTasks.Count > 0 && currentTaskIndex < currentProcedureTasks.Count - 1)
+        {
+            // Move to the next task in the same procedure
+            currentTaskIndex++;
+            string nextTask = currentProcedureTasks[currentTaskIndex];
+            string currentProcedure = allProcedures[currentProcedureIndex].procedureName;
+            
+            Debug.Log($"Moving to next task: {nextTask} in procedure: {currentProcedure}");
+            StartCoroutine(LoadNextTaskAfterDelay(currentProcedure, nextTask, 0.5f));
+        }
+        else
+        {
+            // We've completed all tasks in this procedure, move to next procedure
+            if (currentProcedureIndex < allProcedures.Count - 1)
+            {
+                currentProcedureIndex++;
+                currentTaskIndex = 0; // Reset task index for the new procedure
+                
+                // Load tasks for the next procedure
+                string nextProcedure = allProcedures[currentProcedureIndex].procedureName;
+                LoadProcedureTasks(nextProcedure);
+                
+                // Start with the first task of the next procedure
+                if (currentProcedureTasks.Count > 0)
+                {
+                    Debug.Log($"Moving to next procedure: {nextProcedure}, starting with task: {currentProcedureTasks[0]}");
+                    StartCoroutine(LoadNextTaskAfterDelay(nextProcedure, currentProcedureTasks[0], 0.75f));
+                }
+                else
+                {
+                    Debug.LogError($"No tasks found for procedure: {nextProcedure}");
+                }
+            }
+            else
+            {
+                Debug.Log("All procedures and tasks completed!");
+                // Optional: Show completion UI
+            }
+        }
+    }
+
+    // Add this method to handle loading the next task with a delay
+    private System.Collections.IEnumerator LoadNextTaskAfterDelay(string procedureName, string taskName, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        
+        Debug.Log($"Loading next task: {procedureName} - {taskName}");
+        ActivateProcedure(procedureName, taskName);
+    }
+
+    // Add this method to handle the next button click
+    private void HandleNextButtonClick()
+    {
+        if (procedureDisplay == null) return;
+        
+        // Check if current procedure has next step
+        if (procedureDisplay.HasNextStep())
+        {
+            // Just advance to the next step - ProcedureDisplay handles this
+            procedureDisplay.NextStep();
+        }
+        else
+        {
+            // We've reached the end of the current task's steps, move to next task/procedure
+            OnCurrentProcedureCompleted();
+        }
     }
 } 
