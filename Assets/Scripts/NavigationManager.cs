@@ -10,7 +10,8 @@ public class NavigationManager : MonoBehaviour
     public GameObject navigationPanel; // Panel containing the minimap
     public Button poiButtonPrefab; // Prefab for POI buttons
     public Transform poiListContent; // Content transform for the POI buttons
-    public Button backButton; // Button to return to POI list
+    public Button resetPathButton; // Button to clear the current path
+    public Button dropPinButton; // Button to drop a pin at current location
 
     [Header("Navigation System")]
     public NavigationSystem navigationSystem; // Reference to the NavigationSystem
@@ -25,6 +26,81 @@ public class NavigationManager : MonoBehaviour
 
     [Header("POI Locations")]
     public List<POILocation> poiLocations = new List<POILocation>();
+
+    private void Start()
+    {
+        Debug.Log("[NavigationManager] Starting initialization...");
+
+        // Ensure panels are properly set up
+        if (poiListPanel == null)
+        {
+            Debug.LogError("[NavigationManager] POI List Panel not assigned!");
+            return;
+        }
+        if (navigationPanel == null)
+        {
+            Debug.LogError("[NavigationManager] Navigation Panel not assigned!");
+            return;
+        }
+        if (poiListContent == null)
+        {
+            Debug.LogError("[NavigationManager] POI List Content transform not assigned!");
+            return;
+        }
+        if (poiButtonPrefab == null)
+        {
+            Debug.LogError("[NavigationManager] POI Button Prefab not assigned!");
+            return;
+        }
+        if (resetPathButton == null)
+        {
+            Debug.LogError("[NavigationManager] Reset Path Button not assigned!");
+            return;
+        }
+        if (dropPinButton == null)
+        {
+            Debug.LogError("[NavigationManager] Drop Pin Button not assigned!");
+            return;
+        }
+
+        // Set up reset button
+        resetPathButton.onClick.AddListener(ResetCurrentPath);
+
+        // Set up drop pin button
+        if (dropPinButton != null)
+        {
+            dropPinButton.onClick.AddListener(() => navigationSystem.DropPin());
+        }
+        else
+        {
+            Debug.LogError("[NavigationManager] Drop Pin Button not assigned!");
+        }
+
+        // Initialize POI list
+        PopulatePOIList();
+
+        // Show both panels
+        ShowBothPanels();
+
+        // Place POI icons on the minimap
+        if (navigationSystem != null && poiLocations != null && poiLocations.Count > 0)
+        {
+            var poiPositions = new List<Vector2>();
+            foreach (var poi in poiLocations)
+            {
+                poiPositions.Add(poi.position);
+            }
+            navigationSystem.PlacePOIIcons(poiPositions);
+        }
+        
+        Debug.Log("[NavigationManager] Initialization complete");
+    }
+
+    private void ResetCurrentPath()
+    {
+        Debug.Log("[NavigationManager] Resetting current path");
+        navigationSystem.ClearCurrentPath();
+    }
 
     private void PopulatePOIList()
     {
@@ -93,88 +169,18 @@ public class NavigationManager : MonoBehaviour
         Debug.Log("[NavigationManager] Finished populating POI list");
     }
 
-    private void Start()
-    {
-        Debug.Log("[NavigationManager] Starting initialization...");
-
-        // Ensure navigation system is not initialized yet
-        if (navigationSystem != null)
-        {
-            navigationSystem.enabled = false;
-        }
-
-        // Ensure panels are properly set up
-        if (poiListPanel == null)
-        {
-            Debug.LogError("[NavigationManager] POI List Panel not assigned!");
-            return;
-        }
-        if (navigationPanel == null)
-        {
-            Debug.LogError("[NavigationManager] Navigation Panel not assigned!");
-            return;
-        }
-        if (poiListContent == null)
-        {
-            Debug.LogError("[NavigationManager] POI List Content transform not assigned!");
-            return;
-        }
-        if (poiButtonPrefab == null)
-        {
-            Debug.LogError("[NavigationManager] POI Button Prefab not assigned!");
-            return;
-        }
-
-        // Initialize POI list
-        PopulatePOIList();
-
-        // Set up back button
-        if (backButton != null)
-        {
-            backButton.onClick.AddListener(ShowPOIList);
-        }
-        else
-        {
-            Debug.LogError("[NavigationManager] Back button not assigned!");
-        }
-
-        // Initially show POI list and hide navigation
-        ShowPOIList();
-        
-        Debug.Log("[NavigationManager] Initialization complete");
-    }
-
     private void NavigateToPOI(POILocation poi)
     {
         Debug.Log($"[NavigationManager] Navigating to POI: {poi.name} at position ({poi.position.x}, {poi.position.y})");
         
-        // Enable navigation system
-        if (navigationSystem != null)
-        {
-            navigationSystem.enabled = true;
-        }
-        
-        // Set the end location in the navigation system
-        navigationSystem.endLocation = poi.position;
-        
-        // Show navigation panel and hide POI list
-        ShowNavigation();
-        
-        // Initialize navigation system
-        navigationSystem.StartNavigation();
+        // Update the path to the new POI location
+        navigationSystem.UpdatePathToLocation(poi.position);
     }
 
-    private void ShowPOIList()
+    private void ShowBothPanels()
     {
-        Debug.Log("[NavigationManager] Showing POI List");
+        Debug.Log("[NavigationManager] Showing both panels");
         if (poiListPanel != null) poiListPanel.SetActive(true);
-        if (navigationPanel != null) navigationPanel.SetActive(false);
-    }
-
-    private void ShowNavigation()
-    {
-        Debug.Log("[NavigationManager] Showing Navigation");
-        if (poiListPanel != null) poiListPanel.SetActive(false);
         if (navigationPanel != null) navigationPanel.SetActive(true);
     }
 } 

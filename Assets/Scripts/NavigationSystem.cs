@@ -38,6 +38,10 @@ public class NavigationSystem : MonoBehaviour
     public Button startNavigationButton; // New button reference
     private RectTransform playerIcon;
     private List<GameObject> pathDots = new List<GameObject>();
+    public GameObject poiIconPrefab; // Prefab for POI icons
+    private List<GameObject> poiIcons = new List<GameObject>();
+    public GameObject pinPrefab; // Prefab for dropped pins
+    private List<GameObject> droppedPins = new List<GameObject>();
 
     public Vector2 endLocation = new Vector2(-5600, -9940);
     private List<Node> currentPath = new List<Node>();
@@ -112,8 +116,9 @@ public class NavigationSystem : MonoBehaviour
             Debug.LogError("Start Navigation Button not assigned in inspector!");
         }
 
-        // Don't initialize automatically - wait for NavigationManager
-        Debug.Log("[NavigationSystem] Waiting for explicit initialization from NavigationManager");
+        // Initialize the system immediately
+        Debug.Log("[NavigationSystem] Starting initial system setup");
+        StartCoroutine(InitializeNavigationSystem());
     }
 
     public void StartNavigation()
@@ -186,7 +191,7 @@ public class NavigationSystem : MonoBehaviour
         UpdateMinimap();
         Debug.Log($"[NavigationSystem] Minimap has {minimap.visibleNodes.Count} visible nodes");
         
-        // Wait for initial IMU data before calculating path
+        // Wait for initial IMU data to position the player icon
         Debug.Log("[NavigationSystem] Waiting for initial IMU data...");
         yield return StartCoroutine(WaitForInitialImuData());
         
@@ -521,12 +526,6 @@ public class NavigationSystem : MonoBehaviour
         }
     }
 
-    private float GetMinimapWorldScale()
-    {
-        // Get the overall world scale factor (average of x and y scale)
-        return (minimapRect.lossyScale.x + minimapRect.lossyScale.y) * 0.5f;
-    }
-
     void DrawPathUI(List<Node> path)
     {
         // Clear old dots
@@ -634,7 +633,148 @@ public class NavigationSystem : MonoBehaviour
         
         Debug.Log($"[NavigationSystem] Got initial EVA1 position from IMU: ({startPos.x}, {startPos.y})");
         
-        // Calculate initial path
-        CalculateAndDrawPath(startPos);
+        // Update player position
+        UpdateAgentUI(startPos);
+    }
+
+    public void UpdatePathToLocation(Vector2 newEndLocation)
+    {
+        Debug.Log($"[NavigationSystem] Updating path to new location: ({newEndLocation.x}, {newEndLocation.y})");
+        
+        if (!isInitialized)
+        {
+            Debug.LogWarning("[NavigationSystem] System not initialized yet, cannot update path");
+            return;
+        }
+
+        endLocation = newEndLocation;
+        
+        // Get current position from IMU
+        if (WebSocketClient.LatestImuData != null && 
+            WebSocketClient.LatestImuData.eva1 != null && 
+            WebSocketClient.LatestImuData.eva1.position != null)
+        {
+            Vector2 currentPos = new Vector2(
+                WebSocketClient.LatestImuData.eva1.position.x,
+                WebSocketClient.LatestImuData.eva1.position.y
+            );
+            CalculateAndDrawPath(currentPos);
+        }
+        else
+        {
+            Debug.LogWarning("[NavigationSystem] No IMU data available for path update");
+        }
+    }
+
+    public void ClearCurrentPath()
+    {
+        Debug.Log("[NavigationSystem] Clearing current path");
+        
+        // Clear path dots
+        foreach (var dot in pathDots)
+        {
+            if (dot != null)
+            {
+                Destroy(dot);
+            }
+        }
+        pathDots.Clear();
+        
+        // Clear path data
+        currentPath.Clear();
+    }
+
+    /// <summary>
+    /// Places POI icons on the minimap at the given world positions.
+    /// </summary>
+    /// <param name="poiPositions">List of world positions for POIs</param>
+    public void PlacePOIIcons(List<Vector2> poiPositions)
+    {
+        ClearPOIIcons();
+        if (poiIconPrefab == null)
+        {
+            Debug.LogError("[NavigationSystem] POI Icon Prefab not assigned!");
+            return;
+        }
+        foreach (var pos in poiPositions)
+        {
+            GameObject poiObj = Instantiate(poiIconPrefab, minimapRect);
+            RectTransform poiRect = poiObj.GetComponent<RectTransform>();
+            if (poiRect != null)
+            {
+                Vector2 minimapPos = WorldToMinimap(pos);
+                poiRect.anchoredPosition = minimapPos;
+                poiRect.anchorMin = Vector2.zero;
+                poiRect.anchorMax = Vector2.zero;
+                poiRect.pivot = new Vector2(0.5f, 0.5f);
+            }
+            // Set color to cyan if Image component exists
+            var img = poiObj.GetComponent<UnityEngine.UI.Image>();
+            if (img != null)
+            {
+                img.color = Color.cyan;
+            }
+            poiIcons.Add(poiObj);
+        }
+    }
+
+    /// <summary>
+    /// Clears all POI icons from the minimap.
+    /// </summary>
+    public void ClearPOIIcons()
+    {
+        foreach (var icon in poiIcons)
+        {
+            if (icon != null)
+                Destroy(icon);
+        }
+        poiIcons.Clear();
+    }
+
+    /// <summary>
+    /// Drops a pin at the current IMU position.
+    /// </summary>
+    public void DropPin()
+    {
+        if (pinPrefab == null)
+        {
+            Debug.LogError("[NavigationSystem] Pin Prefab not assigned!");
+            return;
+        }
+        if (WebSocketClient.LatestImuData == null || 
+            WebSocketClient.LatestImuData.eva1 == null || 
+            WebSocketClient.LatestImuData.eva1.position == null)
+        {
+            Debug.LogWarning("[NavigationSystem] No IMU data available for dropping pin.");
+            return;
+        }
+        Vector2 currentPos = new Vector2(
+            WebSocketClient.LatestImuData.eva1.position.x,
+            WebSocketClient.LatestImuData.eva1.position.y
+        );
+        GameObject pinObj = Instantiate(pinPrefab, minimapRect);
+        RectTransform pinRect = pinObj.GetComponent<RectTransform>();
+        if (pinRect != null)
+        {
+            Vector2 minimapPos = WorldToMinimap(currentPos);
+            pinRect.anchoredPosition = minimapPos;
+            pinRect.anchorMin = Vector2.zero;
+            pinRect.anchorMax = Vector2.zero;
+            pinRect.pivot = new Vector2(0.5f, 0.5f);
+        }
+        droppedPins.Add(pinObj);
+    }
+
+    /// <summary>
+    /// Clears all dropped pins from the minimap.
+    /// </summary>
+    public void ClearDroppedPins()
+    {
+        foreach (var pin in droppedPins)
+        {
+            if (pin != null)
+                Destroy(pin);
+        }
+        droppedPins.Clear();
     }
 } 
