@@ -24,7 +24,7 @@ namespace ProcedureSystem
     public class InstructionStep
     {
         public string instructionText;
-        public bool isAutoVerifiable = false; 
+        public bool isAutoVerifiable = false;  // if true (or some variation), system automatically moves to the next step
         public bool requiresManualVerification = false;
         public float estimatedTimeSeconds = 30f;
         public string[] requiredEquipment;
