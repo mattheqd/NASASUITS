@@ -3,6 +3,8 @@ using UnityEngine.UI;
 using System.Linq;
 using System.Collections.Generic;
 using ProcedureSystem;
+using TMPro;
+using System.Collections;
 
 public class ProceduresFlowManager : MonoBehaviour
 {
@@ -27,6 +29,7 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private Button completePicture;  // Button to manually verify umbilical connection
     [SerializeField] private Button completeVoice;  // Button to manually verify umbilical connection
     [SerializeField] private Button completeGps;  // Button to manually verify umbilical connection
+    [SerializeField] private Button checkRockDataButton; // Button to check rock data
 
     [Header("Component References")]
     [SerializeField] private Transform stepsContainer;     // Contains series of steps in TasksInfo
@@ -35,6 +38,8 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private ProcedureAutomation procedureAutomation; // Handles automation of steps
     [SerializeField] private WebCamController webCamController; // Reference to camera controller
     [SerializeField] private AudioRecorder audioRecorder; // Reference to audio recorder
+    [SerializeField] private TextMeshProUGUI coordinateText; // Text to display coordinates
+    [SerializeField] private TextMeshProUGUI rockDataText; // Text to display rock data
     
     [Header("WebSocket")]
     [SerializeField] private WebSocketClient webSocketClient;
@@ -46,10 +51,13 @@ public class ProceduresFlowManager : MonoBehaviour
     // Current geosample being collected
     private GeoSampleData currentSample;
     
-    // Current EVA position data
-    private Vector2 eva1Position = Vector2.zero;
-    private float eva1Heading = 0f;
+    // Current EVA ID (mainly used for rock sampling)
     private int currentEvaId = 1; // Default to EVA 1
+    
+    // Rock data monitoring
+    private RockData baselineRockData = null;
+    private bool isMonitoringRockData = false;
+    private Coroutine monitorRockDataCoroutine = null;
 
     private void Awake()
     {
@@ -59,16 +67,10 @@ public class ProceduresFlowManager : MonoBehaviour
         if (webSocketClient == null)
         {
             webSocketClient = FindObjectOfType<WebSocketClient>();
-        }
-        
-        if (webSocketClient != null)
-        {
-            // Subscribe to high frequency data for position updates
-            webSocketClient.Subscribe("high_frequency", OnHighFrequencyDataReceived);
-        }
-        else
-        {
-            Debug.LogWarning("WebSocketClient not found. Position data will not be available.");
+            if (webSocketClient == null)
+            {
+                Debug.LogWarning("WebSocketClient not found. Position data will not be available.");
+            }
         }
     }
     
@@ -95,6 +97,12 @@ public class ProceduresFlowManager : MonoBehaviour
         completeVoice.onClick.AddListener(CompleteVoice);
         completeGps.onClick.AddListener(CompleteGps);
         
+        // Set up rock data check button
+        if (checkRockDataButton != null)
+        {
+            checkRockDataButton.onClick.AddListener(CheckForRockData);
+        }
+        
         // Connect manual verification button if available
         if (verifyManuallyButton != null)
         {
@@ -102,56 +110,171 @@ public class ProceduresFlowManager : MonoBehaviour
         }
     }
     
-    // Handle high frequency data from WebSocket (position updates)
-    private void OnHighFrequencyDataReceived(object data)
-    {
-        if (data is HighFrequencyData highFreqData)
-        {
-            // Check if the EVA position data exists in the dictionary
-            if (highFreqData.data.TryGetValue("eva1_imu_posx", out float posX) && 
-                highFreqData.data.TryGetValue("eva1_imu_posy", out float posY))
-            {
-                // Update EVA 1 position
-                eva1Position = new Vector2(posX, posY);
-                
-                // Update heading if available
-                if (highFreqData.data.TryGetValue("eva1_imu_heading", out float heading))
-                {
-                    eva1Heading = heading;
-                }
-                
-                Debug.Log($"Updated EVA 1 position: {eva1Position}, heading: {eva1Heading}");
-            }
-        }
-    }
-    
-    // Get the current EVA position
+    // Get the current EVA position directly from WebSocketClient
     public Vector2 GetCurrentEVAPosition()
     {
-        return eva1Position;
+        if (webSocketClient != null)
+        {
+            return webSocketClient.GetEVA1Position();
+        }
+        return Vector2.zero;
     }
     
-    // Get the current EVA heading
+    // Get the current EVA heading directly from WebSocketClient
     public float GetCurrentEVAHeading()
     {
-        return eva1Heading;
+        if (webSocketClient != null)
+        {
+            return webSocketClient.GetEVA1Heading();
+        }
+        return 0f;
     }
 
     private void StartScan()
     {
         // Create a new sample when starting the geosampling process
         currentSample = GeoSampleData.CreateNew("", "", "");
+        
+        // Capture the current rock data as our baseline for comparison
+        CaptureBaselineRockData();
+        
+        // Start monitoring for rock data changes
+        StartRockDataMonitoring();
+        
         samplingPanel.SetActive(false);
         scanningPanel.SetActive(true);
+    }
+    
+    private void CaptureBaselineRockData()
+    {
+        // Get the current rock data for the EVA we're interested in
+        baselineRockData = WebSocketClient.GetRockDataForEva(currentEvaId);
+        
+        if (baselineRockData != null)
+        {
+            Debug.Log($"[SCAN] Captured baseline rock data for EVA{currentEvaId}, SpecID: {baselineRockData.specId}");
+            
+            // If we have rock data text, update it with a waiting message
+            if (rockDataText != null)
+            {
+                rockDataText.text = "<color=#FFCC00>Scanning for rock sample...\nWaiting for data to change</color>";
+            }
+        }
+        else
+        {
+            Debug.Log($"[SCAN] No baseline rock data available for EVA{currentEvaId}");
+            
+            // If we have rock data text, update it with a waiting message
+            if (rockDataText != null)
+            {
+                rockDataText.text = "<color=#FFCC00>No rock data available.\nPlease ensure telemetry is connected.</color>";
+            }
+        }
+    }
+    
+    private void StartRockDataMonitoring()
+    {
+        // Stop any existing monitoring
+        StopRockDataMonitoring();
+        
+        // Start a new monitoring coroutine
+        isMonitoringRockData = true;
+        monitorRockDataCoroutine = StartCoroutine(MonitorRockDataChanges());
+    }
+    
+    private void StopRockDataMonitoring()
+    {
+        isMonitoringRockData = false;
+        
+        if (monitorRockDataCoroutine != null)
+        {
+            StopCoroutine(monitorRockDataCoroutine);
+            monitorRockDataCoroutine = null;
+        }
+    }
+    
+    private IEnumerator MonitorRockDataChanges()
+    {
+        if (baselineRockData == null)
+        {
+            Debug.LogWarning("[ROCK_MONITOR] Started monitoring with null baseline data");
+            yield break;
+        }
+        
+        Debug.Log($"[ROCK_MONITOR] Starting to monitor for changes from SpecID: {baselineRockData.specId}");
+        
+        int checkCount = 0;
+        float waitTime = 0.5f; // Check every half second
+        
+        // Show waiting animation
+        string[] loadingStates = new string[] { "⏳", "⌛" };
+        int animationFrame = 0;
+        
+        while (isMonitoringRockData)
+        {
+            // Update the waiting animation
+            if (rockDataText != null)
+            {
+                animationFrame = (animationFrame + 1) % loadingStates.Length;
+                rockDataText.text = $"<color=#FFCC00>Scanning for rock sample...</color>\n\n" +
+                                   $"{loadingStates[animationFrame]} Waiting for new data...";
+            }
+            
+            // Get the current rock data
+            RockData currentRockData = WebSocketClient.GetRockDataForEva(currentEvaId);
+            
+            if (currentRockData != null)
+            {
+                // Check if the spec ID has changed
+                if (currentRockData.specId != baselineRockData.specId)
+                {
+                    Debug.Log($"[ROCK_MONITOR] Detected rock data change: SpecID {baselineRockData.specId} -> {currentRockData.specId}");
+                    
+                    // Display the new rock data
+                    if (rockDataText != null)
+                    {
+                        string formattedData = "🆕 <color=#00FF00>NEW SAMPLE DETECTED!</color>\n\n" + 
+                                              WebSocketClient.FormatRockDataSummary(currentRockData);
+                        rockDataText.text = formattedData;
+                    }
+                    
+                    // Update the sample type with the new spec ID
+                    if (currentSample != null)
+                    {
+                        currentSample.sampleType = $"Rock Sample #{currentRockData.specId} (EVA {currentRockData.evaId})";
+                        Debug.Log($"[ROCK_MONITOR] Updated sample type to: {currentSample.sampleType}");
+                    }
+                    
+                    // Stop monitoring since we found a change
+                    isMonitoringRockData = false;
+                    break;
+                }
+                else
+                {
+                    Debug.Log($"[ROCK_MONITOR] Check #{checkCount}: No change in SpecID, still {currentRockData.specId}");
+                }
+            }
+            
+            yield return new WaitForSeconds(waitTime);
+            checkCount++;
+        }
+        
+        Debug.Log("[ROCK_MONITOR] Stopped monitoring for rock data changes");
     }
 
     private void CompleteScan()
     {
+        // Stop monitoring for rock data changes when scan is complete
+        StopRockDataMonitoring();
+        
         // Save scanning data to current sample
         if (currentSample != null)
         {
-            // Set the sample type based on scanning results
-            currentSample.sampleType = "Rock Sample"; // Or whatever type is determined from scanning
+            // Set the sample type based on scanning results if it wasn't already set
+            if (string.IsNullOrEmpty(currentSample.sampleType) || currentSample.sampleType == "Rock Sample")
+            {
+                currentSample.sampleType = "Rock Sample"; // Or whatever type is determined from scanning
+            }
         }
         scanningPanel.SetActive(false);
         picturePanel.SetActive(true);
@@ -179,6 +302,34 @@ public class ProceduresFlowManager : MonoBehaviour
             string transcription = audioRecorder.GetCurrentTranscription();
             currentSample.voiceTranscription = transcription;
         }
+        
+        // Update coordinate text with EVA1 position data
+        if (coordinateText != null)
+        {
+            Vector2 evaPosition = Vector2.zero;
+            
+            // Get the latest IMU data if available
+            if (webSocketClient != null && WebSocketClient.LatestImuData != null && 
+                WebSocketClient.LatestImuData.eva1 != null && 
+                WebSocketClient.LatestImuData.eva1.position != null)
+            {
+                // Use the latest IMU data for EVA1
+                evaPosition.x = WebSocketClient.LatestImuData.eva1.position.x;
+                evaPosition.y = WebSocketClient.LatestImuData.eva1.position.y;
+                
+                Debug.Log($"[VOICE] Got EVA1 coordinates from IMU: ({evaPosition.x}, {evaPosition.y})");
+            }
+            else
+            {
+                // Fallback to the basic position data
+                evaPosition = GetCurrentEVAPosition();
+                Debug.Log($"[VOICE] Using fallback EVA1 position: ({evaPosition.x}, {evaPosition.y})");
+            }
+            
+            // Format and display the coordinates
+            coordinateText.text = $"EVA1 Coordinates: ({evaPosition.x:F2}, {evaPosition.y:F2})";
+        }
+        
         voicePanel.SetActive(false);
         gpsPanel.SetActive(true);
     }
@@ -188,31 +339,47 @@ public class ProceduresFlowManager : MonoBehaviour
         // Save GPS data to current sample
         if (currentSample != null)
         {
-            // Get GPS coordinates from your GPS system
-            string gpsCoordinates = GetCurrentGPSLocation();
-            currentSample.location = gpsCoordinates;
+            // Get coordinates from IMU data instead of just the EVA position
+            Vector2 evaPosition = Vector2.zero;
+            
+            // Get the latest IMU data if available
+            if (webSocketClient != null && WebSocketClient.LatestImuData != null && 
+                WebSocketClient.LatestImuData.eva1 != null && 
+                WebSocketClient.LatestImuData.eva1.position != null)
+            {
+                // Use the latest IMU data for EVA1
+                evaPosition.x = WebSocketClient.LatestImuData.eva1.position.x;
+                evaPosition.y = WebSocketClient.LatestImuData.eva1.position.y;
+                
+                Debug.Log($"[GPS] Using IMU data: Position ({evaPosition.x}, {evaPosition.y})");
+            }
+            else
+            {
+                // Fallback to the basic position data
+                evaPosition = GetCurrentEVAPosition();
+                Debug.Log($"[GPS] Using fallback position data: ({evaPosition.x}, {evaPosition.y})");
+            }
+            
+            // Format location string with just position (no heading)
+            string locationData = $"x:{evaPosition.x},y:{evaPosition.y}";
+            currentSample.location = locationData;
 
+            // Log the sample being saved
+            Debug.Log($"[GEOSAMPLE] Saving sample with location: {locationData}");
+            
             // Save the complete sample to storage
             GeoSampleStorage.Instance.AddSample(currentSample);
             
             // Clear the current sample to prevent duplicates
             currentSample = null;
         }
-        gpsPanel.SetActive(false);
-        proceduresListPanel.SetActive(true);
-    }
-
-    private string GetCurrentGPSLocation()
-    {
-        // Use the position data from WebSocket if available
-        if (eva1Position != Vector2.zero)
-        {   
-            Debug.Log($"EVA 1 position: {eva1Position}");
-            return $"{eva1Position.x},{eva1Position.y}";
+        else
+        {
+            Debug.LogWarning("[GEOSAMPLE] No current sample to save GPS data to");
         }
         
-        // Fallback to a placeholder
-        return "0,0";
+        gpsPanel.SetActive(false);
+        proceduresListPanel.SetActive(true);
     }
 
     //* ---- Starting screens----//
@@ -253,8 +420,6 @@ public class ProceduresFlowManager : MonoBehaviour
             
             if (taskProcedure != null)
             {
-                Debug.Log($"ProceduresFlowManager: Loading task '{TARGET_TASK_NAME}' with {taskProcedure.instructionSteps.Count} steps");
-                
                 // Load only this task's steps
                 procedureDisplay.LoadCustomProcedure(taskProcedure);
                 
@@ -266,7 +431,6 @@ public class ProceduresFlowManager : MonoBehaviour
                 if (procedureAutomation != null)
                 {
                     procedureAutomation.SetProcedureState(PROCEDURE_NAME, TARGET_TASK_NAME, 0);
-                    Debug.Log($"ProceduresFlowManager: Setup automation for task '{TARGET_TASK_NAME}'");
                 }
                 else
                 {
@@ -287,8 +451,6 @@ public class ProceduresFlowManager : MonoBehaviour
     // Populate the steps in the TasksInfo panel
     private void PopulateTaskSteps()
     {
-        Debug.Log($"ProceduresFlowManager: Populating steps for '{TARGET_TASK_NAME}'");
-        
         if (ProcedureManager.Instance == null)
         {
             Debug.LogError("ProceduresFlowManager: ProcedureManager.Instance is null");
@@ -334,5 +496,99 @@ public class ProceduresFlowManager : MonoBehaviour
     {
         proceduresListPanel.SetActive(false);
         samplingPanel.SetActive(true);
+    }
+
+    // Check for new rock data and update UI
+    public void CheckForRockData()
+    {
+        if (rockDataText == null)
+        {
+            Debug.LogError("Rock data text component is not assigned in inspector");
+            return;
+        }
+        
+        if (WebSocketClient.HasNewRockData())
+        {
+            // Get the latest rock data and clear the flag
+            RockData rockData = WebSocketClient.GetAndClearLatestRockData();
+            
+            // Format and display the rock data
+            string formattedData = "🆕 <color=#00FF00>NEW SAMPLE DETECTED!</color>\n\n" + 
+                                   WebSocketClient.FormatRockDataSummary(rockData);
+            rockDataText.text = formattedData;
+            
+            Debug.Log($"[ROCK_CHECK] Found new unique rock data from EVA{rockData.evaId}, Sample ID: {rockData.specId}");
+            
+            // Store the sample ID in the current sample if available
+            if (currentSample != null)
+            {
+                currentSample.sampleType = $"Rock Sample #{rockData.specId} (EVA {rockData.evaId})";
+                Debug.Log($"[ROCK_CHECK] Updated current sample type to: {currentSample.sampleType}");
+            }
+        }
+        else
+        {
+            // Show instructional text rather than old data
+            rockDataText.text = "<color=#FFCC00>Scan Rock, new data will appear once complete</color>";
+            Debug.Log("[ROCK_CHECK] Waiting for new rock data...");
+            
+            // Start checking for new data periodically
+            StartCoroutine(WaitForNewRockData());
+        }
+    }
+    
+    // Coroutine to wait for new rock data
+    private IEnumerator WaitForNewRockData()
+    {
+        // Initial wait time
+        float waitTime = 1.0f;
+        int checkCount = 0;
+        
+        // Show waiting animation
+        string[] loadingStates = new string[] { "⏳", "⌛" };
+        int animationFrame = 0;
+        
+        // Check for new data for up to 30 seconds
+        while (checkCount < 30 && rockDataText != null)
+        {
+            // Update the waiting animation
+            animationFrame = (animationFrame + 1) % loadingStates.Length;
+            rockDataText.text = $"<color=#FFCC00>Scan Rock, new data will appear once complete</color>\n\n{loadingStates[animationFrame]} Waiting for data...";
+            
+            yield return new WaitForSeconds(waitTime);
+            
+            // Check if new data is available
+            if (WebSocketClient.HasNewRockData())
+            {
+                // Get the latest rock data and clear the flag
+                RockData rockData = WebSocketClient.GetAndClearLatestRockData();
+                
+                // Format and display the rock data
+                string formattedData = "🆕 <color=#00FF00>NEW SAMPLE DETECTED!</color>\n\n" + 
+                                      WebSocketClient.FormatRockDataSummary(rockData);
+                rockDataText.text = formattedData;
+                
+                Debug.Log($"[ROCK_CHECK] Found new unique rock data while waiting: EVA{rockData.evaId}, Sample ID: {rockData.specId}");
+                
+                // Store the sample ID in the current sample if available
+                if (currentSample != null)
+                {
+                    currentSample.sampleType = $"Rock Sample #{rockData.specId} (EVA {rockData.evaId})";
+                    Debug.Log($"[ROCK_CHECK] Updated current sample type to: {currentSample.sampleType}");
+                }
+                
+                // New data found, exit the coroutine
+                yield break;
+            }
+            
+            checkCount++;
+        }
+        
+        // If we exit the loop without finding new data, show a timeout message
+        if (rockDataText != null)
+        {
+            rockDataText.text = "<color=#FF6666>No new rock data detected.\nTry scanning again.</color>";
+            Debug.Log("[ROCK_CHECK] Timed out waiting for new rock data");
+        }
     }
 } 
