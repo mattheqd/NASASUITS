@@ -40,17 +40,22 @@ public class ProcedureManager : MonoBehaviour
         LoadProcedures();
     }
     
+    // creates a container that stores all procedures
     private void LoadProcedures()
     {
+        // loads the json file as a series of bytes
         TextAsset jsonFile = Resources.Load<TextAsset>("procedure_data");
         
         if (jsonFile)
         {
-            // Parse JSON to intermediate structure
+            // JSON container stores all procedures in raw json format
             JsonProcedureContainer jsonContainer = JsonUtility.FromJson<JsonProcedureContainer>(jsonFile.text);
             
-            // Create our runtime structure
-            procedureContainer = new ProcedureCollection();
+            // Create a runtime container to store all procedures
+            // This is used to store and retrieve procedures at runtime
+            // we will store the parsed json data into containers
+            // using a separate container makes it easier to manage and retrieve procedures
+            procedureContainer = new ProcedureCollection(); 
             procedureContainer.procedures = new List<Procedure>();
             
             // Copy procedures from JSON container to our runtime container
@@ -58,11 +63,8 @@ public class ProcedureManager : MonoBehaviour
             {
                 foreach (var proc in jsonContainer.procedures)
                 {
-                    procedureContainer.procedures.Add(proc);
+                    procedureContainer.procedures.Add(proc); // add each procedure to the container
                 }
-                
-                Debug.Log($"Loaded {procedureContainer.procedures.Count} procedures with a total of " +
-                        $"{procedureContainer.procedures.Sum(p => p.instructionSteps.Count)} steps");
             }
         }
         else
@@ -147,5 +149,50 @@ public class ProcedureManager : MonoBehaviour
         _instance = managerObject.AddComponent<ProcedureManager>();
         Debug.Log("Created new ProcedureManager instance");
         return _instance;
+    }
+
+    /// <summary>
+    /// Returns a list of all task names for a specific procedure
+    /// </summary>
+    /// <param name="procedureName">Name of the procedure to get tasks for</param>
+    /// <returns>List of task names within the procedure</returns>
+    public List<string> LoadProcedureTasks(string procedureName)
+    {
+        List<string> taskNames = new List<string>();
+        
+        if (procedureContainer == null || procedureContainer.procedures == null)
+        {
+            Debug.LogError($"Procedure container not initialized when trying to load tasks for {procedureName}");
+            return taskNames;
+        }
+        
+        // Find all procedures with the matching procedureName
+        var matchingProcedures = procedureContainer.procedures
+            .Where(p => p.procedureName == procedureName)
+            .ToList();
+        
+        if (matchingProcedures.Count == 0)
+        {
+            Debug.LogWarning($"No procedures found with name '{procedureName}'");
+            return taskNames;
+        }
+        
+        // Extract all unique task names
+        foreach (var proc in matchingProcedures)
+        {
+            if (!string.IsNullOrEmpty(proc.taskName))
+            {
+                // Only add unique task names
+                if (!taskNames.Contains(proc.taskName))
+                {
+                    taskNames.Add(proc.taskName);
+                }
+            }
+        }
+        
+        // Log the results
+        Debug.Log($"Found {taskNames.Count} tasks for procedure '{procedureName}': {string.Join(", ", taskNames)}");
+        
+        return taskNames;
     }
 }

@@ -62,7 +62,13 @@ public class LowFrequencyData
     public float eva1_spec_pres;
     public float eva1_spec_humid;
     public float eva1_spec_light;
-    // ...add more fields as needed for your use case
+}
+[Serializable]
+public class ErrorData
+{
+    public float eva1_fan_error;
+    public float eva1_o2_error;
+    public float eva1_pump_error;
 }
 
 [Serializable]
