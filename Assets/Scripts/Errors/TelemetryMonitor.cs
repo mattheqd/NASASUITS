@@ -181,7 +181,39 @@ public class TelemetryMonitor : MonoBehaviour
 
     // processes the error states for pump, o2, and fan
     private void ProcessErrorState(string astronautId, string paramName, bool errorState) {
-       
+        // check if state changed
+        TelemetryThresholds.Status status = isError
+            ? TelemetryThresholds.Status.Critical // mapped to "error = true"
+            : TelemetryThresholds.Status.Nominal; // mapped to "error = false"
+        TelemetryThresholds.Status prevStatus = TelemetryThresholds.Status.Nominal;
+        if (alerts[astronautId].ContainsKey(errorName)) { // check if the error exists in the dictionary
+            TelemetryAlert prevAlert = alerts[astronautId][errorName];
+            if (prevAlert != null) {
+                prevStatus = prevAlert.status;
+            }
+        }
+
+        // trigger event to create a new alert
+        if (newStatus != prevStatus) {
+        // Create alert
+        TelemetryAlert alert = new TelemetryAlert {
+            astronautId = astronautId,
+            parameterName = errorName,
+            value = isError ? 1 : 0,
+            status = newStatus,
+            message = GetErrorMessage(astronautId, errorName, isError),
+            timestamp = DateTime.Now
+        };
+        
+        // Store the alert
+        alerts[astronautId][errorName] = alert;
+        
+        // Trigger appropriate event
+        if (isError) {
+            onCriticalDetected.Invoke(alert);
+        } else {
+            onReturnToNominal.Invoke(alert);
+        }
+    }
     }
 }
-
