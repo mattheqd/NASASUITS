@@ -111,24 +111,37 @@ public class NavigationSystem : MonoBehaviour
         {
             Debug.LogError("Start Navigation Button not assigned in inspector!");
         }
+
+        // Don't initialize automatically - wait for NavigationManager
+        Debug.Log("[NavigationSystem] Waiting for explicit initialization from NavigationManager");
+    }
+
+    public void StartNavigation()
+    {
+        Debug.Log("[NavigationSystem] Starting navigation via public method");
+        StartCoroutine(InitializeNavigationSystem());
     }
 
     private void OnStartNavigationPressed()
     {
-        Debug.Log("Starting navigation system initialization...");
-        StartCoroutine(InitializeNavigationSystem());
+        Debug.Log("[NavigationSystem] Start Navigation button pressed");
+        StartNavigation();
     }
 
     private void CleanupExistingSystem()
     {
+        Debug.Log("[NavigationSystem] Cleaning up existing system...");
+        
         // Clean up existing player icon
         if (playerIcon != null)
         {
+            Debug.Log("[NavigationSystem] Destroying existing player icon");
             Destroy(playerIcon.gameObject);
             playerIcon = null;
         }
 
         // Clean up existing path dots
+        Debug.Log($"[NavigationSystem] Cleaning up {pathDots.Count} path dots");
         foreach (var dot in pathDots)
         {
             if (dot != null)
@@ -139,6 +152,7 @@ public class NavigationSystem : MonoBehaviour
         pathDots.Clear();
 
         // Reset state
+        Debug.Log("[NavigationSystem] Resetting system state");
         allNodes.Clear();
         minimap.visibleNodes.Clear();
         currentPath.Clear();
@@ -150,21 +164,34 @@ public class NavigationSystem : MonoBehaviour
 
     private System.Collections.IEnumerator InitializeNavigationSystem()
     {
+        Debug.Log("[NavigationSystem] Starting initialization...");
+        
         // Clean up any existing system
         CleanupExistingSystem();
 
         // Create player icon
+        Debug.Log("[NavigationSystem] Creating new player icon");
         GameObject iconObj = Instantiate(playerIconPrefab, minimapRect);
         playerIcon = iconObj.GetComponent<RectTransform>();
+        if (playerIcon == null)
+        {
+            Debug.LogError("[NavigationSystem] Failed to get RectTransform from player icon!");
+        }
         
+        Debug.Log("[NavigationSystem] Initializing nodes");
         InitializeNodes();
+        Debug.Log($"[NavigationSystem] Initialized {allNodes.Count} nodes");
+        
+        Debug.Log("[NavigationSystem] Updating minimap");
         UpdateMinimap();
+        Debug.Log($"[NavigationSystem] Minimap has {minimap.visibleNodes.Count} visible nodes");
         
         // Wait for initial IMU data before calculating path
+        Debug.Log("[NavigationSystem] Waiting for initial IMU data...");
         yield return StartCoroutine(WaitForInitialImuData());
         
         isInitialized = true;
-        Debug.Log("Navigation system initialized successfully!");
+        Debug.Log("[NavigationSystem] Initialization complete!");
     }
 
     void Update()
@@ -381,7 +408,15 @@ public class NavigationSystem : MonoBehaviour
             }
         }
 
-        Debug.Log($"Finding nearest node to ({position.x}, {position.y}). Found node at ({nearest.position.x}, {nearest.position.y})");
+        if (nearest == null)
+        {
+            Debug.LogError($"[NavigationSystem] No nearest node found for position ({position.x}, {position.y})");
+        }
+        else
+        {
+            Debug.Log($"[NavigationSystem] Found nearest node at ({nearest.position.x}, {nearest.position.y}) with distance {minDistance}");
+        }
+        
         return nearest;
     }
 
@@ -476,7 +511,13 @@ public class NavigationSystem : MonoBehaviour
     {
         if (playerIcon != null)
         {
-            playerIcon.anchoredPosition = WorldToMinimap(agentWorldPos);
+            Vector2 minimapPos = WorldToMinimap(agentWorldPos);
+            Debug.Log($"[NavigationSystem] Updating agent UI from world pos ({agentWorldPos.x}, {agentWorldPos.y}) to minimap pos ({minimapPos.x}, {minimapPos.y})");
+            playerIcon.anchoredPosition = minimapPos;
+        }
+        else
+        {
+            Debug.LogWarning("[NavigationSystem] Cannot update agent UI - playerIcon is null!");
         }
     }
 
@@ -531,27 +572,57 @@ public class NavigationSystem : MonoBehaviour
 
     void CalculateAndDrawPath(Vector2 startPos)
     {
-        Debug.Log($"Calculating path from ({startPos.x}, {startPos.y}) to ({endLocation.x}, {endLocation.y})");
+        Debug.Log($"[NavigationSystem] Calculating path from ({startPos.x}, {startPos.y}) to ({endLocation.x}, {endLocation.y})");
+        
+        // Find nearest nodes for start and end positions
+        startNode = FindNearestNode(startPos);
+        endNode = FindNearestNode(endLocation);
+        
+        if (startNode == null || endNode == null)
+        {
+            Debug.LogError("[NavigationSystem] Failed to find valid start or end nodes!");
+            if (startNode == null) Debug.LogError("[NavigationSystem] Start node is null");
+            if (endNode == null) Debug.LogError("[NavigationSystem] End node is null");
+            return;
+        }
+        
+        Debug.Log($"[NavigationSystem] Found start node at ({startNode.position.x}, {startNode.position.y})");
+        Debug.Log($"[NavigationSystem] Found end node at ({endNode.position.x}, {endNode.position.y})");
+        
         currentPath = FindPath(startPos, endLocation);
         if (currentPath != null && currentPath.Count > 0)
         {
-            Debug.Log($"Path found with {currentPath.Count} nodes");
+            Debug.Log($"[NavigationSystem] Path found with {currentPath.Count} nodes");
             DrawPathUI(currentPath);
             UpdateAgentUI(startPos);
         }
         else
         {
-            Debug.LogWarning("No path found!");
+            Debug.LogWarning("[NavigationSystem] No path found!");
         }
     }
 
     private System.Collections.IEnumerator WaitForInitialImuData()
     {
+        Debug.Log("[NavigationSystem] Starting to wait for IMU data...");
+        int waitCount = 0;
+        
         // Wait until we have valid IMU data
         while (WebSocketClient.LatestImuData == null || 
                WebSocketClient.LatestImuData.eva1 == null || 
                WebSocketClient.LatestImuData.eva1.position == null)
         {
+            waitCount++;
+            if (waitCount % 10 == 0) // Log every 10 attempts
+            {
+                Debug.Log($"[NavigationSystem] Still waiting for IMU data... (attempt {waitCount})");
+                if (WebSocketClient.LatestImuData == null)
+                    Debug.Log("[NavigationSystem] LatestImuData is null");
+                else if (WebSocketClient.LatestImuData.eva1 == null)
+                    Debug.Log("[NavigationSystem] eva1 data is null");
+                else if (WebSocketClient.LatestImuData.eva1.position == null)
+                    Debug.Log("[NavigationSystem] eva1 position is null");
+            }
             yield return new WaitForSeconds(0.1f);
         }
 
@@ -561,7 +632,7 @@ public class NavigationSystem : MonoBehaviour
             WebSocketClient.LatestImuData.eva1.position.y
         );
         
-        Debug.Log($"Got initial EVA1 position from IMU: ({startPos.x}, {startPos.y})");
+        Debug.Log($"[NavigationSystem] Got initial EVA1 position from IMU: ({startPos.x}, {startPos.y})");
         
         // Calculate initial path
         CalculateAndDrawPath(startPos);
