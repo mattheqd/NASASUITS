@@ -25,5 +25,3 @@ public class TelemetryThresholds {
             return Status.Critical;
     }
 }
-
-// tracks all telemetry values
