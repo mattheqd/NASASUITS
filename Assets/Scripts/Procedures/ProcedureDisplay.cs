@@ -55,7 +55,7 @@ public class ProcedureDisplay : MonoBehaviour
 
     // Navigation buttons to move next or start procedure
     [Header("Navigation Controls")]
-    [SerializeField] private Button TaskNextButton; // go to the next task
+    [SerializeField] public Button TaskNextButton; // go to the next task
     // [SerializeField] private Button procedureCompleteStepButton; 
     [SerializeField] private Button TaskSkipStepButton; // skip the current step
     // removing this button for now
@@ -143,6 +143,7 @@ public class ProcedureDisplay : MonoBehaviour
             }
         }
 
+
         // Set up step indicators
         CreateTaskStepIndicators(procedure.instructionSteps.Count);
 
@@ -180,6 +181,13 @@ public class ProcedureDisplay : MonoBehaviour
         Debug.Log($"Loaded procedure '{procedure.procedureName}' with {procedure.instructionSteps.Count} steps");
     }
 
+    //*----- Manage Procedure progression -----*/
+    // Procedure trigger uses this to check if there is a next step
+    public bool HasNextStep()
+    {
+        return CurrentProcedure != null && 
+               currentStepIndex < CurrentProcedure.instructionSteps.Count - 1;
+    }
     // Move to the next step
     public void NextStep()
     {
@@ -190,20 +198,34 @@ public class ProcedureDisplay : MonoBehaviour
             return;
         }
 
-        // Check if this is the last step
-        if (currentStepIndex >= CurrentProcedure.instructionSteps.Count - 1)
+        // Mark the current step complete if it exists
+        if (currentStepIndex < TaskStepItems.Count && TaskStepItems[currentStepIndex] != null)
         {
-            // We're at the last step, mark this procedure as complete
-            Debug.Log("ProcedureDisplay: Procedure complete!");
+            StepItem stepItem = TaskStepItems[currentStepIndex].GetComponent<StepItem>();
+            if (stepItem != null)
+                stepItem.MarkCompleted(true);
+        }
+
+        // Increment the step index
+        currentStepIndex++;
+
+        // Check if this was the last step in the current task
+        if (currentStepIndex >= CurrentProcedure.instructionSteps.Count)
+        {
+            Debug.Log($"ProcedureDisplay: Task '{CurrentProcedure.taskName}' complete! Triggering completion event.");
+            
+            // Important: Reset UI state
+            if (DisplayPanel != null)
+                DisplayPanel.SetActive(false);
+            
+            // Trigger the completion event to notify ProcedureTrigger to move to next task
             onProcedureCompleted?.Invoke();
             return;
         }
 
-        // Increment the step index and update display
-        currentStepIndex++;
+        // Not at the end yet, show the next step
         DisplayCurrentStep();
-        
-        Debug.Log($"ProcedureDisplay: Advanced to step {currentStepIndex + 1} of {CurrentProcedure.instructionSteps.Count}P: {CurrentProcedure.procedureName}, Step Text: {CurrentProcedure.instructionSteps[currentStepIndex].instructionText}");
+        UpdateProgressIndicators();
     }
 
     // Skip the current step
