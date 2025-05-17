@@ -191,7 +191,8 @@ public class WebSocketClient : MonoBehaviour
 {
     private WebSocket ws;
     private Dictionary<string, List<Action<object>>> messageHandlers = new Dictionary<string, List<Action<object>>>();
-    private string serverUrl = "wss://8ae4-128-195-95-17.ngrok-free.app/ws";
+    private string serverUrl = "wss://468d-76-78-137-102.ngrok-free.app/ws";
+    
 
     private bool isConnected = false;
     private float reconnectDelay = 5f;
@@ -416,6 +417,7 @@ public class WebSocketClient : MonoBehaviour
         try
         {
             ws = new WebSocket(serverUrl);
+            ws.SslConfiguration.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;
             
             ws.OnOpen += (sender, e) => {
                 isConnected = true;
