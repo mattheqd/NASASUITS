@@ -244,6 +244,9 @@ public class ProceduresFlowManager : MonoBehaviour
                 {
                     Debug.Log($"[ROCK_MONITOR] Detected rock data change: SpecID {baselineRockData.specId} -> {currentRockData.specId}");
                     
+                    // Update the baseline to the new data to prevent multiple detections
+                    baselineRockData = currentRockData;
+                    
                     DisplayRockDataDetails(currentRockData); // Display new rock data details
                     if (rockDataText != null)
                     {
