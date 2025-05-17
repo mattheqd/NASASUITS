@@ -41,6 +41,21 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI coordinateText; // Text to display coordinates
     [SerializeField] private TextMeshProUGUI rockDataText; // Text to display rock data
     
+    [Header("Rock Data UI Fields")]
+    [SerializeField] private TextMeshProUGUI rockEvaIdText;
+    [SerializeField] private TextMeshProUGUI rockSpecIdText;
+    [SerializeField] private TextMeshProUGUI rockNameText;
+    [SerializeField] private TextMeshProUGUI rockSiO2Text;
+    [SerializeField] private TextMeshProUGUI rockAl2O3Text;
+    [SerializeField] private TextMeshProUGUI rockMnOText;
+    [SerializeField] private TextMeshProUGUI rockCaOText;
+    [SerializeField] private TextMeshProUGUI rockP2O3Text;
+    [SerializeField] private TextMeshProUGUI rockTiO2Text;
+    [SerializeField] private TextMeshProUGUI rockFeOText;
+    [SerializeField] private TextMeshProUGUI rockMgOText;
+    [SerializeField] private TextMeshProUGUI rockK2OText;
+    [SerializeField] private TextMeshProUGUI rockOtherText;
+
     [Header("WebSocket")]
     [SerializeField] private WebSocketClient webSocketClient;
 
@@ -153,21 +168,19 @@ public class ProceduresFlowManager : MonoBehaviour
         if (baselineRockData != null)
         {
             Debug.Log($"[SCAN] Captured baseline rock data for EVA{currentEvaId}, SpecID: {baselineRockData.specId}");
-            
-            // If we have rock data text, update it with a waiting message
+            DisplayRockDataDetails(baselineRockData); // Display baseline details
             if (rockDataText != null)
             {
-                rockDataText.text = "<color=#FFCC00>Scanning for rock sample...\nWaiting for data to change</color>";
+                rockDataText.text = "<color=#FFCC00>Scanning for rock sample... Waiting for data to change</color>";
             }
         }
         else
         {
             Debug.Log($"[SCAN] No baseline rock data available for EVA{currentEvaId}");
-            
-            // If we have rock data text, update it with a waiting message
+            DisplayRockDataDetails(null); // Clear details
             if (rockDataText != null)
             {
-                rockDataText.text = "<color=#FFCC00>No rock data available.\nPlease ensure telemetry is connected.</color>";
+                rockDataText.text = "<color=#FFCC00>No rock data available. Please ensure telemetry is connected.</color>";
             }
         }
     }
@@ -216,9 +229,9 @@ public class ProceduresFlowManager : MonoBehaviour
             if (rockDataText != null)
             {
                 animationFrame = (animationFrame + 1) % loadingStates.Length;
-                rockDataText.text = $"<color=#FFCC00>Scanning for rock sample...</color>\n\n" +
-                                   $"{loadingStates[animationFrame]} Waiting for new data...";
+                rockDataText.text = $"<color=#FFCC00>Scanning for rock sample...</color> {loadingStates[animationFrame]} Waiting for new data...";
             }
+            DisplayRockDataDetails(null); // Clear details while waiting for new specId
             
             // Get the current rock data
             RockData currentRockData = WebSocketClient.GetRockDataForEva(currentEvaId);
@@ -230,12 +243,10 @@ public class ProceduresFlowManager : MonoBehaviour
                 {
                     Debug.Log($"[ROCK_MONITOR] Detected rock data change: SpecID {baselineRockData.specId} -> {currentRockData.specId}");
                     
-                    // Display the new rock data
+                    DisplayRockDataDetails(currentRockData); // Display new rock data details
                     if (rockDataText != null)
                     {
-                        string formattedData = "🆕 <color=#00FF00>NEW SAMPLE DETECTED!</color>\n\n" + 
-                                              WebSocketClient.FormatRockDataSummary(currentRockData);
-                        rockDataText.text = formattedData;
+                        rockDataText.text = "🆕 <color=#00FF00>NEW SAMPLE DETECTED!</color>";
                     }
                     
                     // Update the sample type with the new spec ID
@@ -513,9 +524,10 @@ public class ProceduresFlowManager : MonoBehaviour
             RockData rockData = WebSocketClient.GetAndClearLatestRockData();
             
             // Format and display the rock data
-            string formattedData = "🆕 <color=#00FF00>NEW SAMPLE DETECTED!</color>\n\n" + 
-                                   WebSocketClient.FormatRockDataSummary(rockData);
-            rockDataText.text = formattedData;
+            DisplayRockDataDetails(rockData); // Display new rock data details
+            if (rockDataText != null) {
+                rockDataText.text = "🆕 <color=#00FF00>NEW SAMPLE DETECTED!</color>";
+            }
             
             Debug.Log($"[ROCK_CHECK] Found new unique rock data from EVA{rockData.evaId}, Sample ID: {rockData.specId}");
             
@@ -529,7 +541,10 @@ public class ProceduresFlowManager : MonoBehaviour
         else
         {
             // Show instructional text rather than old data
-            rockDataText.text = "<color=#FFCC00>Scan Rock, new data will appear once complete</color>";
+            if (rockDataText != null) {
+                rockDataText.text = "<color=#FFCC00>Scan Rock, new data will appear once complete</color>";
+            }
+            DisplayRockDataDetails(null); // Clear details
             Debug.Log("[ROCK_CHECK] Waiting for new rock data...");
             
             // Start checking for new data periodically
@@ -553,7 +568,10 @@ public class ProceduresFlowManager : MonoBehaviour
         {
             // Update the waiting animation
             animationFrame = (animationFrame + 1) % loadingStates.Length;
-            rockDataText.text = $"<color=#FFCC00>Scan Rock, new data will appear once complete</color>\n\n{loadingStates[animationFrame]} Waiting for data...";
+            if (rockDataText != null) {
+                rockDataText.text = $"<color=#FFCC00>Scan Rock, new data will appear once complete</color> {loadingStates[animationFrame]} Waiting for data...";
+            }
+            DisplayRockDataDetails(null); // Clear details while waiting
             
             yield return new WaitForSeconds(waitTime);
             
@@ -563,10 +581,10 @@ public class ProceduresFlowManager : MonoBehaviour
                 // Get the latest rock data and clear the flag
                 RockData rockData = WebSocketClient.GetAndClearLatestRockData();
                 
-                // Format and display the rock data
-                string formattedData = "🆕 <color=#00FF00>NEW SAMPLE DETECTED!</color>\n\n" + 
-                                      WebSocketClient.FormatRockDataSummary(rockData);
-                rockDataText.text = formattedData;
+                DisplayRockDataDetails(rockData); // Display new rock data details
+                if (rockDataText != null) {
+                    rockDataText.text = "🆕 <color=#00FF00>NEW SAMPLE DETECTED!</color>";
+                }
                 
                 Debug.Log($"[ROCK_CHECK] Found new unique rock data while waiting: EVA{rockData.evaId}, Sample ID: {rockData.specId}");
                 
@@ -587,8 +605,65 @@ public class ProceduresFlowManager : MonoBehaviour
         // If we exit the loop without finding new data, show a timeout message
         if (rockDataText != null)
         {
-            rockDataText.text = "<color=#FF6666>No new rock data detected.\nTry scanning again.</color>";
+            rockDataText.text = "<color=#FF6666>No new rock data detected. Try scanning again.</color>";
+            DisplayRockDataDetails(null); // Clear details on timeout
             Debug.Log("[ROCK_CHECK] Timed out waiting for new rock data");
+        }
+    }
+
+    private void DisplayRockDataDetails(RockData data)
+    {
+        string placeholder = "---";
+        if (data != null)
+        {
+            if (rockEvaIdText != null) rockEvaIdText.text = $"EVA {data.evaId}";
+            if (rockSpecIdText != null) rockSpecIdText.text = $"Sample ID: {data.specId}";
+            if (rockNameText != null) rockNameText.text = data.name ?? placeholder;
+
+            if (data.composition != null)
+            {
+                if (rockSiO2Text != null) rockSiO2Text.text = $"{data.composition.SiO2:F2}%";
+                if (rockAl2O3Text != null) rockAl2O3Text.text = $"{data.composition.Al2O3:F2}%";
+                if (rockMnOText != null) rockMnOText.text = $"{data.composition.MnO:F2}%";
+                if (rockCaOText != null) rockCaOText.text = $"{data.composition.CaO:F2}%";
+                if (rockP2O3Text != null) rockP2O3Text.text = $"{data.composition.P2O3:F2}%";
+                if (rockTiO2Text != null) rockTiO2Text.text = $"{data.composition.TiO2:F2}%";
+                if (rockFeOText != null) rockFeOText.text = $"{data.composition.FeO:F2}%";
+                if (rockMgOText != null) rockMgOText.text = $"{data.composition.MgO:F2}%";
+                if (rockK2OText != null) rockK2OText.text = $"{data.composition.K2O:F2}%";
+                if (rockOtherText != null) rockOtherText.text = $"{data.composition.Other:F2}%";
+            }
+            else
+            {
+                // If composition is null, set oxide fields to placeholder
+                if (rockSiO2Text != null) rockSiO2Text.text = placeholder;
+                if (rockAl2O3Text != null) rockAl2O3Text.text = placeholder;
+                if (rockMnOText != null) rockMnOText.text = placeholder;
+                if (rockCaOText != null) rockCaOText.text = placeholder;
+                if (rockP2O3Text != null) rockP2O3Text.text = placeholder;
+                if (rockTiO2Text != null) rockTiO2Text.text = placeholder;
+                if (rockFeOText != null) rockFeOText.text = placeholder;
+                if (rockMgOText != null) rockMgOText.text = placeholder;
+                if (rockK2OText != null) rockK2OText.text = placeholder;
+                if (rockOtherText != null) rockOtherText.text = placeholder;
+            }
+        }
+        else
+        {
+            if (rockEvaIdText != null) rockEvaIdText.text = placeholder;
+            if (rockSpecIdText != null) rockSpecIdText.text = placeholder;
+            if (rockNameText != null) rockNameText.text = placeholder;
+            // Set all composition fields to placeholder if data is null
+            if (rockSiO2Text != null) rockSiO2Text.text = placeholder;
+            if (rockAl2O3Text != null) rockAl2O3Text.text = placeholder;
+            if (rockMnOText != null) rockMnOText.text = placeholder;
+            if (rockCaOText != null) rockCaOText.text = placeholder;
+            if (rockP2O3Text != null) rockP2O3Text.text = placeholder;
+            if (rockTiO2Text != null) rockTiO2Text.text = placeholder;
+            if (rockFeOText != null) rockFeOText.text = placeholder;
+            if (rockMgOText != null) rockMgOText.text = placeholder;
+            if (rockK2OText != null) rockK2OText.text = placeholder;
+            if (rockOtherText != null) rockOtherText.text = placeholder;
         }
     }
 } 

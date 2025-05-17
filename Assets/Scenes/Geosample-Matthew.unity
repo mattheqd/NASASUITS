@@ -329,7 +329,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: SiO2
+  m_text: FeO
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -552,7 +552,7 @@ GameObject:
   - component: {fileID: 19150153}
   - component: {fileID: 19150152}
   m_Layer: 0
-  m_Name: Panel (7)
+  m_Name: FeO
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1102,7 +1102,7 @@ GameObject:
   - component: {fileID: 81285782}
   - component: {fileID: 81285781}
   m_Layer: 0
-  m_Name: Panel (2)
+  m_Name: MnO
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1304,7 +1304,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: SiO2
+  m_text: Other
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -1946,7 +1946,7 @@ GameObject:
   - component: {fileID: 209454351}
   - component: {fileID: 209454350}
   m_Layer: 0
-  m_Name: Panel (5)
+  m_Name: K2O
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2291,7 +2291,7 @@ GameObject:
   - component: {fileID: 242766386}
   - component: {fileID: 242766385}
   m_Layer: 0
-  m_Name: Panel (4)
+  m_Name: Other
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2368,7 +2368,7 @@ GameObject:
   - component: {fileID: 244139340}
   - component: {fileID: 244139339}
   m_Layer: 0
-  m_Name: Panel
+  m_Name: SiO2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3099,7 +3099,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: SiO2
+  m_text: K2O
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -4219,7 +4219,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: SiO2
+  m_text: TiO2
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -4865,7 +4865,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: -0.000030517578, y: 0}
+  m_AnchoredPosition: {x: 0.000021159896, y: 0}
   m_SizeDelta: {x: 814.71, y: 879.2}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &583117677
@@ -6077,15 +6077,15 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 244139338}
-  - {fileID: 1762210492}
-  - {fileID: 992063873}
-  - {fileID: 81285780}
   - {fileID: 1065967510}
-  - {fileID: 242766384}
-  - {fileID: 209454349}
-  - {fileID: 903342851}
-  - {fileID: 19150151}
+  - {fileID: 81285780}
+  - {fileID: 992063873}
+  - {fileID: 1762210492}
   - {fileID: 1380376303}
+  - {fileID: 19150151}
+  - {fileID: 903342851}
+  - {fileID: 209454349}
+  - {fileID: 242766384}
   m_Father: {fileID: 1626391520}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -7260,7 +7260,7 @@ GameObject:
   - component: {fileID: 903342853}
   - component: {fileID: 903342852}
   m_Layer: 0
-  m_Name: Panel (6)
+  m_Name: MgO
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -8106,7 +8106,7 @@ GameObject:
   - component: {fileID: 992063875}
   - component: {fileID: 992063874}
   m_Layer: 0
-  m_Name: Panel (3)
+  m_Name: CaO
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -9046,7 +9046,7 @@ GameObject:
   - component: {fileID: 1065967512}
   - component: {fileID: 1065967511}
   m_Layer: 0
-  m_Name: Panel (1)
+  m_Name: AI2O3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11251,7 +11251,7 @@ GameObject:
   - component: {fileID: 1380376305}
   - component: {fileID: 1380376304}
   m_Layer: 0
-  m_Name: Panel (8)
+  m_Name: TiO2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -13017,8 +13017,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1524602400}
   m_HandleRect: {fileID: 1524602399}
   m_Direction: 0
-  m_Value: 0
-  m_Size: 1
+  m_Value: 1
+  m_Size: 0.99999994
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -13608,7 +13608,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: SiO2
+  m_text: 'AI2O3
+
+'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -13904,7 +13906,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 950431903}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.99999994
+  m_Size: 0.9999998
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -14533,7 +14535,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: SiO2
+  m_text: MgO
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -14858,7 +14860,7 @@ GameObject:
   - component: {fileID: 1762210494}
   - component: {fileID: 1762210493}
   m_Layer: 0
-  m_Name: Panel (4)
+  m_Name: P2O3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -15729,7 +15731,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: SiO2
+  m_text: 'CaO
+
+'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -16040,7 +16044,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: SiO2
+  m_text: 'MnO
+
+'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -17912,7 +17918,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: SiO2
+  m_text: 'P2O3
+
+'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -18344,7 +18352,7 @@ MonoBehaviour:
   minimapRect: {fileID: 2119364828}
   playerIconPrefab: {fileID: 1935131872001031994, guid: bdee18c3742dce9469686d276d38ffe6, type: 3}
   pathDotPrefab: {fileID: 9011896807242633772, guid: 010114904fce6a940bd1d32a91874708, type: 3}
-  startLocation: {x: -5700, y: -10030}
+  startNavigationButton: {fileID: 0}
   endLocation: {x: -5620, y: -9960}
 --- !u!114 &2119364830
 MonoBehaviour:
@@ -18601,6 +18609,18 @@ MonoBehaviour:
   audioRecorder: {fileID: 1037795209}
   coordinateText: {fileID: 1618999462}
   rockDataText: {fileID: 1261288002}
+  rockEvaIdText: {fileID: 0}
+  rockSpecIdText: {fileID: 0}
+  rockOxygenText: {fileID: 0}
+  rockWaterText: {fileID: 0}
+  rockCO2Text: {fileID: 0}
+  rockH2Text: {fileID: 0}
+  rockN2Text: {fileID: 0}
+  rockOtherText: {fileID: 0}
+  rockTemperatureText: {fileID: 0}
+  rockPressureText: {fileID: 0}
+  rockHumidityText: {fileID: 0}
+  rockLightText: {fileID: 0}
   webSocketClient: {fileID: 0}
 --- !u!114 &2133738272
 MonoBehaviour:

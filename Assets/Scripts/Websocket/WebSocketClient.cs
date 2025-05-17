@@ -21,20 +21,28 @@ public class WsError
 }
 
 [Serializable]
+public class RockComposition
+{
+    public float SiO2;
+    public float Al2O3;
+    public float MnO;
+    public float CaO;
+    public float P2O3;
+    public float TiO2;
+    public float FeO;
+    public float MgO;
+    public float K2O;
+    public float Other;
+}
+
+[Serializable]
 public class RockData
 {
     public int evaId;
     public int specId;
-    public float oxygen;
-    public float water;
-    public float co2;
-    public float h2;
-    public float n2;
-    public float other;
-    public float temperature;
-    public float pressure;
-    public float humidity;
-    public float light;
+    public string name; // Added name
+    public RockComposition composition; // Added nested composition
+    // Removed: oxygen, water, co2, h2, n2, other (moved to composition), temperature, pressure, humidity, light
 }
 
 [Serializable]
@@ -502,16 +510,20 @@ public class WebSocketClient : MonoBehaviour
         {
             evaId = rockData.evaId,
             specId = rockData.specId,
-            oxygen = rockData.oxygen,
-            water = rockData.water,
-            co2 = rockData.co2,
-            h2 = rockData.h2,
-            n2 = rockData.n2,
-            other = rockData.other,
-            temperature = rockData.temperature,
-            pressure = rockData.pressure,
-            humidity = rockData.humidity,
-            light = rockData.light
+            name = rockData.name,
+            composition = new RockComposition // Ensure composition is deep copied if not null
+            {
+                SiO2 = rockData.composition?.SiO2 ?? 0f,
+                Al2O3 = rockData.composition?.Al2O3 ?? 0f,
+                MnO = rockData.composition?.MnO ?? 0f,
+                CaO = rockData.composition?.CaO ?? 0f,
+                P2O3 = rockData.composition?.P2O3 ?? 0f,
+                TiO2 = rockData.composition?.TiO2 ?? 0f,
+                FeO = rockData.composition?.FeO ?? 0f,
+                MgO = rockData.composition?.MgO ?? 0f,
+                K2O = rockData.composition?.K2O ?? 0f,
+                Other = rockData.composition?.Other ?? 0f
+            }
         };
         
         // Log the first data received
@@ -610,11 +622,16 @@ public class WebSocketClient : MonoBehaviour
     {
         if (data == null) return;
         
-        Debug.Log($"[{label}] Rock Data for EVA{data.evaId}, SpecID: {data.specId}");
-        Debug.Log($"  Oxygen: {data.oxygen:F4}, Water: {data.water:F4}, CO2: {data.co2:F4}");
-        Debug.Log($"  H2: {data.h2:F4}, N2: {data.n2:F4}, Other: {data.other:F4}");
-        Debug.Log($"  Temp: {data.temperature:F4}, Pressure: {data.pressure:F4}");
-        Debug.Log($"  Humidity: {data.humidity:F4}, Light: {data.light:F4}");
+        Debug.Log($"[{label}] Rock Data for EVA{data.evaId}, SpecID: {data.specId}, Name: {data.name}");
+        if (data.composition != null)
+        {
+            Debug.Log($"  Composition (SiO2: {data.composition.SiO2:F4}, Al2O3: {data.composition.Al2O3:F4}, MnO: {data.composition.MnO:F4}, CaO: {data.composition.CaO:F4}, P2O3: {data.composition.P2O3:F4})");
+            Debug.Log($"  (TiO2: {data.composition.TiO2:F4}, FeO: {data.composition.FeO:F4}, MgO: {data.composition.MgO:F4}, K2O: {data.composition.K2O:F4}, Other: {data.composition.Other:F4})");
+        }
+        else
+        {
+            Debug.Log("  Composition: null");
+        }
     }
     
     // Debug helper to print comparison between two rock data objects
@@ -624,12 +641,19 @@ public class WebSocketClient : MonoBehaviour
         
         Debug.Log($"[ROCK_COMPARE] Comparing rock data for EVA{current.evaId}:");
         Debug.Log($"  Spec ID: {old.specId} -> {current.specId}, Changed: {old.specId != current.specId}");
-        Debug.Log($"  Oxygen: {old.oxygen:F4} -> {current.oxygen:F4}, Changed: {Math.Abs(old.oxygen - current.oxygen) > 0.01f}");
-        Debug.Log($"  Water: {old.water:F4} -> {current.water:F4}, Changed: {Math.Abs(old.water - current.water) > 0.01f}");
-        Debug.Log($"  CO2: {old.co2:F4} -> {current.co2:F4}, Changed: {Math.Abs(old.co2 - current.co2) > 0.01f}");
-        Debug.Log($"  H2: {old.h2:F4} -> {current.h2:F4}, Changed: {Math.Abs(old.h2 - current.h2) > 0.01f}");
-        Debug.Log($"  N2: {old.n2:F4} -> {current.n2:F4}, Changed: {Math.Abs(old.n2 - current.n2) > 0.01f}");
-        Debug.Log($"  Other: {old.other:F4} -> {current.other:F4}, Changed: {Math.Abs(old.other - current.other) > 0.01f}");
+        Debug.Log($"  Name: {old.name} -> {current.name}, Changed: {old.name != current.name}");
+
+        if (old.composition != null && current.composition != null)
+        {
+            Debug.Log($"  SiO2: {old.composition.SiO2:F4} -> {current.composition.SiO2:F4}, Changed: {Math.Abs(old.composition.SiO2 - current.composition.SiO2) > 0.01f}");
+            Debug.Log($"  Al2O3: {old.composition.Al2O3:F4} -> {current.composition.Al2O3:F4}, Changed: {Math.Abs(old.composition.Al2O3 - current.composition.Al2O3) > 0.01f}");
+            // ... Add comparisons for other oxides ...
+            Debug.Log($"  Other: {old.composition.Other:F4} -> {current.composition.Other:F4}, Changed: {Math.Abs(old.composition.Other - current.composition.Other) > 0.01f}");
+        }
+        else
+        {
+            Debug.Log($"  Composition comparison skipped due to null: old={old.composition == null}, current={current.composition == null}");
+        }
     }
     
     // Check if rock data is unique based on spec ID
@@ -667,15 +691,23 @@ public class WebSocketClient : MonoBehaviour
     {
         if (data == null) return string.Empty;
         
-        // Combine all the relevant properties into a string and hash it
-        // Round values to 3 decimal places to avoid minor fluctuations triggering differences
-        // but still catch meaningful changes
-        return $"{data.evaId}:{data.specId}:" +
-               $"{Math.Round(data.oxygen, 3)}:{Math.Round(data.water, 3)}:" +
-               $"{Math.Round(data.co2, 3)}:{Math.Round(data.h2, 3)}:" +
-               $"{Math.Round(data.n2, 3)}:{Math.Round(data.other, 3)}:" +
-               $"{Math.Round(data.temperature, 3)}:{Math.Round(data.pressure, 3)}:" +
-               $"{Math.Round(data.humidity, 3)}:{Math.Round(data.light, 3)}";
+        StringBuilder hashBuilder = new StringBuilder();
+        hashBuilder.Append($"{data.evaId}:{data.specId}:{data.name}:");
+
+        if (data.composition != null)
+        {
+            hashBuilder.Append($"{Math.Round(data.composition.SiO2, 3)}:");
+            hashBuilder.Append($"{Math.Round(data.composition.Al2O3, 3)}:");
+            hashBuilder.Append($"{Math.Round(data.composition.MnO, 3)}:");
+            hashBuilder.Append($"{Math.Round(data.composition.CaO, 3)}:");
+            hashBuilder.Append($"{Math.Round(data.composition.P2O3, 3)}:");
+            hashBuilder.Append($"{Math.Round(data.composition.TiO2, 3)}:");
+            hashBuilder.Append($"{Math.Round(data.composition.FeO, 3)}:");
+            hashBuilder.Append($"{Math.Round(data.composition.MgO, 3)}:");
+            hashBuilder.Append($"{Math.Round(data.composition.K2O, 3)}:");
+            hashBuilder.Append($"{Math.Round(data.composition.Other, 3)}");
+        }
+        return hashBuilder.ToString();
     }
 
     private void HandleDcuDataMessage(object data)
@@ -1019,19 +1051,28 @@ public class WebSocketClient : MonoBehaviour
         
         StringBuilder sb = new StringBuilder();
         sb.AppendLine($"Rock Sample ID: {data.specId}");
+        sb.AppendLine($"Name: {data.name ?? "N/A"}");
         sb.AppendLine($"From EVA: {data.evaId}");
-        sb.AppendLine($"Contents:");
-        sb.AppendLine($"  Oxygen: {data.oxygen:F2}%");
-        sb.AppendLine($"  Water: {data.water:F2}%");
-        sb.AppendLine($"  CO₂: {data.co2:F2}%");
-        sb.AppendLine($"  H₂: {data.h2:F2}%");
-        sb.AppendLine($"  N₂: {data.n2:F2}%");
-        sb.AppendLine($"  Other: {data.other:F2}%");
-        sb.AppendLine($"Environment:");
-        sb.AppendLine($"  Temp: {data.temperature:F1}°C");
-        sb.AppendLine($"  Pressure: {data.pressure:F1} kPa");
-        sb.AppendLine($"  Humidity: {data.humidity:F1}%");
-        sb.AppendLine($"  Light: {data.light:F1} lux");
+        
+        if (data.composition != null)
+        {
+            sb.AppendLine($"Contents:");
+            sb.AppendLine($"  SiO2: {data.composition.SiO2:F2}%");
+            sb.AppendLine($"  Al2O3: {data.composition.Al2O3:F2}%");
+            sb.AppendLine($"  MnO: {data.composition.MnO:F2}%");
+            sb.AppendLine($"  CaO: {data.composition.CaO:F2}%");
+            sb.AppendLine($"  P2O3: {data.composition.P2O3:F2}%");
+            sb.AppendLine($"  TiO2: {data.composition.TiO2:F2}%");
+            sb.AppendLine($"  FeO: {data.composition.FeO:F2}%");
+            sb.AppendLine($"  MgO: {data.composition.MgO:F2}%");
+            sb.AppendLine($"  K2O: {data.composition.K2O:F2}%");
+            sb.AppendLine($"  Other: {data.composition.Other:F2}%");
+        }
+        else
+        {
+            sb.AppendLine("Composition: Not available");
+        }
+        // Environmental data removed as it's not in the new JSON
         
         return sb.ToString();
     }
