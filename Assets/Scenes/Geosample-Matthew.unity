@@ -2562,8 +2562,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 48
-  m_fontSizeBase: 48
+  m_fontSize: 30
+  m_fontSizeBase: 30
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -3844,8 +3844,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 48
-  m_fontSizeBase: 48
+  m_fontSize: 30
+  m_fontSizeBase: 30
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -4514,8 +4514,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 48
-  m_fontSizeBase: 48
+  m_fontSize: 30
+  m_fontSizeBase: 30
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -4731,7 +4731,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0.000021159896, y: 0}
+  m_AnchoredPosition: {x: -0.00043039845, y: 0}
   m_SizeDelta: {x: 814.71, y: 879.2}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &583117677
@@ -6365,8 +6365,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 48
-  m_fontSizeBase: 48
+  m_fontSize: 30
+  m_fontSizeBase: 30
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -9205,16 +9205,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   eva1SpecId: {fileID: 0}
-  eva1Oxygen: {fileID: 0}
-  eva1Water: {fileID: 0}
-  eva1CO2: {fileID: 0}
-  eva1H2: {fileID: 0}
-  eva1N2: {fileID: 0}
+  eva1NameText: {fileID: 0}
+  eva1SiO2Text: {fileID: 0}
+  eva1Al2O3Text: {fileID: 0}
+  eva1MnOText: {fileID: 0}
+  eva1CaOText: {fileID: 0}
+  eva1P2O3Text: {fileID: 0}
+  eva1TiO2Text: {fileID: 0}
+  eva1FeOText: {fileID: 0}
+  eva1MgOText: {fileID: 0}
+  eva1K2OText: {fileID: 0}
   eva1Other: {fileID: 0}
-  eva1Temperature: {fileID: 0}
-  eva1Pressure: {fileID: 0}
-  eva1Humidity: {fileID: 0}
-  eva1Light: {fileID: 0}
 --- !u!1 &1157301912
 GameObject:
   m_ObjectHideFlags: 0
@@ -10203,8 +10204,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 48
-  m_fontSizeBase: 48
+  m_fontSize: 30
+  m_fontSizeBase: 30
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -11549,8 +11550,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 48
-  m_fontSizeBase: 48
+  m_fontSize: 30
+  m_fontSizeBase: 30
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -12852,7 +12853,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1524602399}
   m_Direction: 0
   m_Value: 1
-  m_Size: 0.99999994
+  m_Size: 0.9999935
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -14556,8 +14557,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 48
-  m_fontSizeBase: 48
+  m_fontSize: 30
+  m_fontSizeBase: 30
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -15275,8 +15276,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 48
-  m_fontSizeBase: 48
+  m_fontSize: 30
+  m_fontSizeBase: 30
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -17403,8 +17404,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 48
-  m_fontSizeBase: 48
+  m_fontSize: 30
+  m_fontSizeBase: 30
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -17537,8 +17538,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 48
-  m_fontSizeBase: 48
+  m_fontSize: 30
+  m_fontSizeBase: 30
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -18606,16 +18607,17 @@ MonoBehaviour:
   rockDataText: {fileID: 1261288002}
   rockEvaIdText: {fileID: 0}
   rockSpecIdText: {fileID: 0}
-  rockOxygenText: {fileID: 0}
-  rockWaterText: {fileID: 0}
-  rockCO2Text: {fileID: 0}
-  rockH2Text: {fileID: 0}
-  rockN2Text: {fileID: 0}
-  rockOtherText: {fileID: 0}
-  rockTemperatureText: {fileID: 0}
-  rockPressureText: {fileID: 0}
-  rockHumidityText: {fileID: 0}
-  rockLightText: {fileID: 0}
+  rockNameText: {fileID: 0}
+  rockSiO2Text: {fileID: 2073615934}
+  rockAl2O3Text: {fileID: 804725773}
+  rockMnOText: {fileID: 312081337}
+  rockCaOText: {fileID: 1723382437}
+  rockP2O3Text: {fileID: 1254618340}
+  rockTiO2Text: {fileID: 557415930}
+  rockFeOText: {fileID: 1805144946}
+  rockMgOText: {fileID: 477968432}
+  rockK2OText: {fileID: 2033581646}
+  rockOtherText: {fileID: 1483280626}
   webSocketClient: {fileID: 0}
 --- !u!114 &2133738272
 MonoBehaviour:
