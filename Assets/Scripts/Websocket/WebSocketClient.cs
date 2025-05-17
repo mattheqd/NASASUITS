@@ -66,9 +66,9 @@ public class LowFrequencyData
 [Serializable]
 public class ErrorData
 {
-    public float eva1_fan_error;
-    public float eva1_o2_error;
-    public float eva1_pump_error;
+    public bool eva1_fan_error;
+    public bool eva1_o2_error;
+    public bool eva1_pump_error;
 }
 
 [Serializable]

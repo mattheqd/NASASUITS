@@ -29,7 +29,7 @@ public class TelemetryMonitor : MonoBehaviour
 
     // creates a list of all thresholds which is compared to the telemetry values ( based on TelemetryThreshold)    
     [SerializeField] 
-    private List<Thresholds.TelemetryThresholds> thresholds = new List<Thresholds.TelemetryThresholds>();
+    private List<TelemetryThresholds> thresholds = new List<TelemetryThresholds>();
 
     // dictionary tracks current alert status for each parameter
     // alerts stored in a dict with parameter name as key and alert as the value
@@ -63,7 +63,7 @@ public class TelemetryMonitor : MonoBehaviour
     }
 
     //----------- Main Telemetry processing functions -----------
-    public void UpdateTelemetry(HighFrequencyData highFreqData, LowFrequencyData lowFreqData) {
+    public void UpdateTelemetry(HighFrequencyData highFreqData, LowFrequencyData lowFreqData, ErrorData errorData = null) {
         this.highFreqData = highFreqData;
         this.lowFreqData = lowFreqData;
         this.errorData = errorData;
@@ -120,9 +120,9 @@ public class TelemetryMonitor : MonoBehaviour
 
         // Error data (if provided)
         if (errorData != null) {
-            ProcessErrorState("EVA1", "fan_error", errorData.eva1_fan_error > 0);
-            ProcessErrorState("EVA1", "o2_error", errorData.eva1_o2_error > 0);  
-            ProcessErrorState("EVA1", "pump_error", errorData.eva1_pump_error > 0);
+            ProcessErrorState("EVA1", "fan_error", errorData.eva1_fan_error);
+            ProcessErrorState("EVA1", "o2_error", errorData.eva1_o2_error);  
+            ProcessErrorState("EVA1", "pump_error", errorData.eva1_pump_error);
         }
     }
     //----------- Helper functions -----------
@@ -144,6 +144,9 @@ public class TelemetryMonitor : MonoBehaviour
             if (prevAlert != null) prevStatus = prevAlert.status; 
         }
 
+        // convert float to bool
+        bool errorState = value > 0 ? true : false;
+
         // call the checker which sees if the telemetry value is within nominal range
         TelemetryThresholds.Status newStatus = threshold.CheckValue(value);
 
@@ -155,7 +158,7 @@ public class TelemetryMonitor : MonoBehaviour
                 parameterName = paramName,
                 value = value,
                 status = newStatus,
-                message = GetAlertMessage(astronautId, paramName, value, newStatus), 
+                message = GetErrorMessage(astronautId, paramName, errorState),
                 timestamp = DateTime.Now
             };
 
@@ -180,27 +183,33 @@ public class TelemetryMonitor : MonoBehaviour
     }
 
     // processes the error states for pump, o2, and fan
-    private void ProcessErrorState(string astronautId, string paramName, bool errorState) {
-        // check if state changed
-        TelemetryThresholds.Status status = isError
-            ? TelemetryThresholds.Status.Critical // mapped to "error = true"
-            : TelemetryThresholds.Status.Nominal; // mapped to "error = false"
+    private void ProcessErrorState(string astronautId, string errorName, bool isError) {
+        // Default to nominal if no error
+        TelemetryThresholds.Status status = isError ? 
+            TelemetryThresholds.Status.Critical : 
+            TelemetryThresholds.Status.Nominal;
+        
+        // convert float to bool
+        bool errorState = isError ? true : false;
+
+        // Get previous status if it exists
         TelemetryThresholds.Status prevStatus = TelemetryThresholds.Status.Nominal;
-        if (alerts[astronautId].ContainsKey(errorName)) { // check if the error exists in the dictionary
+        
+        if (alerts[astronautId].ContainsKey(errorName)) {
             TelemetryAlert prevAlert = alerts[astronautId][errorName];
             if (prevAlert != null) {
                 prevStatus = prevAlert.status;
             }
         }
-
-        // trigger event to create a new alert
-        if (newStatus != prevStatus) {
+        
+        // If status changed, trigger the appropriate events
+        if (status != prevStatus) {
             // Create alert
             TelemetryAlert alert = new TelemetryAlert {
                 astronautId = astronautId,
                 parameterName = errorName,
-                value = isError ? 1 : 0,
-                status = newStatus,
+                value = isError ? 1 : 0,  // Convert boolean to numeric value
+                status = status,
                 message = GetErrorMessage(astronautId, errorName, isError),
                 timestamp = DateTime.Now
             };
@@ -219,14 +228,22 @@ public class TelemetryMonitor : MonoBehaviour
 
     //* ----- Generate UI components -----
     // human readable alert message displayed in the UI
-    private string GetAlertMessage(string astronautId, string paramName, float value, TelemetryThresholds.Status status) {
-        string severity = status == TelemetryThresholds.Status.Caution ? "CAUTION" : 
-                    (status == TelemetryThresholds.Status.Critical ? "WARNING" : "NORMAL");
-
-        string paramDisplayName = paramName.Replace("_", " "); // ex: eva1_oxy -> Oxygen
-        string valueText = FormatParameter(paramName, value);
-
-        return $"{severity} error: {astronautId} {displayName} at {valueText}";
+    private string GetErrorMessage(string astronautId, string errorName, bool isError)
+    {
+        if (!isError) {
+            return $"RESOLVED: {astronautId} {errorName.Replace("_", " ")} is now normal";
+        }
+        
+        switch (errorName) {
+            case "fan_error":
+                return $"CRITICAL: {astronautId} fan system failure!";
+            case "o2_error":
+                return $"CRITICAL: {astronautId} oxygen system failure!";
+            case "pump_error":
+                return $"CRITICAL: {astronautId} water pump failure!";
+            default:
+                return $"CRITICAL: {astronautId} {errorName.Replace("_", " ")}";
+        }
     }
 
     // format the parameters
