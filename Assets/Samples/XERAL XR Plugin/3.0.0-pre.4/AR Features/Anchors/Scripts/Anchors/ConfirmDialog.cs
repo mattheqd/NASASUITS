@@ -49,11 +49,11 @@ namespace Unity.XR.XREAL.Samples
         // Return void
         /// </summary>
         /// <returns>A task that completes when the dialog is closed.</returns>
-        public async Task WaitUntilClosed()
-        {
-            m_WaitCloseDialogTask = new TaskCompletionSource<bool>();
-            await m_WaitCloseDialogTask.Task;
-        }
+        // public async Task WaitUntilClosed()
+        // {
+        //     m_WaitCloseDialogTask = new TaskCompletionSource<bool>();
+        //     await m_WaitCloseDialogTask.Task;
+        // }
 
         private TaskCompletionSource<bool> m_WaitCloseDialogTask = null;
 
