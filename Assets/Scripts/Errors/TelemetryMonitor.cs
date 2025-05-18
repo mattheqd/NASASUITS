@@ -63,75 +63,101 @@ public class TelemetryMonitor : MonoBehaviour
     }
 
     //----------- Main Telemetry processing functions -----------
-    public void UpdateTelemetry(HighFrequencyData highFreqData, LowFrequencyData lowFreqData, ErrorData errorData = null) {
-        this.highFreqData = highFreqData;
-        this.lowFreqData = lowFreqData;
-        this.errorData = errorData;
-
-        // process immediately after updating
-        ProcessTelemetry();
-    }
-
-    public void ProcessTelemetry() {
-        if (highFreqData == null && lowFreqData == null && errorData == null) return;
-
-        // High frequency data (from dictionary)
-        if (highFreqData != null && highFreqData.data != null) {
-            // EVA1 Data
-            if (highFreqData.data.TryGetValue("eva1_batt", out float eva1_batt))
-                CheckParameter("EVA1", "battery", eva1_batt);
-            
-            if (highFreqData.data.TryGetValue("eva1_oxy", out float eva1_oxy))
-                CheckParameter("EVA1", "oxygen", eva1_oxy);
-            
-            if (highFreqData.data.TryGetValue("eva1_co2", out float eva1_co2))
-                CheckParameter("EVA1", "co2", eva1_co2);
+    public void UpdateTelemetry()
+    {
+        Debug.Log("TelemetryMonitor: Checking for telemetry updates");
         
-            // EVA2 Data
-            if (highFreqData.data.TryGetValue("eva2_batt", out float eva2_batt))
-                CheckParameter("EVA2", "battery", eva2_batt);
-            
-            if (highFreqData.data.TryGetValue("eva2_oxy", out float eva2_oxy))
-                CheckParameter("EVA2", "oxygen", eva2_oxy);
-            
-            if (highFreqData.data.TryGetValue("eva2_co2", out float eva2_co2))
-                CheckParameter("EVA2", "co2", eva2_co2);
-        }
+        // Directly access WebSocketClient data
+        HighFrequencyData highFreqData = WebSocketClient.LatestHighFrequencyData;
+        LowFrequencyData lowFreqData = WebSocketClient.LatestLowFrequencyData;
+        ErrorData errorData = WebSocketClient.LatestErrorData;
+        BiometricsData eva1Bio = WebSocketClient.LatestEva1BiometricsData;
+        BiometricsData eva2Bio = WebSocketClient.LatestEva2BiometricsData;
 
-        // Low frequency data (direct properties)
-        if (lowFreqData != null) {
-            // Only check properties that actually exist in LowFrequencyData
-            // Based on WebSocketClient.cs structure
-            if (highFreqData != null && highFreqData.data != null) {
-                // Check if heart rate data exists in the dictionary
-                if (highFreqData.data.TryGetValue("eva1_heart_rate", out float eva1_heart_rate))
-                    CheckParameter("EVA1", "heart_rate", eva1_heart_rate);
-                
-                if (highFreqData.data.TryGetValue("eva1_temperature", out float eva1_temp))
-                    CheckParameter("EVA1", "temperature", eva1_temp);
-                
-                if (highFreqData.data.TryGetValue("eva2_heart_rate", out float eva2_heart_rate))
-                    CheckParameter("EVA2", "heart_rate", eva2_heart_rate);
-                
-                if (highFreqData.data.TryGetValue("eva2_temperature", out float eva2_temp))
-                    CheckParameter("EVA2", "temperature", eva2_temp);
+        // Log the data we found for debugging
+        if (highFreqData != null) 
+            Debug.Log("Processing high frequency data from WebSocketClient");
+        if (lowFreqData != null)
+            Debug.Log("Processing low frequency data from WebSocketClient");
+        if (errorData != null)
+            Debug.Log("Processing error data from WebSocketClient");
+        if (eva1Bio != null)
+            Debug.Log("Processing EVA1 biometrics data from WebSocketClient");
+        
+        // Process high frequency data (DCU data)
+        if (highFreqData != null && highFreqData.data != null)
+        {
+            // Process EVA1 telemetry
+            if (highFreqData.data.TryGetValue("eva1_batt", out float battery))
+                CheckParameter("EVA1", "battery", battery);
+            
+            if (highFreqData.data.TryGetValue("eva1_oxy", out float oxygen))
+                CheckParameter("EVA1", "oxygen", oxygen);
+            
+            if (highFreqData.data.TryGetValue("eva1_co2", out float co2))
+                CheckParameter("EVA1", "co2", co2);
+            
+            // Check fan value - maps to an error state if it's 0
+            if (highFreqData.data.TryGetValue("eva1_fan", out float fan))
+            {
+                CheckParameter("EVA1", "fan", fan);
+                bool fanErrorState = fan < 0.5f; // Consider it an error if below 0.5
+                ProcessErrorState("EVA1", "fan_error", fanErrorState);
+            }
+            
+            // Check pump value - maps to an error state if it's 0
+            if (highFreqData.data.TryGetValue("eva1_pump", out float pump))
+            {
+                CheckParameter("EVA1", "pump", pump);
+                bool pumpErrorState = pump < 0.5f; // Consider it an error if below 0.5
+                ProcessErrorState("EVA1", "pump_error", pumpErrorState);
             }
         }
-
-        // Error data (if provided)
-        if (errorData != null) {
+        
+        // Process biometrics data directly from WebSocketClient
+        if (eva1Bio != null)
+        {
+            // Check heart rate
+            CheckParameter("EVA1", "heart_rate", eva1Bio.heartRate);
+            
+            // Check temperature
+            CheckParameter("EVA1", "temperature", eva1Bio.temperature);
+            
+            // Check suit pressure if available
+            if (eva1Bio.suitPressureTotal > 0)
+                CheckParameter("EVA1", "suit_pressure", eva1Bio.suitPressureTotal);
+        }
+        
+        // Process error data if available
+        if (errorData != null)
+        {
             ProcessErrorState("EVA1", "fan_error", errorData.eva1_fan_error);
-            ProcessErrorState("EVA1", "o2_error", errorData.eva1_o2_error);  
+            ProcessErrorState("EVA1", "o2_error", errorData.eva1_o2_error);
             ProcessErrorState("EVA1", "pump_error", errorData.eva1_pump_error);
         }
+        
+        // Process low frequency data
+        if (lowFreqData != null)
+        {
+            // Process additional low frequency data
+            // Example: CheckParameter("EVA1", "radiation", lowFreqData.radiation);
+        }
     }
+
     //----------- Helper functions -----------
     // checks if a parameter (paramName) value (value) of an astronaut (astronautId) is off-nominal
     private void CheckParameter(string astronautId, string paramName, float value) {
+        if (debugMode)
+            Debug.Log($"Checking parameter {astronautId} {paramName}: {value}");
+        
         // find the current threshold ranges for the parameter based on the name
         // ex: (oxygen errors: 0 < oxygen < 100)
         TelemetryThresholds threshold = thresholds.Find(t => t.parameterName == paramName);
-        if (threshold == null) return;
+        if (threshold == null) {
+            if (debugMode)
+                Debug.LogWarning($"No threshold defined for parameter: {paramName}");
+            return;
+        }
 
         // get the prev alert status
         // this will be used to determine if the alert should be updated (i.e. if its the same or different)
@@ -256,5 +282,33 @@ public class TelemetryMonitor : MonoBehaviour
             case "temperature": return $"{value:F1}°C";
             default: return $"{value:F1}";
         }
+    }
+
+    [Header("Debug Settings")]
+    [SerializeField] private bool debugMode = true;
+
+    // Add this method to check if data properties exist
+    private void CheckDataAvailability()
+    {
+        Debug.Log("WebSocketClient Static Properties Status:");
+        Debug.Log($"- HighFrequencyData: {(WebSocketClient.LatestHighFrequencyData != null ? "Available" : "NULL")}");
+        Debug.Log($"- LowFrequencyData: {(WebSocketClient.LatestLowFrequencyData != null ? "Available" : "NULL")}");
+        Debug.Log($"- ErrorData: {(WebSocketClient.LatestErrorData != null ? "Available" : "NULL")}");
+        Debug.Log($"- EVA1 Biometrics: {(WebSocketClient.LatestEva1BiometricsData != null ? "Available" : "NULL")}");
+    }
+
+    // Add this method to force test alerts for debugging
+    public void ForceTestData()
+    {
+        Debug.Log("TelemetryMonitor: Forcing test data...");
+        
+        // Create and check a test heart rate alert
+        CheckParameter("EVA1", "heart_rate", 125f);
+        
+        // Create and check a test oxygen alert
+        CheckParameter("EVA1", "oxygen", 15f);
+        
+        // Force a critical fan error
+        ProcessErrorState("EVA1", "fan_error", true);
     }
 }

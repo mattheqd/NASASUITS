@@ -8,29 +8,33 @@ using Thresholds;
 using System;
 
 public class AlertDisplay : MonoBehaviour {
-    [Header ("UI References")]
+    [Header("UI References")]
     [SerializeField] private Transform AlertContainer;
     [SerializeField] private GameObject AlertPrefab; // contains the alert message and icon
     [SerializeField] private TextMeshProUGUI AlertStatusText; // contains the alert message
     
-    [Header("Test Controls")]
-    [SerializeField] private bool triggerHeartRateTest = false;
-    [SerializeField] private float testHeartRate = 180f; // Dangerous heart rate
+    [Header("Data Sources")]
+    [SerializeField] private TelemetryMonitor telemetryMonitor;
     
-    private TelemetryMonitor telemetryMonitor;
+    [Header("Settings")]
+    [SerializeField] private float updateInterval = 1.0f;
+    [SerializeField] private bool runTest = false;
+    [SerializeField] private bool forceTest = false; // For testing alerts without real data
+    
     private Dictionary<string, GameObject> activeAlerts = new Dictionary<string, GameObject>();
-    
-    // Data from last update
-    private Dictionary<string, float> highFreqData = new Dictionary<string, float>();
+    private float timeSinceLastUpdate = 0f;
 
     //* ---- Functions ----
     void Start()
     {
-        // Get reference to TelemetryMonitor
-        telemetryMonitor = FindObjectOfType<TelemetryMonitor>();
+        Debug.Log("AlertDisplay starting...");
+        
+        // Find references if not assigned
         if (telemetryMonitor == null)
-        {
-            Debug.LogError("TelemetryMonitor not found in scene!");
+            telemetryMonitor = FindObjectOfType<TelemetryMonitor>();
+        
+        if (telemetryMonitor == null) {
+            Debug.LogError("TelemetryMonitor not found! Alerts will not work.");
             return;
         }
         
@@ -39,140 +43,179 @@ public class AlertDisplay : MonoBehaviour {
         telemetryMonitor.onCriticalDetected.AddListener(HandleCriticalAlert);
         telemetryMonitor.onReturnToNominal.AddListener(HandleNominalAlert);
         
-        // Initialize test data
-        highFreqData["eva1_heart_rate"] = 75f;
+        Debug.Log("Registered telemetry event listeners");
         
-        // Add initial status text
-        if (statusText != null)
-            statusText.text = "Telemetry Monitoring Active - All Systems Nominal";
+        // Set initial status text
+        if (AlertStatusText != null)
+            AlertStatusText.text = "Telemetry Monitoring Active - All Systems Nominal";
     }
     
     void Update()
     {
-        // Test trigger for heart rate error
-        if (triggerHeartRateTest)
+        // Manual test
+        if (runTest)
         {
-            triggerHeartRateTest = false;
-            SimulateHeartRateError();
+            runTest = false;
+            CheckTelemetry();
+        }
+        
+        // Force test alerts (bypass real data)
+        if (forceTest)
+        {
+            forceTest = false;
+            ForceTestAlerts();
+        }
+        
+        // Automatic updates
+        timeSinceLastUpdate += Time.deltaTime;
+        if (timeSinceLastUpdate >= updateInterval)
+        {
+            timeSinceLastUpdate = 0f;
+            CheckTelemetry();
         }
     }
     
-    public void SimulateHeartRateError()
+    void CheckTelemetry()
     {
-        Debug.Log($"Simulating heart rate error: {testHeartRate} BPM");
+        if (telemetryMonitor == null) {
+            Debug.LogError("Cannot check telemetry: TelemetryMonitor is null");
+            return;
+        }
         
-        // Create data structures for heart rate test
-        HighFrequencyData highFreq = new HighFrequencyData();
-        highFreq.data = new Dictionary<string, float>();
-        highFreq.data["eva1_heart_rate"] = testHeartRate;
-        highFreq.data["eva1_batt"] = 95f;
-        highFreq.data["eva1_oxy"] = 98f;
-        
-        // Send to telemetry monitor
-        telemetryMonitor.UpdateTelemetry(highFreq, null);
+        telemetryMonitor.UpdateTelemetry();
+        Debug.Log("AlertDisplay: Called TelemetryMonitor.UpdateTelemetry()");
     }
     
-    // Handle caution alerts
-    private void HandleCautionAlert(TelemetryMonitor.TelemetryAlert alert)
+    // Force test alerts for debugging
+    void ForceTestAlerts()
     {
-        Debug.Log($"CAUTION: {alert.astronautId} {alert.parameterName} - {alert.value} - {alert.message}");
-        CreateOrUpdateAlertUI(alert, Color.yellow);
-    }
-    
-    // Handle critical alerts
-    private void HandleCriticalAlert(TelemetryMonitor.TelemetryAlert alert)
-    {
-        Debug.LogError($"CRITICAL: {alert.astronautId} {alert.parameterName} - {alert.value} - {alert.message}");
-        CreateOrUpdateAlertUI(alert, Color.red);
-    }
-    
-    // Handle return to nominal
-    private void HandleNominalAlert(TelemetryMonitor.TelemetryAlert alert)
-    {
-        Debug.Log($"NOMINAL: {alert.astronautId} {alert.parameterName} is now normal");
+        Debug.Log("Forcing test alerts");
         
-        // Remove from active alerts
-        string alertKey = $"{alert.astronautId}_{alert.parameterName}";
-        if (activeAlerts.TryGetValue(alertKey, out GameObject alertObj))
+        // Create test alerts
+        TelemetryMonitor.TelemetryAlert heartRateAlert = new TelemetryMonitor.TelemetryAlert {
+            astronautId = "EVA1",
+            parameterName = "heart_rate",
+            value = 125f,
+            status = TelemetryThresholds.Status.Caution,
+            message = "EVA1 heart_rate: 125 BPM - above nominal range",
+            timestamp = DateTime.Now
+        };
+        
+        TelemetryMonitor.TelemetryAlert fanAlert = new TelemetryMonitor.TelemetryAlert {
+            astronautId = "EVA1",
+            parameterName = "fan_error",
+            value = 0f,
+            status = TelemetryThresholds.Status.Critical,
+            message = "EVA1 fan system failure",
+            timestamp = DateTime.Now
+        };
+        
+        // Trigger alerts
+        HandleCautionAlert(heartRateAlert);
+        HandleCriticalAlert(fanAlert);
+    }
+    
+    // Handle different alert types
+    void HandleCautionAlert(TelemetryMonitor.TelemetryAlert alert)
+    {
+        Debug.Log($"CAUTION ALERT: {alert.astronautId} {alert.parameterName}: {alert.value}");
+        CreateOrUpdateAlert(alert, Color.yellow);
+    }
+    
+    void HandleCriticalAlert(TelemetryMonitor.TelemetryAlert alert)
+    {
+        Debug.Log($"CRITICAL ALERT: {alert.astronautId} {alert.parameterName}: {alert.value}");
+        CreateOrUpdateAlert(alert, Color.red);
+    }
+    
+    void HandleNominalAlert(TelemetryMonitor.TelemetryAlert alert)
+    {
+        Debug.Log($"RESOLVED ALERT: {alert.astronautId} {alert.parameterName} returned to nominal");
+        RemoveAlert(alert.astronautId + "_" + alert.parameterName);
+        
+        // If no more alerts, set status to nominal
+        if (activeAlerts.Count == 0 && AlertStatusText != null)
         {
-            Destroy(alertObj);
-            activeAlerts.Remove(alertKey);
+            AlertStatusText.text = "Telemetry Monitoring Active - All Systems Nominal";
+            AlertStatusText.color = Color.white;
         }
     }
     
-    // Create or update alert UI element
-    private void CreateOrUpdateAlertUI(TelemetryMonitor.TelemetryAlert alert, Color color)
+    // Create or update an alert in the UI
+    void CreateOrUpdateAlert(TelemetryMonitor.TelemetryAlert alert, Color color)
     {
-        string alertKey = $"{alert.astronautId}_{alert.parameterName}";
-        GameObject alertObj;
+        string alertId = alert.astronautId + "_" + alert.parameterName;
         
-        // Create new alert UI if it doesn't exist
-        if (!activeAlerts.TryGetValue(alertKey, out alertObj))
+        // If alert already exists, update it
+        if (activeAlerts.TryGetValue(alertId, out GameObject alertObj))
         {
-            if (alertPrefab == null || alertContainer == null)
+            // Update existing alert
+            TextMeshProUGUI alertText = alertObj.GetComponentInChildren<TextMeshProUGUI>();
+            if (alertText != null)
             {
-                Debug.LogError("Alert prefab or container not assigned!");
-                return;
+                alertText.text = $"{alert.message}";
+                alertText.color = color;
             }
             
-            alertObj = Instantiate(alertPrefab, alertContainer);
-            activeAlerts[alertKey] = alertObj;
+            // Update background
+            Image bgImage = alertObj.GetComponent<Image>();
+            if (bgImage != null)
+            {
+                Color bgColor = color;
+                bgColor.a = 0.3f;
+                bgImage.color = bgColor;
+            }
         }
-        
-        // Update alert UI
-        TMP_Text alertText = alertObj.GetComponentInChildren<TMP_Text>();
-        if (alertText != null)
+        else
         {
-            alertText.text = $"{alert.message}";
-            alertText.color = color;
-        }
-        
-        // Update background color
-        Image bgImage = alertObj.GetComponent<Image>();
-        if (bgImage != null)
-        {
-            Color bgColor = color;
-            bgColor.a = 0.3f; // Make it semi-transparent
-            bgImage.color = bgColor;
+            // Create new alert if container and prefab exist
+            if (AlertContainer != null && AlertPrefab != null)
+            {
+                GameObject newAlert = Instantiate(AlertPrefab, AlertContainer);
+                activeAlerts[alertId] = newAlert;
+                
+                // Set alert text
+                TextMeshProUGUI alertText = newAlert.GetComponentInChildren<TextMeshProUGUI>();
+                if (alertText != null)
+                {
+                    alertText.text = $"{alert.message}";
+                    alertText.color = color;
+                }
+                
+                // Set background color
+                Image bgImage = newAlert.GetComponent<Image>();
+                if (bgImage != null)
+                {
+                    Color bgColor = color;
+                    bgColor.a = 0.3f;
+                    bgImage.color = bgColor;
+                }
+            }
         }
         
         // Update status text
-        if (statusText != null)
+        if (AlertStatusText != null)
         {
             if (alert.status == TelemetryThresholds.Status.Critical)
             {
-                statusText.text = "CRITICAL ALERT: System requires immediate attention!";
-                statusText.color = Color.red;
+                AlertStatusText.text = "CRITICAL ALERT: System requires immediate attention!";
+                AlertStatusText.color = Color.red;
             }
             else if (alert.status == TelemetryThresholds.Status.Caution)
             {
-                statusText.text = "CAUTION: System parameters outside nominal range";
-                statusText.color = Color.yellow;
+                AlertStatusText.text = "CAUTION: System parameters outside nominal range";
+                AlertStatusText.color = Color.yellow;
             }
         }
     }
     
-    // Public button function to test heart rate error
-    public void TestHeartRateError()
+    // Remove an alert from the UI
+    void RemoveAlert(string alertId)
     {
-        SimulateHeartRateError();
-    }
-    
-    // Public button function to reset heart rate to normal
-    public void ResetHeartRate()
-    {
-        HighFrequencyData highFreq = new HighFrequencyData();
-        highFreq.data = new Dictionary<string, float>();
-        highFreq.data["eva1_heart_rate"] = 75f;
-        highFreq.data["eva1_batt"] = 95f;
-        highFreq.data["eva1_oxy"] = 98f;
-        
-        telemetryMonitor.UpdateTelemetry(highFreq, null);
-        
-        if (statusText != null)
+        if (activeAlerts.TryGetValue(alertId, out GameObject alertObj))
         {
-            statusText.text = "Telemetry Monitoring Active - All Systems Nominal";
-            statusText.color = Color.white;
+            Destroy(alertObj);
+            activeAlerts.Remove(alertId);
         }
     }
 }
