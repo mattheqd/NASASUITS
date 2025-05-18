@@ -11,6 +11,9 @@ public class StepItem : MonoBehaviour
     [SerializeField] private GameObject activeIndicator; // Optional indicator for active step
     private LayoutElement layoutElement;
 
+    //private AutomationTrigger currentAutoTrigger; // Added for automation
+    //public AutomationTrigger CurrentAutoTrigger => currentAutoTrigger; // Getter for automation trigger
+
     private void Awake()
     {
         layoutElement = GetComponent<LayoutElement>();
@@ -72,4 +75,27 @@ public class StepItem : MonoBehaviour
         if (activeIndicator != null)
             activeIndicator.SetActive(active);
     }
+
+    // public void SetAutomationTrigger(AutomationTrigger trigger) // Added for automation
+    // {
+    //     currentAutoTrigger = trigger;
+    // }
+
+    // Placeholder for DCUManager interaction
+    // You'll need to replace this with your actual DCU data access
+    public interface IDCUManager 
+    {
+        string GetValue(string key);
+    }
+
+    // public bool ShouldAutoComplete(IDCUManager dcuManager) // Added for automation
+    // {
+    //     if (dcuManager == null || currentAutoTrigger == null || !currentAutoTrigger.enabled)
+    //     {
+    //         return false;
+    //     }
+    //     // Replace this with your actual DCU value checking logic
+    //     string currentValue = dcuManager.GetValue(currentAutoTrigger.dcuKey);
+    //     return currentValue == currentAutoTrigger.expectedValue;
+    // }
 } 

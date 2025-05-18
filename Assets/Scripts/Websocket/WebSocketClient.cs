@@ -134,10 +134,8 @@ public class BiometricsData
 }
 
 [Serializable]
-public class EvaTelemetryData
+public class SingleEvaTelemetryData
 {
-    public int evaId;
-    public int evaTime;
     public int o2TimeLeft;
     public float oxygenPrimaryStorage;
     public float oxygenSecondaryStorage;
@@ -159,6 +157,15 @@ public class EvaTelemetryData
     public int heartRate;
     public float temperature;
     public float coolantLevel;
+}
+
+[Serializable]
+public class CombinedEvaTelemetryData
+{
+    public int evaTime;
+    public long timestamp;
+    public SingleEvaTelemetryData eva1;
+    public SingleEvaTelemetryData eva2;
 }
 
 [Serializable]
@@ -219,7 +226,7 @@ public class WsBiometricsDataMessage
 public class WsEvaTelemetryDataMessage
 {
     public string type;
-    public EvaTelemetryData data;
+    public CombinedEvaTelemetryData data;
     public bool success;
     public WsError error;
 }
@@ -283,8 +290,8 @@ public class WebSocketClient : MonoBehaviour
     public static BiometricsData LatestEva2BiometricsData { get; private set; }
 
     // Latest EVA Telemetry data for EVA1 and EVA2
-    public static EvaTelemetryData LatestEva1TelemetryData { get; private set; }
-    public static EvaTelemetryData LatestEva2TelemetryData { get; private set; }
+    public static SingleEvaTelemetryData LatestEva1TelemetryData { get; private set; }
+    public static SingleEvaTelemetryData LatestEva2TelemetryData { get; private set; }
 
     private void Awake() {
         if (Instance != null && Instance != this) {
@@ -773,7 +780,13 @@ public class WebSocketClient : MonoBehaviour
         }
         
         // Log DCU data
-        Debug.Log($"[DCU_DATA] EVA{dcuData.evaId}, Processing at time: {Time.time}");
+        StringBuilder logBuilder = new StringBuilder();
+        logBuilder.AppendLine($"[DCU_DATA] EVA{dcuData.evaId}, Processing at time: {Time.time}");
+        foreach (var field in typeof(DcuData).GetFields())
+        {
+            logBuilder.AppendLine($"  {field.Name}: {field.GetValue(dcuData)}");
+        }
+        Debug.Log(logBuilder.ToString());
         
         // Store the latest DCU data
         LatestDcuData = dcuData;
@@ -798,7 +811,13 @@ public class WebSocketClient : MonoBehaviour
         }
         
         // Log UIA data
-        Debug.Log($"[UIA_DATA] Processing at time: {Time.time}");
+        StringBuilder logBuilder = new StringBuilder();
+        logBuilder.AppendLine($"[UIA_DATA] Processing at time: {Time.time}");
+        foreach (var field in typeof(UiaData).GetFields())
+        {
+            logBuilder.AppendLine($"  {field.Name}: {field.GetValue(uiaData)}");
+        }
+        Debug.Log(logBuilder.ToString());
         
         // Store the latest UIA data
         LatestUiaData = uiaData;
@@ -961,33 +980,44 @@ public class WebSocketClient : MonoBehaviour
 
         lastEvaTelemetryProcessTime = Time.time;
 
-        EvaTelemetryData telemetryData = data as EvaTelemetryData;
-        if (telemetryData == null)
+        CombinedEvaTelemetryData combinedData = data as CombinedEvaTelemetryData;
+        if (combinedData == null)
         {
-            Debug.LogError($"[EVA_TELEMETRY] Data is not an EvaTelemetryData object: {data?.GetType()}");
+            Debug.LogError($"[EVA_TELEMETRY] Data is not a CombinedEvaTelemetryData object: {data?.GetType()}");
             return;
         }
 
         // Store latest EVA telemetry data based on EVA ID
-        if (telemetryData.evaId == 1)
-        {
-            LatestEva1TelemetryData = telemetryData;
-        }
-        else if (telemetryData.evaId == 2)
-        {
-            LatestEva2TelemetryData = telemetryData;
-        }
-
+        LatestEva1TelemetryData = combinedData.eva1;
+        LatestEva2TelemetryData = combinedData.eva2;
+        
         // Log EVA telemetry data
         StringBuilder logBuilder = new StringBuilder();
-        logBuilder.AppendLine($"[EVA_TELEMETRY_DATA] EVA{telemetryData.evaId}, Processing at time: {Time.time}:");
-        logBuilder.AppendLine($"  EVA Time: {telemetryData.evaTime}");
-        logBuilder.AppendLine($"  O2 Time Left: {telemetryData.o2TimeLeft}");
-        logBuilder.AppendLine($"  Oxygen Primary Storage: {telemetryData.oxygenPrimaryStorage}");
-        logBuilder.AppendLine($"  Oxygen Secondary Storage: {telemetryData.oxygenSecondaryStorage}");
-        logBuilder.AppendLine($"  Suit Pressure Total: {telemetryData.suitPressureTotal}");
-        logBuilder.AppendLine($"  Suit Pressure CO2: {telemetryData.suitPressureCO2}");
-        // Add other relevant fields to log if needed
+        logBuilder.AppendLine($"[EVA_TELEMETRY_DATA] Combined data received. Timestamp: {combinedData.timestamp}, EvaTime: {combinedData.evaTime}, Processing at time: {Time.time}:");
+        
+        if (combinedData.eva1 != null)
+        {
+            logBuilder.AppendLine("  EVA1 Data:");
+            logBuilder.AppendLine($"    O2 Time Left: {combinedData.eva1.o2TimeLeft}");
+            logBuilder.AppendLine($"    Oxygen Primary Storage: {combinedData.eva1.oxygenPrimaryStorage}");
+            // Add more EVA1 fields to log as needed
+        }
+        else
+        {
+            logBuilder.AppendLine("  EVA1 Data: null");
+        }
+
+        if (combinedData.eva2 != null)
+        {
+            logBuilder.AppendLine("  EVA2 Data:");
+            logBuilder.AppendLine($"    O2 Time Left: {combinedData.eva2.o2TimeLeft}");
+            logBuilder.AppendLine($"    Oxygen Primary Storage: {combinedData.eva2.oxygenPrimaryStorage}");
+            // Add more EVA2 fields to log as needed
+        }
+        else
+        {
+            logBuilder.AppendLine("  EVA2 Data: null");
+        }
         
         Debug.Log(logBuilder.ToString());
 
@@ -997,7 +1027,8 @@ public class WebSocketClient : MonoBehaviour
         {
             foreach (var handler in messageHandlers["eva_telemetry_data"])
             {
-                handler(telemetryData);
+                // Subscribers will now receive the CombinedEvaTelemetryData object
+                handler(combinedData);
             }
         }
     }
@@ -1100,21 +1131,6 @@ public class WebSocketClient : MonoBehaviour
         else if (testData.evaId == 2)
         {
             LatestEva2BiometricsData = testData;
-        }
-    }
-
-    // Debug method to set EVA telemetry data for testing
-    public static void SetTestEvaTelemetryData(EvaTelemetryData testData)
-    {
-        if (testData == null) return;
-
-        if (testData.evaId == 1)
-        {
-            LatestEva1TelemetryData = testData;
-        }
-        else if (testData.evaId == 2)
-        {
-            LatestEva2TelemetryData = testData;
         }
     }
 

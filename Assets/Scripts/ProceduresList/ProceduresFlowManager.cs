@@ -22,7 +22,8 @@ public class ProceduresFlowManager : MonoBehaviour
     [Header("UI Elements")]
     [SerializeField] private Button egressButton;          // Button to go from TasksList to TasksInfo
     [SerializeField] private Button samplingButton;   
-     [SerializeField] private Button samplingStart; 
+    [SerializeField] private Button ingressButton; // Added for Ingress procedure
+    [SerializeField] private Button samplingStart; 
     [SerializeField] private Button backButton;            // Button to go back from TasksInfo to TasksList
     [SerializeField] private Button startButton;           // Button to go from TasksInfo to Procedures
     [SerializeField] private Button verifyManuallyButton;  // Button to manually verify umbilical connection
@@ -63,7 +64,9 @@ public class ProceduresFlowManager : MonoBehaviour
     private Procedure procedureData;
 
     // Target task name for this MVP
-    private const string PROCEDURE_NAME = "EVA Egress";
+    private const string EGRESS_PROCEDURE_NAME = "EVA Egress"; // Renamed for clarity
+    private const string INGRESS_PROCEDURE_NAME = "EVA Ingress"; // Added
+    private string currentProcedureNameToStart; // Added to track which procedure to start from info panel
     private const string TARGET_TASK_NAME = "Connect UIA to DCU and start Depress";
 
     // Current geosample being collected
@@ -118,13 +121,18 @@ public class ProceduresFlowManager : MonoBehaviour
         // Set up button listeners
         egressButton.onClick.AddListener(ShowTasksInfo);
         backButton.onClick.AddListener(ShowTasksList);
-        startButton.onClick.AddListener(ShowProcedure);
+        startButton.onClick.AddListener(() => ShowProcedure(currentProcedureNameToStart)); // Modified to use currentProcedureNameToStart
         samplingButton.onClick.AddListener(ShowSampling);
         samplingStart.onClick.AddListener(StartScan);
         completeScanning.onClick.AddListener(CompleteScan);
         completePicture.onClick.AddListener(CompletePicture);
         completeVoice.onClick.AddListener(CompleteVoice);
         completeGps.onClick.AddListener(CompleteGps);
+        
+        if (ingressButton != null) // Added listener for ingress button
+        {
+            ingressButton.onClick.AddListener(ShowIngressProcedureInfo);
+        }
         
         // Set up rock data check button
         if (checkRockDataButton != null)
@@ -448,13 +456,28 @@ public class ProceduresFlowManager : MonoBehaviour
     {
         proceduresListPanel.SetActive(false);
         proceduresPanel.SetActive(false);
-        proceduresInfoPanel.SetActive(true);
+        currentProcedureNameToStart = EGRESS_PROCEDURE_NAME; // Set for Egress
+        // proceduresInfoPanel is where the procedure title/description would be shown before starting.
+        // For now, we are keeping a generic info panel. If specific info per procedure is needed, this logic would change.
+        proceduresInfoPanel.SetActive(true); 
+        // todo: Potentially update a title text on proceduresInfoPanel to "EVA Egress"
+    }
+
+    // Added method to show info for Ingress procedure
+    private void ShowIngressProcedureInfo()
+    {
+        proceduresListPanel.SetActive(false);
+        proceduresPanel.SetActive(false);
+        currentProcedureNameToStart = INGRESS_PROCEDURE_NAME; // Set for Ingress
+        // Assuming the same generic info panel is used. Update if Ingress has a unique info screen.
+        proceduresInfoPanel.SetActive(true); 
+        // todo: Potentially update a title text on proceduresInfoPanel to "EVA Ingress"
     }
 
     // Show third panel (Procedures) when pressing Start
-    private void ShowProcedure()
+    private void ShowProcedure(string procedureName) // Modified to accept procedureName
     {
-        Debug.Log("ShowProcedure called");
+        Debug.Log($"ShowProcedure called for: {procedureName}");
         proceduresListPanel.SetActive(false);
         proceduresInfoPanel.SetActive(false);
         proceduresPanel.SetActive(true);
@@ -464,24 +487,38 @@ public class ProceduresFlowManager : MonoBehaviour
         else
             Debug.LogError("ProcedureLoader is null!");
 
+        Procedure selectedProcedure = null;
         if (procedureLoader != null && procedureLoader.LoadedProcedures.Count > 0)
         {
-            procedureData = procedureLoader.LoadedProcedures[0];
-            Debug.Log($"procedureData set: {procedureData.procedureName}, tasks: {procedureData.tasks?.Count}");
+            selectedProcedure = procedureLoader.LoadedProcedures.FirstOrDefault(p => p.procedureName == procedureName);
+            if (selectedProcedure != null)
+            {
+                Debug.Log($"Selected procedure: {selectedProcedure.procedureName}, tasks: {selectedProcedure.tasks?.Count}");
+            }
+            else
+            {
+                Debug.LogError($"Procedure named '{procedureName}' not found in ProcedureLoader!");
+                // Fallback or error handling
+                ShowTasksList(); // Go back to list if procedure not found
+                return;
+            }
         }
         else
         {
             Debug.LogError("No procedures loaded in ProcedureLoader!");
+            ShowTasksList(); // Go back to list
+            return;
         }
 
-        if (procedureDisplay != null && procedureData != null)
+        if (procedureDisplay != null && selectedProcedure != null)
         {
-            Debug.Log($"Calling LoadProcedure for: {procedureData.procedureName}");
-            procedureDisplay.LoadProcedure(procedureData);
+            Debug.Log($"Calling LoadProcedure for: {selectedProcedure.procedureName}");
+            procedureDisplay.LoadProcedure(selectedProcedure);
         }
         else
         {
-            Debug.LogError("ProcedureDisplay or procedureData is missing");
+            Debug.LogError("ProcedureDisplay or selectedProcedure is missing");
+            ShowTasksList(); // Go back to list
         }
     }
 

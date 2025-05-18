@@ -3,6 +3,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.Events;
+using System.Collections;
+using System.Reflection;
 
 // Attach this script to your Procedure UI panel in Unity
 public class ProcedureDisplay : MonoBehaviour
@@ -23,6 +25,8 @@ public class ProcedureDisplay : MonoBehaviour
     private int currentTaskIndex = 0;
     private int currentStepIndex = 0;
     private List<GameObject> stepItems = new List<GameObject>();
+
+    private Coroutine autoVerificationCoroutine;
 
     // Call this to start a procedure
     public void LoadProcedure(Procedure procedure)
@@ -45,6 +49,8 @@ public class ProcedureDisplay : MonoBehaviour
     {
         Debug.Log($"[ProcedureDisplay] LoadCurrentTask: currentTaskIndex={currentTaskIndex}");
         ClearStepItems();
+        StopAutoVerificationCoroutine();
+
         if (currentProcedure == null || currentTaskIndex >= currentProcedure.tasks.Count)
         {
             Debug.Log("[ProcedureDisplay] No more tasks or currentProcedure is null");
@@ -68,12 +74,16 @@ public class ProcedureDisplay : MonoBehaviour
             stepItems.Add(stepObj);
         }
         UpdateStepDisplay();
+        TryStartAutoVerificationForCurrentStep();
     }
 
     public void NextStep()
     {
         Debug.Log($"[ProcedureDisplay] NextStep called. currentTaskIndex={currentTaskIndex}, currentStepIndex={currentStepIndex}");
-        if (currentProcedure == null) return;
+        if (currentProcedure == null || currentTaskIndex >= currentProcedure.tasks.Count) return;
+
+        StopAutoVerificationCoroutine();
+
         var task = currentProcedure.tasks[currentTaskIndex];
         // Mark current step as completed
         if (currentStepIndex < stepItems.Count)
@@ -91,6 +101,7 @@ public class ProcedureDisplay : MonoBehaviour
             return;
         }
         UpdateStepDisplay();
+        TryStartAutoVerificationForCurrentStep();
     }
 
     public void SkipStep()
@@ -104,7 +115,9 @@ public class ProcedureDisplay : MonoBehaviour
         {
             StepItem stepItem = stepItems[i].GetComponent<StepItem>();
             if (stepItem != null)
+            {
                 stepItem.SetActiveStep(i == currentStepIndex);
+            }
         }
     }
 
@@ -120,7 +133,98 @@ public class ProcedureDisplay : MonoBehaviour
     private void CompleteProcedure()
     {
         // Do not hide the panel here; let the manager handle UI reset
+        StopAutoVerificationCoroutine();
         onProcedureCompleted?.Invoke();
+    }
+
+    private void TryStartAutoVerificationForCurrentStep()
+    {
+        StopAutoVerificationCoroutine();
+
+        if (currentProcedure == null || currentTaskIndex >= currentProcedure.tasks.Count) return;
+        var task = currentProcedure.tasks[currentTaskIndex];
+        if (currentStepIndex >= task.instructionSteps.Count) return;
+
+        var currentStepInstruction = task.instructionSteps[currentStepIndex];
+        if (currentStepInstruction.isAutoVerifiable)
+        {
+            Debug.Log($"[ProcedureDisplay] Starting auto-verification for step: {currentStepInstruction.instructionText}");
+            autoVerificationCoroutine = StartCoroutine(CheckAutoVerification(currentStepInstruction));
+        }
+        else
+        {
+            Debug.Log($"[ProcedureDisplay] Step not auto-verifiable: {currentStepInstruction.instructionText}");
+        }
+    }
+
+    private void StopAutoVerificationCoroutine()
+    {
+        if (autoVerificationCoroutine != null)
+        {
+            Debug.Log("[ProcedureDisplay] Stopping auto-verification coroutine.");
+            StopCoroutine(autoVerificationCoroutine);
+            autoVerificationCoroutine = null;
+        }
+    }
+
+    private IEnumerator CheckAutoVerification(InstructionStep stepToVerify)
+    {
+        Debug.Log($"[ProcedureDisplay] Coroutine started for: {stepToVerify.instructionText}, Target: {stepToVerify.location}.{stepToVerify.targetKey} == {stepToVerify.targetValue}");
+        while (true)
+        {
+            yield return new WaitForSeconds(0.5f);
+
+            object dataObject = null;
+            string locationUpper = stepToVerify.location?.ToUpper();
+
+            switch (locationUpper)
+            {
+                case "UIA":
+                    dataObject = WebSocketClient.LatestUiaData;
+                    break;
+                case "DCU":
+                    dataObject = WebSocketClient.LatestDcuData;
+                    break;
+                default:
+                    Debug.LogWarning($"[ProcedureDisplay] Unknown location for auto-verification: {stepToVerify.location}");
+                    yield break;
+            }
+
+            if (dataObject == null)
+            {
+                continue;
+            }
+
+            FieldInfo field = dataObject.GetType().GetField(stepToVerify.targetKey);
+            if (field == null)
+            {
+                Debug.LogError($"[ProcedureDisplay] Field '{stepToVerify.targetKey}' not found in {dataObject.GetType().Name} (Location: {stepToVerify.location}). Stopping verification for this step.");
+                yield break;
+            }
+
+            object fieldValue = field.GetValue(dataObject);
+            if (fieldValue == null)
+            {
+                continue;
+            }
+
+            string currentValueString;
+            if (fieldValue is float floatVal)
+            {
+                currentValueString = floatVal.ToString("F0");
+            }
+            else
+            {
+                currentValueString = fieldValue.ToString();
+            }
+            
+            if (currentValueString.Equals(stepToVerify.targetValue))
+            {
+                Debug.Log($"[ProcedureDisplay] Auto-verified step: '{stepToVerify.instructionText}'. Current value '{currentValueString}' matches target '{stepToVerify.targetValue}'.");
+                NextStep();
+                yield break;
+            }
+        }
     }
 }
 
@@ -129,7 +233,6 @@ public class ProcedureDisplay : MonoBehaviour
 public class Procedure
 {
     public string procedureName;
-    public string procedureDescription;
     public List<Task> tasks;
 }
 
@@ -137,7 +240,6 @@ public class Procedure
 public class Task
 {
     public string taskName;
-    public string taskDescription;
     public List<InstructionStep> instructionSteps;
 }
 
@@ -145,4 +247,8 @@ public class Task
 public class InstructionStep
 {
     public string instructionText;
+    public bool isAutoVerifiable;
+    public string location;
+    public string targetKey;
+    public string targetValue;
 } 
