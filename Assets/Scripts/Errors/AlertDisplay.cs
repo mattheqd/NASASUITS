@@ -44,21 +44,7 @@ public class AlertDisplay : MonoBehaviour {
     }
     
     void Update()
-    {
-        // Manual test
-        if (runTest)
-        {
-            runTest = false;
-            CheckTelemetry();
-        }
-        
-        // Force test alerts (bypass real data)
-        if (forceTest)
-        {
-            forceTest = false;
-            ForceTestAlerts();
-        }
-        
+    {    
         // Automatic updates
         timeSinceLastUpdate += Time.deltaTime;
         if (timeSinceLastUpdate >= updateInterval)

@@ -115,7 +115,7 @@ namespace Thresholds {
                 parameterName = "heart_rate",
                 minCritical = 0,
                 minNominal = 50,
-                maxNominal = 160,
+                maxNominal = 70,
                 maxCritical = float.MaxValue
             };
         }
@@ -186,16 +186,16 @@ namespace Thresholds {
             };
         }
         
-        public static TelemetryThresholds HelmetPressureCO2()
-        {
-            return new TelemetryThresholds {
-                parameterName = "helmet_pressure_co2",
-                minCritical = 0,
-                minNominal = 0.0f,
-                maxNominal = 0.15f,
-                maxCritical = float.MaxValue
-            };
-        }
+        // public static TelemetryThresholds HelmetPressureCO2()
+        // {
+        //     return new TelemetryThresholds {
+        //         parameterName = "helmet_pressure_co2",
+        //         minCritical = 0,
+        //         minNominal = 0.0f,
+        //         maxNominal = 0.15f,
+        //         maxCritical = float.MaxValue
+        //     };
+        // }
         
         public static TelemetryThresholds FanPrimaryRPM()
         {

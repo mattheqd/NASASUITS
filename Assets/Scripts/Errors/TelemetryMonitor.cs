@@ -49,16 +49,18 @@ public class TelemetryMonitor : MonoBehaviour
     //* --------- FUNCTIONS ---------
     //------- Initialization -------
     private void Awake() {
-        // initialize status tracking for each astronaut
-        // A dictionary stores the status (TelemetryThreshold.Status) of each parameter (string)
+        // First ensure all thresholds are loaded
+        InitializeThresholds();
+        
+        // THEN initialize status tracking for each astronaut
+        alerts = new Dictionary<string, Dictionary<string, TelemetryAlert>>();
         alerts["EVA1"] = new Dictionary<string, TelemetryAlert>();
         alerts["EVA2"] = new Dictionary<string, TelemetryAlert>();
 
         // initialize default status (nominal) for each parameter
-        // changes value based on telemetrythresholds.cs
         foreach (var threshold in thresholds) {
-            alerts["EVA1"][threshold.parameterName] = new TelemetryAlert();
-            alerts["EVA2"][threshold.parameterName] = new TelemetryAlert();
+            alerts["EVA1"][threshold.parameterName] = null;
+            alerts["EVA2"][threshold.parameterName] = null;
         }
     }
 
@@ -80,18 +82,18 @@ public class TelemetryMonitor : MonoBehaviour
         {
             // Process EVA1 telemetry
             if (highFreqData.data.TryGetValue("eva1_batt", out float battery))
-                CheckParameter("EVA1", "battery", battery);
+                CheckParameter("EVA1", "batt_time_left", battery);
             
             if (highFreqData.data.TryGetValue("eva1_oxy", out float oxygen))
-                CheckParameter("EVA1", "oxygen", oxygen);
+                CheckParameter("EVA1", "oxy_pri_storage", oxygen);
             
-            if (highFreqData.data.TryGetValue("eva1_co2", out float co2))
-                CheckParameter("EVA1", "co2", co2);
+            // if (highFreqData.data.TryGetValue("eva1_co2", out float co2))
+            //     CheckParameter("EVA1", "helmet_pressure_co2", co2);
             
             // Check fan value - maps to an error state if it's 0
             if (highFreqData.data.TryGetValue("eva1_fan", out float fan))
             {
-                CheckParameter("EVA1", "fan", fan);
+                CheckParameter("EVA1", "fan_pri_rpm", fan * 30000); // Convert 0-1 to RPM
                 bool fanErrorState = fan < 0.5f; // Consider it an error if below 0.5
                 ProcessErrorState("EVA1", "fan_error", fanErrorState);
             }
@@ -99,7 +101,6 @@ public class TelemetryMonitor : MonoBehaviour
             // Check pump value - maps to an error state if it's 0
             if (highFreqData.data.TryGetValue("eva1_pump", out float pump))
             {
-                CheckParameter("EVA1", "pump", pump);
                 bool pumpErrorState = pump < 0.5f; // Consider it an error if below 0.5
                 ProcessErrorState("EVA1", "pump_error", pumpErrorState);
             }
@@ -114,9 +115,19 @@ public class TelemetryMonitor : MonoBehaviour
             // Check temperature
             CheckParameter("EVA1", "temperature", eva1Bio.temperature);
             
-            // Check suit pressure if available
+            // Check O2 consumption
+            CheckParameter("EVA1", "oxy_consumption", eva1Bio.o2Consumption);
+            
+            // Check CO2 production
+            CheckParameter("EVA1", "co2_production", eva1Bio.co2Production);
+            
+            // Check suit pressure
             if (eva1Bio.suitPressureTotal > 0)
-                CheckParameter("EVA1", "suit_pressure", eva1Bio.suitPressureTotal);
+                CheckParameter("EVA1", "suit_pressure_total", eva1Bio.suitPressureTotal);
+            
+            // Check helmet CO2
+            // if (eva1Bio.helmetCO2 > 0)
+            //     CheckParameter("EVA1", "helmet_pressure_co2", eva1Bio.helmetCO2);
         }
         
         // Process error data if available
@@ -144,58 +155,60 @@ public class TelemetryMonitor : MonoBehaviour
         
         // Find the threshold for this parameter
         TelemetryThresholds threshold = thresholds.Find(t => t.parameterName == paramName);
-        if (threshold == null)
-        {
-            if (debugMode)
-                Debug.LogWarning($"No threshold defined for parameter: {paramName}");
+        
+        // Check if a matching threshold was found
+        if (threshold == null) {
+            Debug.LogWarning($"No threshold defined for parameter: {paramName}");
+            
+            // Add debug info to help identify the issue
+            if (thresholds.Count == 0) {
+                Debug.LogError("Thresholds list is empty! Please populate it in the Inspector.");
+            }
             return;
         }
         
-        // Get previous status if exists
-        TelemetryThresholds.Status prevStatus = TelemetryThresholds.Status.Nominal;
-        if (alerts[astronautId].ContainsKey(paramName))
-        {
-            TelemetryAlert prevAlert = alerts[astronautId][paramName];
-            if (prevAlert != null) prevStatus = prevAlert.status;
+        // Continue with normal processing
+        TelemetryThresholds.Status status = threshold.CheckValue(value);
+        
+        if (debugMode) {
+            Debug.Log($"Threshold values for {paramName}: min={threshold.minCritical}/{threshold.minNominal}, max={threshold.maxNominal}/{threshold.maxCritical}");
+            Debug.Log($"The status of parameter {astronautId} {paramName} is {status}");
         }
         
-        // Check if value is within nominal range
-        TelemetryThresholds.Status newStatus = threshold.CheckValue(value);
+        // Get the previous status if it exists
+        TelemetryThresholds.Status previousStatus = TelemetryThresholds.Status.Nominal;
+        if (alerts[astronautId].ContainsKey(paramName) && alerts[astronautId][paramName] != null) {
+            previousStatus = alerts[astronautId][paramName].status;
+        }
         
-        // If status has changed, create an alert
-        if (newStatus != prevStatus)
-        {
-            Debug.Log($"Parameter {astronautId} {paramName} changed from {prevStatus} to {newStatus}");
+        // Create a new telemetry alert
+        TelemetryAlert alert = new TelemetryAlert {
+            astronautId = astronautId,
+            parameterName = paramName,
+            value = value,
+            status = status,
+            message = GetAlertMessage(astronautId, paramName, value, status),
+            timestamp = DateTime.Now
+        };
             
-            // Create alert with appropriate message
-            string message = GetAlertMessage(astronautId, paramName, value, newStatus);
-            
-            TelemetryAlert alert = new TelemetryAlert {
-                astronautId = astronautId,
-                parameterName = paramName,
-                value = value,
-                status = newStatus,
-                message = message,
-                timestamp = DateTime.Now
-            };
-            
-            // Store alert
-            alerts[astronautId][paramName] = alert;
-            
-            // Trigger appropriate event
-            switch (newStatus)
-            {
-                case TelemetryThresholds.Status.Nominal:
+        // Store the alert for future reference
+        alerts[astronautId][paramName] = alert;
+        
+        // Fire the appropriate event based on status
+        switch (status) {
+            case TelemetryThresholds.Status.Nominal:
+                if (previousStatus != TelemetryThresholds.Status.Nominal)
                     onReturnToNominal.Invoke(alert);
-                    break;
-                case TelemetryThresholds.Status.Caution:
+                break;
+            case TelemetryThresholds.Status.Caution:
+                if (previousStatus != TelemetryThresholds.Status.Caution)
                     onCautionDetected.Invoke(alert);
-                    break;
-                case TelemetryThresholds.Status.Critical:
+                break;
+            case TelemetryThresholds.Status.Critical:
+                if (previousStatus != TelemetryThresholds.Status.Critical)
                     onCriticalDetected.Invoke(alert);
-                    break;
-            }
-        }
+                break;
+        }    
     }
 
     // processes the error states for pump, o2, and fan
@@ -284,7 +297,6 @@ public class TelemetryMonitor : MonoBehaviour
             case "suit_pressure_co2":
             case "suit_pressure_other":
             case "suit_pressure_total":
-            case "helmet_pressure_co2":
             case "coolant_liquid_pressure":
             case "coolant_gas_pressure":
                 return $"{value:F1} psi";
@@ -320,92 +332,6 @@ public class TelemetryMonitor : MonoBehaviour
         Debug.Log($"- ErrorData: {(WebSocketClient.LatestErrorData != null ? "Available" : "NULL")}");
         Debug.Log($"- EVA1 Biometrics: {(WebSocketClient.LatestEva1BiometricsData != null ? "Available" : "NULL")}");
     }
-
-    // Add this method to force test alerts for debugging
-    public void ForceTestData()
-    {
-        Debug.Log("TelemetryMonitor: Forcing test data...");
-        
-        // Create and check a test heart rate alert
-        CheckParameter("EVA1", "heart_rate", 125f);
-        
-        // Create and check a test oxygen alert
-        CheckParameter("EVA1", "oxygen", 15f);
-        
-        // Force a critical fan error
-        ProcessErrorState("EVA1", "fan_error", true);
-    }
-
-    #if UNITY_EDITOR
-    private void OnValidate()
-    {
-        // Initialize with default thresholds if none exist
-        if (thresholds.Count == 0)
-        {
-            // Add key parameters from the telemetry table
-            
-            // Battery time
-            thresholds.Add(new TelemetryThresholds
-            {
-                parameterName = "batt_time_left",
-                minCritical = 0,
-                minNominal = 3600,
-                maxNominal = 10800,
-                maxCritical = float.MaxValue
-            });
-            
-            // Primary oxygen storage
-            thresholds.Add(new TelemetryThresholds
-            {
-                parameterName = "oxy_pri_storage",
-                minCritical = 0,
-                minNominal = 20,
-                maxNominal = 100,
-                maxCritical = float.MaxValue
-            });
-            
-            // Secondary oxygen storage
-            thresholds.Add(new TelemetryThresholds
-            {
-                parameterName = "oxy_sec_storage",
-                minCritical = 0,
-                minNominal = 20,
-                maxNominal = 100,
-                maxCritical = float.MaxValue
-            });
-            
-            // Heart rate (matches table)
-            thresholds.Add(new TelemetryThresholds
-            {
-                parameterName = "heart_rate",
-                minCritical = 0,
-                minNominal = 50,
-                maxNominal = 160,
-                maxCritical = float.MaxValue
-            });
-            
-            // Suit pressure total
-            thresholds.Add(new TelemetryThresholds
-            {
-                parameterName = "suit_pressure_total",
-                minCritical = 0,
-                minNominal = 3.5f,
-                maxNominal = 4.5f,
-                maxCritical = float.MaxValue
-            });
-            
-            // Temperature (in °F as per table)
-            thresholds.Add(new TelemetryThresholds
-            {
-                parameterName = "temperature",
-                minCritical = 0,
-                minNominal = 50,
-                maxNominal = 90,
-                maxCritical = float.MaxValue
-            });
-        }
-    }
-    #endif
 
     private string GetAlertMessage(string astronautId, string paramName, float value, TelemetryThresholds.Status status)
     {
@@ -470,6 +396,44 @@ public class TelemetryMonitor : MonoBehaviour
             
             default:
                 return value;
+        }
+    }
+
+    private void InitializeThresholds() {
+        // Clear existing thresholds to avoid duplicates
+        thresholds.Clear();
+        Debug.Log("Initializing default telemetry thresholds");
+        
+        // Add all the required thresholds
+        thresholds.Add(TelemetryThresholds.BatteryTimeLeft());
+        thresholds.Add(TelemetryThresholds.OxygenPrimaryStorage());
+        thresholds.Add(TelemetryThresholds.OxygenSecondaryStorage());
+        thresholds.Add(TelemetryThresholds.OxygenPrimaryPressure());
+        thresholds.Add(TelemetryThresholds.OxygenSecondaryPressure());
+        thresholds.Add(TelemetryThresholds.OxygenTimeLeft());
+        thresholds.Add(TelemetryThresholds.CoolantStorage());
+        thresholds.Add(TelemetryThresholds.HeartRate());
+        thresholds.Add(TelemetryThresholds.OxygenConsumption());
+        thresholds.Add(TelemetryThresholds.CO2Production());
+        thresholds.Add(TelemetryThresholds.SuitPressureOxy());
+        thresholds.Add(TelemetryThresholds.SuitPressureCO2());
+        thresholds.Add(TelemetryThresholds.SuitPressureOther());
+        thresholds.Add(TelemetryThresholds.SuitPressureTotal());
+        thresholds.Add(TelemetryThresholds.FanPrimaryRPM());
+        thresholds.Add(TelemetryThresholds.FanSecondaryRPM());
+        thresholds.Add(TelemetryThresholds.ScrubberACO2Storage());
+        thresholds.Add(TelemetryThresholds.ScrubberBCO2Storage());
+        thresholds.Add(TelemetryThresholds.Temperature());
+        thresholds.Add(TelemetryThresholds.CoolantLiquidPressure());
+        thresholds.Add(TelemetryThresholds.CoolantGasPressure());
+        
+        // Add HelmetPressureCO2 only if it's defined (uncomment in TelemetryThresholds.cs)
+        // thresholds.Add(TelemetryThresholds.HelmetPressureCO2());
+        
+        // Log all available thresholds for debugging
+        Debug.Log($"Total thresholds initialized: {thresholds.Count}");
+        foreach (var t in thresholds) {
+            Debug.Log($"Loaded threshold: {t.parameterName}");
         }
     }
 }
