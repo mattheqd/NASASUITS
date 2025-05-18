@@ -33,10 +33,8 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private Button checkRockDataButton; // Button to check rock data
 
     [Header("Component References")]
-    [SerializeField] private Transform stepsContainer;     // Contains series of steps in TasksInfo
-    [SerializeField] private StepItem stepItemPrefab;      // Prefab for each step
     [SerializeField] private ProcedureDisplay procedureDisplay; // Main procedure handler
-    [SerializeField] private ProcedureAutomation procedureAutomation; // Handles automation of steps
+    //[SerializeField] private ProcedureAutomation procedureAutomation; // Handles automation of steps
     [SerializeField] private WebCamController webCamController; // Reference to camera controller
     [SerializeField] private AudioRecorder audioRecorder; // Reference to audio recorder
     [SerializeField] private TextMeshProUGUI coordinateText; // Text to display coordinates
@@ -59,6 +57,10 @@ public class ProceduresFlowManager : MonoBehaviour
 
     [Header("WebSocket")]
     [SerializeField] private WebSocketClient webSocketClient;
+
+    [Header("Procedure Data")]
+    [SerializeField] private ProcedureLoader procedureLoader;
+    private Procedure procedureData;
 
     // Target task name for this MVP
     private const string PROCEDURE_NAME = "EVA Egress";
@@ -87,6 +89,17 @@ public class ProceduresFlowManager : MonoBehaviour
             {
                 Debug.LogWarning("WebSocketClient not found. Position data will not be available.");
             }
+        }
+
+        // Find ProcedureLoader if not set in inspector
+        if (procedureLoader == null)
+            procedureLoader = FindObjectOfType<ProcedureLoader>();
+
+        // Ensure onProcedureCompleted listener is only added once
+        if (procedureDisplay != null)
+        {
+            procedureDisplay.onProcedureCompleted.RemoveListener(ShowTasksList);
+            procedureDisplay.onProcedureCompleted.AddListener(ShowTasksList);
         }
     }
     
@@ -436,95 +449,49 @@ public class ProceduresFlowManager : MonoBehaviour
         proceduresListPanel.SetActive(false);
         proceduresPanel.SetActive(false);
         proceduresInfoPanel.SetActive(true);
-        
-        // Populate steps for the selected task only
-        PopulateTaskSteps();
     }
 
     // Show third panel (Procedures) when pressing Start
     private void ShowProcedure()
     {
+        Debug.Log("ShowProcedure called");
         proceduresListPanel.SetActive(false);
         proceduresInfoPanel.SetActive(false);
         proceduresPanel.SetActive(true);
-        
-        // Initialize procedure in the procedure display with only the target task
-        if (procedureDisplay != null)
+
+        if (procedureLoader != null)
+            Debug.Log($"ProcedureLoader found, LoadedProcedures count: {procedureLoader.LoadedProcedures.Count}");
+        else
+            Debug.LogError("ProcedureLoader is null!");
+
+        if (procedureLoader != null && procedureLoader.LoadedProcedures.Count > 0)
         {
-            // Get only the specific task instead of the whole procedure
-            Procedure taskProcedure = ProcedureManager.Instance.GetProcedureTask(PROCEDURE_NAME, TARGET_TASK_NAME);
-            
-            if (taskProcedure != null)
-            {
-                // Load only this task's steps
-                procedureDisplay.LoadCustomProcedure(taskProcedure);
-                
-                // Explicitly make the display panel active
-                if (procedureDisplay.transform.Find("DisplayPanel") != null)
-                    procedureDisplay.transform.Find("DisplayPanel").gameObject.SetActive(true);
-                
-                // Set up automation for this task
-                if (procedureAutomation != null)
-                {
-                    procedureAutomation.SetProcedureState(PROCEDURE_NAME, TARGET_TASK_NAME, 0);
-                }
-                else
-                {
-                    Debug.LogError("ProceduresFlowManager: procedureAutomation reference is missing");
-                }
-            }
-            else
-            {
-                Debug.LogError($"ProceduresFlowManager: Failed to load task '{TARGET_TASK_NAME}'");
-            }
+            procedureData = procedureLoader.LoadedProcedures[0];
+            Debug.Log($"procedureData set: {procedureData.procedureName}, tasks: {procedureData.tasks?.Count}");
         }
         else
         {
-            Debug.LogError("ProceduresFlowManager: procedureDisplay reference is missing");
+            Debug.LogError("No procedures loaded in ProcedureLoader!");
         }
-    }
 
-    // Populate the steps in the TasksInfo panel
-    private void PopulateTaskSteps()
-    {
-        if (ProcedureManager.Instance == null)
+        if (procedureDisplay != null && procedureData != null)
         {
-            Debug.LogError("ProceduresFlowManager: ProcedureManager.Instance is null");
-            return;
+            Debug.Log($"Calling LoadProcedure for: {procedureData.procedureName}");
+            procedureDisplay.LoadProcedure(procedureData);
         }
-        
-        // Get only the specific task
-        var taskProc = ProcedureManager.Instance.GetProcedureTask(PROCEDURE_NAME, TARGET_TASK_NAME);
-        if (taskProc == null)
+        else
         {
-            Debug.LogError($"ProceduresFlowManager: Task '{TARGET_TASK_NAME}' not found");
-            return;
-        }
-        
-        if (stepItemPrefab == null || stepsContainer == null)
-        {
-            Debug.LogError("ProceduresFlowManager: Missing prefab or container reference");
-            return;
-        }
-        
-        // Clear existing steps
-        foreach (Transform child in stepsContainer) 
-            Destroy(child.gameObject);
-        
-        // Populate steps for this task
-        for (int i = 0; i < taskProc.instructionSteps.Count; i++)
-        {
-            var item = Instantiate(stepItemPrefab, stepsContainer);
-            item.SetStep(i + 1, taskProc.instructionSteps[i].instructionText);
+            Debug.LogError("ProcedureDisplay or procedureData is missing");
         }
     }
 
     // Method to manually verify the first step (umbilical connection)
     private void VerifyManualStep()
     {
-        if (procedureAutomation != null)
+        if (procedureDisplay != null)
         {
-            procedureAutomation.ManualCompleteStep();
+            // Mark the current step as complete in ProcedureDisplay
+            procedureDisplay.NextStep();
         }
     }
 

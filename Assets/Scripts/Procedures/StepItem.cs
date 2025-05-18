@@ -1,12 +1,26 @@
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 
+[RequireComponent(typeof(LayoutElement))]
 public class StepItem : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI stepNumberText;
     [SerializeField] private TextMeshProUGUI stepInstructionText;
     [SerializeField] private GameObject completionIndicator; // Optional indicator for completion
     [SerializeField] private GameObject activeIndicator; // Optional indicator for active step
+    private LayoutElement layoutElement;
+
+    private void Awake()
+    {
+        layoutElement = GetComponent<LayoutElement>();
+        if (layoutElement != null)
+        {
+            // Make height flexible based on content
+            layoutElement.preferredHeight = -1;
+            layoutElement.flexibleHeight = 1;
+        }
+    }
 
     // Original method - Keep for backward compatibility
     public void SetStep(int stepNumber, string instruction)
@@ -57,13 +71,5 @@ public class StepItem : MonoBehaviour
     {
         if (activeIndicator != null)
             activeIndicator.SetActive(active);
-            
-        // Optional: Change the color to indicate active state
-        if (active && stepNumberText != null && stepInstructionText != null)
-        {
-            Color activeColor = new Color(0.145f, 0.145f, 0.145f); // #252525
-            stepNumberText.color = activeColor;
-            stepInstructionText.color = activeColor;
-        }
     }
 } 
