@@ -29,29 +29,40 @@ public class BiometricsDisplayManager : MonoBehaviour
     private const float TEMPERATURE_MIN = 35f;       // Celsius
     private const float TEMPERATURE_MAX = 40f;       // Celsius
 
+    private float timeSinceLastUpdate = 0f;
+    private const float updateInterval = 1.0f; // Update once per second
+
     void Update()
     {
-        if (WebSocketClient.Instance == null)
+        timeSinceLastUpdate += Time.deltaTime;
+
+        if (timeSinceLastUpdate >= updateInterval)
         {
-            Debug.LogWarning("BiometricsDisplayManager: WebSocketClient.Instance is not available.");
-            return;
-        }
+            timeSinceLastUpdate = 0f; // Reset timer
 
-        // Update EVA 1 Gauges
-        BiometricsData eva1Data = WebSocketClient.LatestEva1BiometricsData;
-        if (eva1Data != null)
-        {
-            if (eva1_OxygenConsumptionGauge != null) 
-                eva1_OxygenConsumptionGauge.SetData("O2 Consumption", o2ConsumptionIcon, "kg/hr", eva1Data.o2Consumption, O2_CONSUMPTION_MIN, O2_CONSUMPTION_MAX);
-            
-            if (eva1_CO2ProductionGauge != null) 
-                eva1_CO2ProductionGauge.SetData("CO2 Production", co2ProductionIcon, "kg/hr", eva1Data.co2Production, CO2_PRODUCTION_MIN, CO2_PRODUCTION_MAX);
+            if (WebSocketClient.Instance == null)
+            {
+                Debug.LogWarning("BiometricsDisplayManager: WebSocketClient.Instance is not available.");
+                return;
+            }
 
-            if (eva1_HeartRateGauge != null) 
-                eva1_HeartRateGauge.SetData("Heart Rate", heartRateIcon, "BPM", eva1Data.heartRate, HEART_RATE_MIN, HEART_RATE_MAX);
+            // Update EVA 1 Gauges
+            BiometricsData eva1Data = WebSocketClient.LatestEva1BiometricsData;
+            Debug.Log("EVA 1 Data: " + eva1Data.o2Consumption + " " + eva1Data.co2Production + " " + eva1Data.heartRate + " " + eva1Data.temperature);
+            if (eva1Data != null)
+            {
+                if (eva1_OxygenConsumptionGauge != null) 
+                    eva1_OxygenConsumptionGauge.SetData("O2 Consumption", o2ConsumptionIcon, "kg/hr", eva1Data.o2Consumption, O2_CONSUMPTION_MIN, O2_CONSUMPTION_MAX);
+                
+                if (eva1_CO2ProductionGauge != null) 
+                    eva1_CO2ProductionGauge.SetData("CO2 Production", co2ProductionIcon, "kg/hr", eva1Data.co2Production, CO2_PRODUCTION_MIN, CO2_PRODUCTION_MAX);
 
-            if (eva1_TemperatureGauge != null) 
-                eva1_TemperatureGauge.SetData("Temperature", temperatureIcon, "°C", eva1Data.temperature, TEMPERATURE_MIN, TEMPERATURE_MAX);
+                if (eva1_HeartRateGauge != null) 
+                    eva1_HeartRateGauge.SetData("Heart Rate", heartRateIcon, "BPM", eva1Data.heartRate, HEART_RATE_MIN, HEART_RATE_MAX);
+
+                if (eva1_TemperatureGauge != null) 
+                    eva1_TemperatureGauge.SetData("Temperature", temperatureIcon, "°C", eva1Data.temperature, TEMPERATURE_MIN, TEMPERATURE_MAX);
+            }
         }
     }
 } 
