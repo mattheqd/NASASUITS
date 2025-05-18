@@ -68,21 +68,12 @@ public class TelemetryMonitor : MonoBehaviour
         Debug.Log("TelemetryMonitor: Checking for telemetry updates");
         
         // Directly access WebSocketClient data
+        // Returns data in this format: 
         HighFrequencyData highFreqData = WebSocketClient.LatestHighFrequencyData;
         LowFrequencyData lowFreqData = WebSocketClient.LatestLowFrequencyData;
         ErrorData errorData = WebSocketClient.LatestErrorData;
         BiometricsData eva1Bio = WebSocketClient.LatestEva1BiometricsData;
         BiometricsData eva2Bio = WebSocketClient.LatestEva2BiometricsData;
-
-        // Log the data we found for debugging
-        if (highFreqData != null) 
-            Debug.Log("Processing high frequency data from WebSocketClient");
-        if (lowFreqData != null)
-            Debug.Log("Processing low frequency data from WebSocketClient");
-        if (errorData != null)
-            Debug.Log("Processing error data from WebSocketClient");
-        if (eva1Bio != null)
-            Debug.Log("Processing EVA1 biometrics data from WebSocketClient");
         
         // Process high frequency data (DCU data)
         if (highFreqData != null && highFreqData.data != null)
@@ -146,61 +137,60 @@ public class TelemetryMonitor : MonoBehaviour
 
     //----------- Helper functions -----------
     // checks if a parameter (paramName) value (value) of an astronaut (astronautId) is off-nominal
+    // ex: "Checking parameter EVA2 suit_pressure_total: 3.9"
     private void CheckParameter(string astronautId, string paramName, float value) {
         if (debugMode)
             Debug.Log($"Checking parameter {astronautId} {paramName}: {value}");
         
-        // find the current threshold ranges for the parameter based on the name
-        // ex: (oxygen errors: 0 < oxygen < 100)
+        // Find the threshold for this parameter
         TelemetryThresholds threshold = thresholds.Find(t => t.parameterName == paramName);
-        if (threshold == null) {
+        if (threshold == null)
+        {
             if (debugMode)
                 Debug.LogWarning($"No threshold defined for parameter: {paramName}");
             return;
         }
-
-        // get the prev alert status
-        // this will be used to determine if the alert should be updated (i.e. if its the same or different)
-        // if it is different, then update it
-        // set to nominal automatically if not found;
+        
+        // Get previous status if exists
         TelemetryThresholds.Status prevStatus = TelemetryThresholds.Status.Nominal;
-        string alertKey = $"{astronautId}_{paramName}"; // ex: eva1_o2
-        if (alerts[astronautId].ContainsKey(paramName)) {
+        if (alerts[astronautId].ContainsKey(paramName))
+        {
             TelemetryAlert prevAlert = alerts[astronautId][paramName];
-            if (prevAlert != null) prevStatus = prevAlert.status; 
+            if (prevAlert != null) prevStatus = prevAlert.status;
         }
-
-        // convert float to bool
-        bool errorState = value > 0 ? true : false;
-
-        // call the checker which sees if the telemetry value is within nominal range
+        
+        // Check if value is within nominal range
         TelemetryThresholds.Status newStatus = threshold.CheckValue(value);
-
-        // if the status changes, trigger events to store the new alert data, store the alert, 
-        if (newStatus != prevStatus) {
-            // create a new alert data struct
+        
+        // If status has changed, create an alert
+        if (newStatus != prevStatus)
+        {
+            Debug.Log($"Parameter {astronautId} {paramName} changed from {prevStatus} to {newStatus}");
+            
+            // Create alert with appropriate message
+            string message = GetAlertMessage(astronautId, paramName, value, newStatus);
+            
             TelemetryAlert alert = new TelemetryAlert {
                 astronautId = astronautId,
                 parameterName = paramName,
                 value = value,
                 status = newStatus,
-                message = GetErrorMessage(astronautId, paramName, errorState),
+                message = message,
                 timestamp = DateTime.Now
             };
-
-            // store the alert into the dictionary
+            
+            // Store alert
             alerts[astronautId][paramName] = alert;
-
-            // trigger event based on new status
-            switch (newStatus) {
+            
+            // Trigger appropriate event
+            switch (newStatus)
+            {
                 case TelemetryThresholds.Status.Nominal:
                     onReturnToNominal.Invoke(alert);
                     break;
-                    
                 case TelemetryThresholds.Status.Caution:
                     onCautionDetected.Invoke(alert);
                     break;
-                    
                 case TelemetryThresholds.Status.Critical:
                     onCriticalDetected.Invoke(alert);
                     break;
@@ -273,14 +263,48 @@ public class TelemetryMonitor : MonoBehaviour
     }
 
     // format the parameters
-    private string FormatParameter(string paramName, float value) {
-        switch (paramName) {
-            case "battery": return $"{value:F1}%";
-            case "oxygen": return $"{value:F1}%";
-            case "co2": return $"{value:F2} kPa";
-            case "heart_rate": return $"{value:F0} BPM";
-            case "temperature": return $"{value:F1}°C";
-            default: return $"{value:F1}";
+    private string FormatParameter(string paramName, float value)
+    {
+        switch (paramName)
+        {
+            case "batt_time_left":
+            case "oxy_time_left":
+                return $"{value:F0} minutes";
+            
+            case "oxy_pri_storage":
+            case "oxy_sec_storage":
+            case "coolant_storage":
+            case "scrubber_a_co2_storage":
+            case "scrubber_b_co2_storage":
+                return $"{value:F1}%";
+            
+            case "oxy_pri_pressure":
+            case "oxy_sec_pressure":
+            case "suit_pressure_oxy":
+            case "suit_pressure_co2":
+            case "suit_pressure_other":
+            case "suit_pressure_total":
+            case "helmet_pressure_co2":
+            case "coolant_liquid_pressure":
+            case "coolant_gas_pressure":
+                return $"{value:F1} psi";
+            
+            case "heart_rate":
+                return $"{value:F0} BPM";
+            
+            case "oxy_consumption":
+            case "co2_production":
+                return $"{value:F2} psi/min";
+            
+            case "fan_pri_rpm":
+            case "fan_sec_rpm":
+                return $"{value:F0} RPM";
+            
+            case "temperature":
+                return $"{value:F1}°F";
+            
+            default:
+                return $"{value:F1}";
         }
     }
 
@@ -310,5 +334,142 @@ public class TelemetryMonitor : MonoBehaviour
         
         // Force a critical fan error
         ProcessErrorState("EVA1", "fan_error", true);
+    }
+
+    #if UNITY_EDITOR
+    private void OnValidate()
+    {
+        // Initialize with default thresholds if none exist
+        if (thresholds.Count == 0)
+        {
+            // Add key parameters from the telemetry table
+            
+            // Battery time
+            thresholds.Add(new TelemetryThresholds
+            {
+                parameterName = "batt_time_left",
+                minCritical = 0,
+                minNominal = 3600,
+                maxNominal = 10800,
+                maxCritical = float.MaxValue
+            });
+            
+            // Primary oxygen storage
+            thresholds.Add(new TelemetryThresholds
+            {
+                parameterName = "oxy_pri_storage",
+                minCritical = 0,
+                minNominal = 20,
+                maxNominal = 100,
+                maxCritical = float.MaxValue
+            });
+            
+            // Secondary oxygen storage
+            thresholds.Add(new TelemetryThresholds
+            {
+                parameterName = "oxy_sec_storage",
+                minCritical = 0,
+                minNominal = 20,
+                maxNominal = 100,
+                maxCritical = float.MaxValue
+            });
+            
+            // Heart rate (matches table)
+            thresholds.Add(new TelemetryThresholds
+            {
+                parameterName = "heart_rate",
+                minCritical = 0,
+                minNominal = 50,
+                maxNominal = 160,
+                maxCritical = float.MaxValue
+            });
+            
+            // Suit pressure total
+            thresholds.Add(new TelemetryThresholds
+            {
+                parameterName = "suit_pressure_total",
+                minCritical = 0,
+                minNominal = 3.5f,
+                maxNominal = 4.5f,
+                maxCritical = float.MaxValue
+            });
+            
+            // Temperature (in °F as per table)
+            thresholds.Add(new TelemetryThresholds
+            {
+                parameterName = "temperature",
+                minCritical = 0,
+                minNominal = 50,
+                maxNominal = 90,
+                maxCritical = float.MaxValue
+            });
+        }
+    }
+    #endif
+
+    private string GetAlertMessage(string astronautId, string paramName, float value, TelemetryThresholds.Status status)
+    {
+        // Convert value to display units
+        float displayValue = ConvertToDisplayUnits(paramName, value);
+        
+        // Format parameter with appropriate units
+        string valueWithUnits = FormatParameter(paramName, displayValue);
+        
+        if (status == TelemetryThresholds.Status.Nominal)
+        {
+            return $"RESOLVED: {astronautId} {paramName.Replace("_", " ")} returned to nominal ({valueWithUnits})";
+        }
+        
+        switch (paramName)
+        {
+            case "heart_rate":
+                return status == TelemetryThresholds.Status.Critical ? 
+                    $"CRITICAL: {astronautId} heart rate at dangerous level ({valueWithUnits})" :
+                    $"CAUTION: {astronautId} heart rate outside nominal range ({valueWithUnits})";
+                
+            case "temperature":
+                return status == TelemetryThresholds.Status.Critical ? 
+                    $"CRITICAL: {astronautId} body temperature at dangerous level ({valueWithUnits})" :
+                    $"CAUTION: {astronautId} body temperature outside nominal range ({valueWithUnits})";
+                
+            case "oxy_pri_storage":
+            case "oxy_sec_storage":
+                return status == TelemetryThresholds.Status.Critical ? 
+                    $"CRITICAL: {astronautId} oxygen storage critically low ({valueWithUnits})" :
+                    $"CAUTION: {astronautId} oxygen storage below nominal ({valueWithUnits})";
+                
+            case "batt_time_left":
+                return status == TelemetryThresholds.Status.Critical ? 
+                    $"CRITICAL: {astronautId} battery time critically low ({valueWithUnits})" :
+                    $"CAUTION: {astronautId} battery time below nominal ({valueWithUnits})";
+                
+            case "suit_pressure_total":
+                return status == TelemetryThresholds.Status.Critical ? 
+                    $"CRITICAL: {astronautId} suit pressure at dangerous level ({valueWithUnits})" :
+                    $"CAUTION: {astronautId} suit pressure outside nominal range ({valueWithUnits})";
+                
+            default:
+                return status == TelemetryThresholds.Status.Critical ? 
+                    $"CRITICAL: {astronautId} {paramName.Replace("_", " ")} at dangerous level ({valueWithUnits})" :
+                    $"CAUTION: {astronautId} {paramName.Replace("_", " ")} outside nominal range ({valueWithUnits})";
+        }
+    }
+
+    private float ConvertToDisplayUnits(string paramName, float value)
+    {
+        switch (paramName)
+        {
+            case "temperature":
+                // Convert from Celsius to Fahrenheit for display
+                return (value * 9/5) + 32;
+            
+            case "batt_time_left":
+            case "oxy_time_left":
+                // Convert seconds to minutes for display
+                return value / 60;
+            
+            default:
+                return value;
+        }
     }
 }

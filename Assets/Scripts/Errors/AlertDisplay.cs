@@ -18,8 +18,6 @@ public class AlertDisplay : MonoBehaviour {
     
     [Header("Settings")]
     [SerializeField] private float updateInterval = 1.0f;
-    [SerializeField] private bool runTest = false;
-    [SerializeField] private bool forceTest = false; // For testing alerts without real data
     
     private Dictionary<string, GameObject> activeAlerts = new Dictionary<string, GameObject>();
     private float timeSinceLastUpdate = 0f;
@@ -32,11 +30,6 @@ public class AlertDisplay : MonoBehaviour {
         // Find references if not assigned
         if (telemetryMonitor == null)
             telemetryMonitor = FindObjectOfType<TelemetryMonitor>();
-        
-        if (telemetryMonitor == null) {
-            Debug.LogError("TelemetryMonitor not found! Alerts will not work.");
-            return;
-        }
         
         // Subscribe to telemetry events
         telemetryMonitor.onCautionDetected.AddListener(HandleCautionAlert);
@@ -76,46 +69,11 @@ public class AlertDisplay : MonoBehaviour {
     }
     
     void CheckTelemetry()
-    {
-        if (telemetryMonitor == null) {
-            Debug.LogError("Cannot check telemetry: TelemetryMonitor is null");
-            return;
-        }
-        
+    {      
         telemetryMonitor.UpdateTelemetry();
-        Debug.Log("AlertDisplay: Called TelemetryMonitor.UpdateTelemetry()");
     }
     
-    // Force test alerts for debugging
-    void ForceTestAlerts()
-    {
-        Debug.Log("Forcing test alerts");
-        
-        // Create test alerts
-        TelemetryMonitor.TelemetryAlert heartRateAlert = new TelemetryMonitor.TelemetryAlert {
-            astronautId = "EVA1",
-            parameterName = "heart_rate",
-            value = 125f,
-            status = TelemetryThresholds.Status.Caution,
-            message = "EVA1 heart_rate: 125 BPM - above nominal range",
-            timestamp = DateTime.Now
-        };
-        
-        TelemetryMonitor.TelemetryAlert fanAlert = new TelemetryMonitor.TelemetryAlert {
-            astronautId = "EVA1",
-            parameterName = "fan_error",
-            value = 0f,
-            status = TelemetryThresholds.Status.Critical,
-            message = "EVA1 fan system failure",
-            timestamp = DateTime.Now
-        };
-        
-        // Trigger alerts
-        HandleCautionAlert(heartRateAlert);
-        HandleCriticalAlert(fanAlert);
-    }
-    
-    // Handle different alert types
+    //* ---- Alert Handlers ----
     void HandleCautionAlert(TelemetryMonitor.TelemetryAlert alert)
     {
         Debug.Log($"CAUTION ALERT: {alert.astronautId} {alert.parameterName}: {alert.value}");
@@ -150,11 +108,11 @@ public class AlertDisplay : MonoBehaviour {
         if (activeAlerts.TryGetValue(alertId, out GameObject alertObj))
         {
             // Update existing alert
-            TextMeshProUGUI alertText = alertObj.GetComponentInChildren<TextMeshProUGUI>();
-            if (alertText != null)
+            TextMeshProUGUI AlertText = alertObj.GetComponentInChildren<TextMeshProUGUI>();
+            if (AlertText != null)
             {
-                alertText.text = $"{alert.message}";
-                alertText.color = color;
+                AlertText.text = $"{alert.message}";
+                AlertText.color = color;
             }
             
             // Update background
@@ -175,11 +133,11 @@ public class AlertDisplay : MonoBehaviour {
                 activeAlerts[alertId] = newAlert;
                 
                 // Set alert text
-                TextMeshProUGUI alertText = newAlert.GetComponentInChildren<TextMeshProUGUI>();
-                if (alertText != null)
+                TextMeshProUGUI AlertText = newAlert.GetComponentInChildren<TextMeshProUGUI>();
+                if (AlertText != null)
                 {
-                    alertText.text = $"{alert.message}";
-                    alertText.color = color;
+                    AlertText.text = $"{alert.message}";
+                    AlertText.color = color;
                 }
                 
                 // Set background color
