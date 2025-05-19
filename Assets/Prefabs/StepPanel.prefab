@@ -34,7 +34,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -61, y: -12}
+  m_AnchoredPosition: {x: -61, y: -10.933}
   m_SizeDelta: {x: 348.3929, y: 67}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6543450109841311773
@@ -288,6 +288,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   stepNumberText: {fileID: 6418161882139241886}
   stepInstructionText: {fileID: 3800360166748977217}
+  completionIndicator: {fileID: 0}
+  activeIndicator: {fileID: 0}
 --- !u!114 &7586490002112210071
 MonoBehaviour:
   m_ObjectHideFlags: 0
