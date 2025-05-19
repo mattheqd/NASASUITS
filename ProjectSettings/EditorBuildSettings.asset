@@ -32,9 +32,12 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/Voice.unity
     guid: 3635fa7efdc4e514694b94275858cfd7
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Geosample-Matthew.unity
     guid: 206613fdf34103d4194c775a88a321c1
+  - enabled: 1
+    path: Assets/Scenes/Geosample-Final.unity
+    guid: 4140c3fba19f5a643a98998619bf76fc
   m_configObjects:
     com.unity.xr.arfoundation.simulation_settings: {fileID: 11400000, guid: 9ac4004b2714e5c4eaedfe426c50b41b, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 7a2c7d9f16540b1448fa771eb5f122f7, type: 2}

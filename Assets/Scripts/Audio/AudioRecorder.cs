@@ -247,6 +247,34 @@ public class AudioRecorder : MonoBehaviour
             trimmedClip.SetData(samples, 0);
 
             recording = trimmedClip;
+
+            // Send the entire recording for transcription
+            if (useWebSocketTranscription && WebSocketClient.Instance != null)
+            {
+                // Generate a unique session ID for this recording
+                currentSessionId = System.Guid.NewGuid().ToString();
+                
+                // Convert float array to PCM16 bytes
+                byte[] pcmBytes = new byte[samples.Length * 2];
+                for (int i = 0; i < samples.Length; i++)
+                {
+                    short pcmValue = (short)(samples[i] * 32767);
+                    byte[] pcmSample = BitConverter.GetBytes(pcmValue);
+                    pcmBytes[i * 2] = pcmSample[0];
+                    pcmBytes[i * 2 + 1] = pcmSample[1];
+                }
+                
+                // Convert to base64
+                string base64Audio = Convert.ToBase64String(pcmBytes);
+                
+                // Send the entire recording
+                WebSocketClient.Instance.Send("transcribe_audio", new Dictionary<string, object> {
+                    { "session_id", currentSessionId },
+                    { "audio_data", base64Audio },
+                    { "sample_rate", sampleRate },
+                    { "channels", 1 }
+                });
+            }
         }
 
         // Update UI
@@ -264,22 +292,6 @@ public class AudioRecorder : MonoBehaviour
             waveformCoroutine = null;
         }
         
-        // stop audio streaming
-        if (streamingCoroutine != null) {
-            StopCoroutine(streamingCoroutine); // stops the streaming function
-            streamingCoroutine = null; // clear anything inside the streaming coroutine
-
-            // notify the server when the transcription session is over
-            if (WebSocketClient.Instance != null) {
-                // create a new dictionary to store the session id 
-                // session id maps to each transcription session
-                // the transcription session stores the audio data represented as a base64 encoded string
-                // base64 is a way to encode binary data into a string of ASCII characters. this is used to transport audio data.
-                WebSocketClient.Instance.Send("end_transcription", new Dictionary<string, object> {
-                    {"session_id", currentSessionId}
-                });
-            }
-        }
         UpdateStatus("Recording complete. Awaiting transcription...");
     }
 
