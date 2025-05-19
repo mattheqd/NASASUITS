@@ -302,6 +302,8 @@ public class WebSocketClient : MonoBehaviour
     public static SingleEvaTelemetryData LatestEva1TelemetryData { get; private set; }
     public static SingleEvaTelemetryData LatestEva2TelemetryData { get; private set; }
 
+    // New static property
+    public static CombinedEvaTelemetryData LatestCombinedEvaTelemetryData { get; private set; }
 
     private void Awake() {
         if (Instance != null && Instance != this) {
@@ -1000,6 +1002,7 @@ public class WebSocketClient : MonoBehaviour
         // Store latest EVA telemetry data based on EVA ID
         LatestEva1TelemetryData = combinedData.eva1;
         LatestEva2TelemetryData = combinedData.eva2;
+        LatestCombinedEvaTelemetryData = combinedData;
         
         // Log EVA telemetry data
         StringBuilder logBuilder = new StringBuilder();
