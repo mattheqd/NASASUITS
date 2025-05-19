@@ -142,12 +142,12 @@ public class AlertDisplay : MonoBehaviour {
         {
             if (alert.status == TelemetryThresholds.Status.Critical)
             {
-                AlertStatusText.text = "CRITICAL ALERT: System requires immediate attention!";
+                AlertStatusText.text = alert.message;
                 AlertStatusText.color = Color.red;
             }
             else if (alert.status == TelemetryThresholds.Status.Caution)
             {
-                AlertStatusText.text = "CAUTION: System parameters outside nominal range";
+                AlertStatusText.text = alert.message;
                 AlertStatusText.color = Color.yellow;
             }
         }
