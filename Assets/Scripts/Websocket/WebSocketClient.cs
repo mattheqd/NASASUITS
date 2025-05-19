@@ -136,6 +136,41 @@ public class BiometricsData
 }
 
 [Serializable]
+public class SingleEvaTelemetryData
+{
+    public int o2TimeLeft;
+    public float oxygenPrimaryStorage;
+    public float oxygenSecondaryStorage;
+    public float oxygenPrimaryPressure;
+    public float oxygenSecondaryPressure;
+    public float suitPressureOxygen;
+    public float suitPressureCO2;
+    public float suitPressureOther;
+    public float suitPressureTotal;
+    public float scrubberAPressure;
+    public float scrubberBPressure;
+    public float h2oGasPressure;
+    public float h2oLiquidPressure;
+    public float oxygenConsumption;
+    public float co2Production;
+    public int primaryFanRPM;
+    public int secondaryFanRPM;
+    public float helmetCO2Pressure;
+    public int heartRate;
+    public float temperature;
+    public float coolantLevel;
+}
+
+[Serializable]
+public class CombinedEvaTelemetryData
+{
+    public int evaTime;
+    public long timestamp;
+    public SingleEvaTelemetryData eva1;
+    public SingleEvaTelemetryData eva2;
+}
+
+[Serializable]
 public class WsRockDataMessage
 {
     public string type;
@@ -189,11 +224,20 @@ public class WsBiometricsDataMessage
     public WsError error;
 }
 
+[Serializable]
+public class WsEvaTelemetryDataMessage
+{
+    public string type;
+    public CombinedEvaTelemetryData data;
+    public bool success;
+    public WsError error;
+}
+
 public class WebSocketClient : MonoBehaviour
 {
     private WebSocket ws;
     private Dictionary<string, List<Action<object>>> messageHandlers = new Dictionary<string, List<Action<object>>>();
-    private string serverUrl = "wss://a7c4-76-78-137-104.ngrok-free.app/ws";
+    private string serverUrl = "wss://4f6e-50-206-208-3.ngrok-free.app/ws";
     
 
     private bool isConnected = false;
@@ -208,12 +252,14 @@ public class WebSocketClient : MonoBehaviour
     private float lastUiaDataProcessTime = 0f;
     private float lastHighFreqProcessTime = 0f;
     private float lastBiometricsProcessTime = 0f;
+    private float lastEvaTelemetryProcessTime = 0f;
     private const float IMU_RATE_LIMIT = 1.0f; // 1 second rate limit
     private const float ROCK_DATA_RATE_LIMIT = 1.0f; // 1 second rate limit
     private const float DCU_DATA_RATE_LIMIT = 1.0f; // 1 second rate limit
     private const float UIA_DATA_RATE_LIMIT = 1.0f; // 1 second rate limit
     private const float HIGH_FREQ_RATE_LIMIT = 1.0f; // 1 second rate limit
     private const float BIOMETRICS_RATE_LIMIT = 1.0f; // 1 second rate limit
+    private const float EVA_TELEMETRY_RATE_LIMIT = 1.0f; // 1 second rate limit
     
     // Queue for thread-safe message handling
     private readonly Queue<string> messageQueue = new Queue<string>();
@@ -246,9 +292,15 @@ public class WebSocketClient : MonoBehaviour
     public static BiometricsData LatestEva1BiometricsData { get; private set; }
     public static BiometricsData LatestEva2BiometricsData { get; private set; }
 
+
     // Static getters for telemetry data - add to WebSocketClient.cs
     public static LowFrequencyData LatestLowFrequencyData { get; private set; }
     public static ErrorData LatestErrorData { get; private set; }
+
+    // Latest EVA Telemetry data for EVA1 and EVA2
+    public static SingleEvaTelemetryData LatestEva1TelemetryData { get; private set; }
+    public static SingleEvaTelemetryData LatestEva2TelemetryData { get; private set; }
+
 
     private void Awake() {
         if (Instance != null && Instance != this) {
@@ -263,6 +315,7 @@ public class WebSocketClient : MonoBehaviour
         Subscribe("high_frequency", HandleHighFrequencyDataMessage);
         Subscribe("imu_data", HandleImuDataMessage);
         Subscribe("biometrics_data", HandleBiometricsDataMessage);
+        Subscribe("eva_telemetry_data", HandleEvaTelemetryDataMessage);
         ConnectToServer();
     }
 
@@ -396,7 +449,15 @@ public class WebSocketClient : MonoBehaviour
                             HandleBiometricsDataMessage(biometricsDataMsg.data);
                         }
                         break;
-                        
+
+                    case "eva_telemetry_data":
+                        WsEvaTelemetryDataMessage evaTelemetryMsg = JsonUtility.FromJson<WsEvaTelemetryDataMessage>(message);
+                        if (evaTelemetryMsg != null && evaTelemetryMsg.data != null)
+                        {
+                            HandleEvaTelemetryDataMessage(evaTelemetryMsg.data);
+                        }
+                        break;
+
                     default:
                         // Handle other message types through the generic handler
                         HandleMessage(baseMsg);
@@ -728,7 +789,13 @@ public class WebSocketClient : MonoBehaviour
         }
         
         // Log DCU data
-        Debug.Log($"[DCU_DATA] EVA{dcuData.evaId}, Processing at time: {Time.time}");
+        StringBuilder logBuilder = new StringBuilder();
+        logBuilder.AppendLine($"[DCU_DATA] EVA{dcuData.evaId}, Processing at time: {Time.time}");
+        foreach (var field in typeof(DcuData).GetFields())
+        {
+            logBuilder.AppendLine($"  {field.Name}: {field.GetValue(dcuData)}");
+        }
+        Debug.Log(logBuilder.ToString());
         
         // Store the latest DCU data
         LatestDcuData = dcuData;
@@ -753,7 +820,13 @@ public class WebSocketClient : MonoBehaviour
         }
         
         // Log UIA data
-        Debug.Log($"[UIA_DATA] Processing at time: {Time.time}");
+        StringBuilder logBuilder = new StringBuilder();
+        logBuilder.AppendLine($"[UIA_DATA] Processing at time: {Time.time}");
+        foreach (var field in typeof(UiaData).GetFields())
+        {
+            logBuilder.AppendLine($"  {field.Name}: {field.GetValue(uiaData)}");
+        }
+        Debug.Log(logBuilder.ToString());
         
         // Store the latest UIA data
         LatestUiaData = uiaData;
@@ -901,6 +974,70 @@ public class WebSocketClient : MonoBehaviour
             foreach (var handler in messageHandlers["biometrics_data"])
             {
                 handler(biometricsData);
+            }
+        }
+    }
+
+    private void HandleEvaTelemetryDataMessage(object data)
+    {
+        // Rate limit check
+        if (Time.time - lastEvaTelemetryProcessTime < EVA_TELEMETRY_RATE_LIMIT)
+        {
+            // Silently skip processing due to rate limit
+            return;
+        }
+
+        lastEvaTelemetryProcessTime = Time.time;
+
+        CombinedEvaTelemetryData combinedData = data as CombinedEvaTelemetryData;
+        if (combinedData == null)
+        {
+            Debug.LogError($"[EVA_TELEMETRY] Data is not a CombinedEvaTelemetryData object: {data?.GetType()}");
+            return;
+        }
+
+        // Store latest EVA telemetry data based on EVA ID
+        LatestEva1TelemetryData = combinedData.eva1;
+        LatestEva2TelemetryData = combinedData.eva2;
+        
+        // Log EVA telemetry data
+        StringBuilder logBuilder = new StringBuilder();
+        logBuilder.AppendLine($"[EVA_TELEMETRY_DATA] Combined data received. Timestamp: {combinedData.timestamp}, EvaTime: {combinedData.evaTime}, Processing at time: {Time.time}:");
+        
+        if (combinedData.eva1 != null)
+        {
+            logBuilder.AppendLine("  EVA1 Data:");
+            logBuilder.AppendLine($"    O2 Time Left: {combinedData.eva1.o2TimeLeft}");
+            logBuilder.AppendLine($"    Oxygen Primary Storage: {combinedData.eva1.oxygenPrimaryStorage}");
+            // Add more EVA1 fields to log as needed
+        }
+        else
+        {
+            logBuilder.AppendLine("  EVA1 Data: null");
+        }
+
+        if (combinedData.eva2 != null)
+        {
+            logBuilder.AppendLine("  EVA2 Data:");
+            logBuilder.AppendLine($"    O2 Time Left: {combinedData.eva2.o2TimeLeft}");
+            logBuilder.AppendLine($"    Oxygen Primary Storage: {combinedData.eva2.oxygenPrimaryStorage}");
+            // Add more EVA2 fields to log as needed
+        }
+        else
+        {
+            logBuilder.AppendLine("  EVA2 Data: null");
+        }
+        
+        Debug.Log(logBuilder.ToString());
+
+        // Notify subscribers if any are specifically listening for "eva_telemetry_data"
+        // This assumes a generic subscription model. If specific handling is needed, adjust accordingly.
+        if (messageHandlers.ContainsKey("eva_telemetry_data"))
+        {
+            foreach (var handler in messageHandlers["eva_telemetry_data"])
+            {
+                // Subscribers will now receive the CombinedEvaTelemetryData object
+                handler(combinedData);
             }
         }
     }

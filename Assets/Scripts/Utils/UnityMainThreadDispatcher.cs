@@ -52,7 +52,7 @@ public class UnityMainThreadDispatcher : MonoBehaviour
         }
     }
 
-    public Task EnqueueAsync(Action action)
+    public Task<bool> EnqueueAsync(Action action)
     {
         var tcs = new TaskCompletionSource<bool>();
         

@@ -2,254 +2,287 @@
   "procedures": [
     {
       "procedureName": "EVA Egress",
-      "taskName": "Verify LTV Coordination",
-      "procedureDescription": "Emergency exit procedure from the station",
-      "categoryName": "EVA",
-      "totalEstimatedDuration": 1800,
-      "isCompleted": false,
-      "isInProgress": false,
-      "currentStepIndex": 0,
-      "procedureColor": {"r": 1, "g": 1, "b": 1, "a": 1},
-      "iconPath": "",
-      "prerequisiteProcedures": [],
-      "followUpProcedures": [],
-      "requiredComponents": [],
-      "instructionSteps": [
+      "tasks": [
         {
-          "instructionText": "Verify ping has been received from LTV",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 30,
-          "requiredEquipment": ["Tablet"],
-          "annotations": ["PR"]
+          "taskName": "Verify LTV Coordination",
+          "instructionSteps": [
+            {
+              "instructionText": "Verify ping has been received from LTV",
+              "isAutoVerifiable": false,
+              "location": "",
+              "targetKey": "",
+              "targetValue": ""
+            },
+            {
+              "instructionText": "Verify worksite POI locations have been provided by LTV",
+              "isAutoVerifiable": false,
+              "location": "",
+              "targetKey": "",
+              "targetValue": ""
+            },
+            {
+              "instructionText": "Verify that EV1 has received LTV POIs",
+              "isAutoVerifiable": false,
+              "location": "",
+              "targetKey": "",
+              "targetValue": ""
+            },
+            {
+              "instructionText": "Announce that PR operations are complete, will now begin monitoring EVA. Turning operations over to EVA.",
+              "isAutoVerifiable": false,
+              "location": "",
+              "targetKey": "",
+              "targetValue": ""
+            }
+          ]
         },
         {
-          "instructionText": "Verify worksite POI locations have been provided by LTV",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 45,
-          "requiredEquipment": ["Tablet"],
-          "annotations": ["PR"]
+          "taskName": "Connect UIA to DCU and start Depress",
+          "instructionSteps": [
+            {
+              "instructionText": "EV1 verify umbilical connection from UIA to DCU",
+              "isAutoVerifiable": false,
+              "location": "",
+              "targetKey": "",
+              "targetValue": ""
+            },
+            {
+              "instructionText": "EV-1, EMU PWR – ON",
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "emu1_power",
+              "targetValue": "1"
+            },
+            {
+              "instructionText": "BATT – UMB",
+              "isAutoVerifiable": true,
+              "location": "DCU",
+              "targetKey": "battery",
+              "targetValue": "1"
+            },
+            {
+              "instructionText": "DEPRESS PUMP PWR – ON",
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "depress_pump",
+              "targetValue": "1"
+            }
+          ]
         },
         {
-          "instructionText": "Verify that EV1 has received LTV POIs",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 30,
-          "requiredEquipment": ["Comms"],
-          "annotations": ["PR"]
+          "taskName": "Prep O2 Tanks",
+          "instructionSteps": [
+            {
+              "instructionText": "OXYGEN O2 VENT – OPEN",
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "o2_vent",
+              "targetValue": "1"
+            },
+            {
+              "instructionText": "Wait until both Primary and Secondary OXY tanks are < 10psi",
+              "isAutoVerifiable": false,
+              "location": "HMD",
+              "targetKey": "",
+              "targetValue": ""
+            },
+            {
+              "instructionText": "OXYGEN O2 VENT – CLOSE",
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "o2_vent",
+              "targetValue": "0"
+            },
+            {
+              "instructionText": "OXY – PRI",
+              "isAutoVerifiable": true,
+              "location": "DCU",
+              "targetKey": "oxygen",
+              "targetValue": "1"
+            },
+            {
+              "instructionText": "OXYGEN EMU-1 – OPEN",
+              "isAutoVerifiable": false,
+              "location": "",
+              "targetKey": "",
+              "targetValue": ""
+            },
+            {
+              "instructionText": "Wait until EV1 Primary O2 tank > 3000 psi",
+              "isAutoVerifiable": false,
+              "location": "HMD",
+              "targetKey": "",
+              "targetValue": ""
+            }
+          ]
         },
         {
-          "instructionText": "Announce that PR operations are complete, will now begin monitoring EVA. Turning operations over to EVA.",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": false,
-          "estimatedTimeSeconds": 30,
-          "requiredEquipment": ["Comms"],
-          "annotations": ["PR"]
+          "taskName": "END Depress, Check Switches and Disconnect",
+          "instructionSteps": [
+            {
+              "instructionText": "Wait until SUIT PRESSURE and O2 Pressure = 4psi",
+              "isAutoVerifiable": false,
+              "location": "HMD",
+              "targetKey": "",
+              "targetValue": ""
+            },
+            {
+              "instructionText": "DEPRESS PUMP PWR – OFF",
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "depress_pump",
+              "targetValue": "0"
+            },
+            {
+              "instructionText": "BATT – LOCAL",
+              "isAutoVerifiable": true,
+              "location": "DCU",
+              "targetKey": "battery",
+              "targetValue": "0"
+            }
+          ]
+        },
+        {
+          "taskName": "Determine Navigation Path",
+          "instructionSteps": [
+            {
+              "instructionText": "Drop pins and determine best path for each POI provided by LTV",
+              "isAutoVerifiable": false,
+              "location": "",
+              "targetKey": "",
+              "targetValue": ""
+            },
+            {
+              "instructionText": "Verify the path has been generated. Wait for go from PR",
+              "isAutoVerifiable": false,
+              "location": "",
+              "targetKey": "",
+              "targetValue": ""
+            },
+            {
+              "instructionText": "Unlock Airlock, announce all clear for EV1",
+              "isAutoVerifiable": false,
+              "location": "",
+              "targetKey": "",
+              "targetValue": ""
+            },
+            {
+              "instructionText": "Exit airlock and begin navigation to worksite",
+              "isAutoVerifiable": false,
+              "location": "",
+              "targetKey": "",
+              "targetValue": ""
+            }
+          ]
         }
       ]
     },
     {
-      "procedureName": "EVA Egress",
-      "taskName": "Connect UIA to DCU and start Depress",
-      "procedureDescription": "Connect UIA to DCU and begin depressurization",
-      "categoryName": "EVA",
-      "totalEstimatedDuration": 600,
-      "isCompleted": false,
-      "isInProgress": false,
-      "currentStepIndex": 0,
-      "procedureColor": {"r": 1, "g": 1, "b": 1, "a": 1},
-      "iconPath": "",
-      "prerequisiteProcedures": [],
-      "followUpProcedures": [],
-      "requiredComponents": [],
-      "instructionSteps": [
+      "procedureName": "EVA Ingress",
+      "tasks": [
         {
-          "instructionText": "EV1 verify umbilical connection from UIA to DCU",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 60,
-          "requiredEquipment": [],
-          "annotations": ["UIA and DCU"]
+          "taskName": "Connect UIA to DCU and start Depress",
+          "instructionSteps": [
+            {
+              "instructionText": "EV1 connect UIA and DCU umbilical",
+              "isAutoVerifiable": false,
+              "location": "UIA and DCU",
+              "targetKey": "",
+              "targetValue": ""
+            },
+            {
+              "instructionText": "EV-1 EMU PWR – ON",
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "emu1_power",
+              "targetValue": "1"
+            },
+            {
+              "instructionText": "BATT – UMB",
+              "isAutoVerifiable": true,
+              "location": "DCU",
+              "targetKey": "battery",
+              "targetValue": "1"
+            }
+          ]
         },
         {
-          "instructionText": "EV-1, EMU PWR – ON",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 15,
-          "requiredEquipment": [],
-          "annotations": ["UIA"]
+          "taskName": "Vent O2 Tanks",
+          "instructionSteps": [
+            {
+              "instructionText": "OXYGEN O2 VENT – OPEN",
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "o2_vent",
+              "targetValue": "1"
+            },
+            {
+              "instructionText": "Wait until both Primary and Secondary OXY tanks are < 10psi",
+              "isAutoVerifiable": false,
+              "location": "HMD",
+              "targetKey": "",
+              "targetValue": ""
+            },
+            {
+              "instructionText": "OXYGEN O2 VENT – CLOSE",
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "o2_vent",
+              "targetValue": "0"
+            }
+          ]
         },
         {
-          "instructionText": "BATT – UMB",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 15,
-          "requiredEquipment": [],
-          "annotations": ["DCU"]
+          "taskName": "Empty Water Tanks",
+          "instructionSteps": [
+            {
+              "instructionText": "PUMP – OPEN",
+              "isAutoVerifiable": true,
+              "location": "DCU",
+              "targetKey": "pump",
+              "targetValue": "1"
+            },
+            {
+              "instructionText": "EV-1 WASTE WATER – OPEN",
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "ev1_waste",
+              "targetValue": "1"
+            },
+            {
+              "instructionText": "Wait until water EV1 Coolant tank is < 5%",
+              "isAutoVerifiable": false,
+              "location": "HMD",
+              "targetKey": "",
+              "targetValue": ""
+            },
+            {
+              "instructionText": "EV-1, WASTE WATER – CLOSE",
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "ev1_waste",
+              "targetValue": "0"
+            }
+          ]
         },
         {
-          "instructionText": "DEPRESS PUMP PWR – ON",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 15,
-          "requiredEquipment": [],
-          "annotations": ["UIA"]
-        }
-      ]
-    },
-    {
-      "procedureName": "EVA Egress",
-      "taskName": "Prep O2 Tanks",
-      "procedureDescription": "Prepare oxygen tanks for EVA",
-      "categoryName": "EVA",
-      "totalEstimatedDuration": 900,
-      "isCompleted": false,
-      "isInProgress": false,
-      "currentStepIndex": 0,
-      "procedureColor": {"r": 1, "g": 1, "b": 1, "a": 1},
-      "iconPath": "",
-      "prerequisiteProcedures": [],
-      "followUpProcedures": [],
-      "requiredComponents": [],
-      "instructionSteps": [
-        {
-          "instructionText": "OXYGEN O2 VENT – OPEN",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 15,
-          "requiredEquipment": [],
-          "annotations": ["UIA"]
-        },
-        {
-          "instructionText": "Wait until both Primary and Secondary OXY tanks are < 10psi",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 120,
-          "requiredEquipment": [],
-          "annotations": ["HMD"]
-        },
-        {
-          "instructionText": "OXYGEN O2 VENT – CLOSE",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 15,
-          "requiredEquipment": [],
-          "annotations": ["UIA"]
-        },
-        {
-          "instructionText": "OXY – PRI",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 15,
-          "requiredEquipment": [],
-          "annotations": ["DCU"]
-        },
-        {
-          "instructionText": "OXYGEN EMU-1 – OPEN",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 15,
-          "requiredEquipment": [],
-          "annotations": ["UIA"]
-        },
-        {
-          "instructionText": "Wait until EV1 Primary O2 tank > 3000 psi",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 60,
-          "requiredEquipment": [],
-          "annotations": ["HMD"]
-        }
-      ]
-    },
-    {
-      "procedureName": "EVA Egress",
-      "taskName": "END Depress, Check Switches and Disconnect",
-      "procedureDescription": "End depressurization, check switches and disconnect",
-      "categoryName": "EVA",
-      "totalEstimatedDuration": 600,
-      "isCompleted": false,
-      "isInProgress": false,
-      "currentStepIndex": 0,
-      "procedureColor": {"r": 1, "g": 1, "b": 1, "a": 1},
-      "iconPath": "",
-      "prerequisiteProcedures": [],
-      "followUpProcedures": [],
-      "requiredComponents": [],
-      "instructionSteps": [
-        {
-          "instructionText": "Wait until SUIT PRESSURE and O2 Pressure = 4",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 120,
-          "requiredEquipment": [],
-          "annotations": ["HMD"]
-        },
-        {
-          "instructionText": "DEPRESS PUMP PWR – OFF",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 15,
-          "requiredEquipment": [],
-          "annotations": ["UIA"]
-        },
-        {
-          "instructionText": "BATT – LOCAL",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 15,
-          "requiredEquipment": [],
-          "annotations": ["DCU"]
-        }
-      ]
-    },
-    {
-      "procedureName": "EVA Egress",
-      "taskName": "Determine Navigation Path",
-      "procedureDescription": "Determine the navigation path for EVA operations",
-      "categoryName": "EVA",
-      "totalEstimatedDuration": 600,
-      "isCompleted": false,
-      "isInProgress": false,
-      "currentStepIndex": 0,
-      "procedureColor": {"r": 1, "g": 1, "b": 1, "a": 1},
-      "iconPath": "",
-      "prerequisiteProcedures": [],
-      "followUpProcedures": [],
-      "requiredComponents": [],
-      "instructionSteps": [
-        {
-          "instructionText": "Drop pins and determine best path for each POI provided by LTV",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 120,
-          "requiredEquipment": ["Tablet"],
-          "annotations": ["EV1"]
-        },
-        {
-          "instructionText": "Verify the path has been generated. Wait for go from PR",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 60,
-          "requiredEquipment": ["Tablet"],
-          "annotations": ["EV1"]
-        },
-        {
-          "instructionText": "Unlock Airlock, announce all clear for EV",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 30,
-          "requiredEquipment": ["Comms"],
-          "annotations": ["PR"]
-        },
-        {
-          "instructionText": "Exit airlock and begin navigation to worksite",
-          "isAutoVerifiable": false,
-          "requiresManualVerification": true,
-          "estimatedTimeSeconds": 60,
-          "requiredEquipment": [],
-          "annotations": ["EV"]
+          "taskName": "Disconnect UIA from DCU",
+          "instructionSteps": [
+            {
+              "instructionText": "EV-1 EMU PWR – OFF",
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "emu1_power",
+              "targetValue": "0"
+            },
+            {
+              "instructionText": "EV1 disconnect umbilical",
+              "isAutoVerifiable": false,
+              "location": "DCU",
+              "targetKey": "",
+              "targetValue": ""
+            }
+          ]
         }
       ]
     }

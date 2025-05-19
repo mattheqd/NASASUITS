@@ -22,7 +22,8 @@ public class ProceduresFlowManager : MonoBehaviour
     [Header("UI Elements")]
     [SerializeField] private Button egressButton;          // Button to go from TasksList to TasksInfo
     [SerializeField] private Button samplingButton;   
-     [SerializeField] private Button samplingStart; 
+    [SerializeField] private Button ingressButton; // Added for Ingress procedure
+    [SerializeField] private Button samplingStart; 
     [SerializeField] private Button backButton;            // Button to go back from TasksInfo to TasksList
     [SerializeField] private Button startButton;           // Button to go from TasksInfo to Procedures
     [SerializeField] private Button verifyManuallyButton;  // Button to manually verify umbilical connection
@@ -33,10 +34,8 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private Button checkRockDataButton; // Button to check rock data
 
     [Header("Component References")]
-    [SerializeField] private Transform stepsContainer;     // Contains series of steps in TasksInfo
-    [SerializeField] private StepItem stepItemPrefab;      // Prefab for each step
     [SerializeField] private ProcedureDisplay procedureDisplay; // Main procedure handler
-    [SerializeField] private ProcedureAutomation procedureAutomation; // Handles automation of steps
+    //[SerializeField] private ProcedureAutomation procedureAutomation; // Handles automation of steps
     [SerializeField] private WebCamController webCamController; // Reference to camera controller
     [SerializeField] private AudioRecorder audioRecorder; // Reference to audio recorder
     [SerializeField] private TextMeshProUGUI coordinateText; // Text to display coordinates
@@ -60,8 +59,14 @@ public class ProceduresFlowManager : MonoBehaviour
     [Header("WebSocket")]
     [SerializeField] private WebSocketClient webSocketClient;
 
+    [Header("Procedure Data")]
+    [SerializeField] private ProcedureLoader procedureLoader;
+    private Procedure procedureData;
+
     // Target task name for this MVP
-    private const string PROCEDURE_NAME = "EVA Egress";
+    private const string EGRESS_PROCEDURE_NAME = "EVA Egress"; // Renamed for clarity
+    private const string INGRESS_PROCEDURE_NAME = "EVA Ingress"; // Added
+    private string currentProcedureNameToStart; // Added to track which procedure to start from info panel
     private const string TARGET_TASK_NAME = "Connect UIA to DCU and start Depress";
 
     // Current geosample being collected
@@ -88,6 +93,17 @@ public class ProceduresFlowManager : MonoBehaviour
                 Debug.LogWarning("WebSocketClient not found. Position data will not be available.");
             }
         }
+
+        // Find ProcedureLoader if not set in inspector
+        if (procedureLoader == null)
+            procedureLoader = FindObjectOfType<ProcedureLoader>();
+
+        // Ensure onProcedureCompleted listener is only added once
+        if (procedureDisplay != null)
+        {
+            procedureDisplay.onProcedureCompleted.RemoveListener(ShowTasksList);
+            procedureDisplay.onProcedureCompleted.AddListener(ShowTasksList);
+        }
     }
     
     public void InitializeUI()
@@ -102,10 +118,36 @@ public class ProceduresFlowManager : MonoBehaviour
         voicePanel.SetActive(false);
         gpsPanel.SetActive(false);
         
-        // Set up button listeners
+        // Remove all existing listeners first to prevent duplicates
+        egressButton.onClick.RemoveAllListeners();
+        backButton.onClick.RemoveAllListeners();
+        startButton.onClick.RemoveAllListeners();
+        samplingButton.onClick.RemoveAllListeners();
+        samplingStart.onClick.RemoveAllListeners();
+        completeScanning.onClick.RemoveAllListeners();
+        completePicture.onClick.RemoveAllListeners();
+        completeVoice.onClick.RemoveAllListeners();
+        completeGps.onClick.RemoveAllListeners();
+        
+        if (ingressButton != null)
+        {
+            ingressButton.onClick.RemoveAllListeners();
+        }
+        
+        if (checkRockDataButton != null)
+        {
+            checkRockDataButton.onClick.RemoveAllListeners();
+        }
+        
+        if (verifyManuallyButton != null)
+        {
+            verifyManuallyButton.onClick.RemoveAllListeners();
+        }
+        
+        // Add listeners after removing all existing ones
         egressButton.onClick.AddListener(ShowTasksInfo);
         backButton.onClick.AddListener(ShowTasksList);
-        startButton.onClick.AddListener(ShowProcedure);
+        startButton.onClick.AddListener(() => ShowProcedure(currentProcedureNameToStart));
         samplingButton.onClick.AddListener(ShowSampling);
         samplingStart.onClick.AddListener(StartScan);
         completeScanning.onClick.AddListener(CompleteScan);
@@ -113,13 +155,16 @@ public class ProceduresFlowManager : MonoBehaviour
         completeVoice.onClick.AddListener(CompleteVoice);
         completeGps.onClick.AddListener(CompleteGps);
         
-        // Set up rock data check button
+        if (ingressButton != null)
+        {
+            ingressButton.onClick.AddListener(ShowIngressProcedureInfo);
+        }
+        
         if (checkRockDataButton != null)
         {
             checkRockDataButton.onClick.AddListener(CheckForRockData);
         }
         
-        // Connect manual verification button if available
         if (verifyManuallyButton != null)
         {
             verifyManuallyButton.onClick.AddListener(VerifyManualStep);
@@ -435,96 +480,85 @@ public class ProceduresFlowManager : MonoBehaviour
     {
         proceduresListPanel.SetActive(false);
         proceduresPanel.SetActive(false);
-        proceduresInfoPanel.SetActive(true);
-        
-        // Populate steps for the selected task only
-        PopulateTaskSteps();
+        currentProcedureNameToStart = EGRESS_PROCEDURE_NAME; // Set for Egress
+        // proceduresInfoPanel is where the procedure title/description would be shown before starting.
+        // For now, we are keeping a generic info panel. If specific info per procedure is needed, this logic would change.
+        proceduresInfoPanel.SetActive(true); 
+        // todo: Potentially update a title text on proceduresInfoPanel to "EVA Egress"
+    }
+
+    // Added method to show info for Ingress procedure
+    private void ShowIngressProcedureInfo()
+    {
+        proceduresListPanel.SetActive(false);
+        proceduresPanel.SetActive(false);
+        currentProcedureNameToStart = INGRESS_PROCEDURE_NAME; // Set for Ingress
+        // Assuming the same generic info panel is used. Update if Ingress has a unique info screen.
+        proceduresInfoPanel.SetActive(true); 
+        // todo: Potentially update a title text on proceduresInfoPanel to "EVA Ingress"
     }
 
     // Show third panel (Procedures) when pressing Start
-    private void ShowProcedure()
+    private void ShowProcedure(string procedureName)
     {
+        Debug.Log($"ShowProcedure called for: {procedureName}");
         proceduresListPanel.SetActive(false);
         proceduresInfoPanel.SetActive(false);
         proceduresPanel.SetActive(true);
-        
-        // Initialize procedure in the procedure display with only the target task
-        if (procedureDisplay != null)
+
+        if (procedureLoader != null)
+            Debug.Log($"ProcedureLoader found, LoadedProcedures count: {procedureLoader.LoadedProcedures.Count}");
+        else
+            Debug.LogError("ProcedureLoader is null!");
+
+        Procedure selectedProcedure = null;
+        if (procedureLoader != null && procedureLoader.LoadedProcedures.Count > 0)
         {
-            // Get only the specific task instead of the whole procedure
-            Procedure taskProcedure = ProcedureManager.Instance.GetProcedureTask(PROCEDURE_NAME, TARGET_TASK_NAME);
-            
-            if (taskProcedure != null)
+            selectedProcedure = procedureLoader.LoadedProcedures.FirstOrDefault(p => p.procedureName == procedureName);
+            if (selectedProcedure != null)
             {
-                // Load only this task's steps
-                procedureDisplay.LoadCustomProcedure(taskProcedure);
-                
-                // Explicitly make the display panel active
-                if (procedureDisplay.transform.Find("DisplayPanel") != null)
-                    procedureDisplay.transform.Find("DisplayPanel").gameObject.SetActive(true);
-                
-                // Set up automation for this task
-                if (procedureAutomation != null)
-                {
-                    procedureAutomation.SetProcedureState(PROCEDURE_NAME, TARGET_TASK_NAME, 0);
-                }
-                else
-                {
-                    Debug.LogError("ProceduresFlowManager: procedureAutomation reference is missing");
-                }
+                Debug.Log($"Selected procedure: {selectedProcedure.procedureName}, tasks: {selectedProcedure.tasks?.Count}");
             }
             else
             {
-                Debug.LogError($"ProceduresFlowManager: Failed to load task '{TARGET_TASK_NAME}'");
+                Debug.LogError($"Procedure named '{procedureName}' not found in ProcedureLoader!");
+                ShowTasksList(); // Go back to list if procedure not found
+                return;
             }
         }
         else
         {
-            Debug.LogError("ProceduresFlowManager: procedureDisplay reference is missing");
+            Debug.LogError("No procedures loaded in ProcedureLoader!");
+            ShowTasksList(); // Go back to list
+            return;
         }
-    }
 
-    // Populate the steps in the TasksInfo panel
-    private void PopulateTaskSteps()
-    {
-        if (ProcedureManager.Instance == null)
+        if (procedureDisplay != null && selectedProcedure != null)
         {
-            Debug.LogError("ProceduresFlowManager: ProcedureManager.Instance is null");
-            return;
+            // Remove any existing listeners before loading the new procedure
+            if (procedureDisplay.onProcedureCompleted != null)
+            {
+                procedureDisplay.onProcedureCompleted.RemoveAllListeners();
+                procedureDisplay.onProcedureCompleted.AddListener(ShowTasksList);
+            }
+            
+            Debug.Log($"Calling LoadProcedure for: {selectedProcedure.procedureName}");
+            procedureDisplay.LoadProcedure(selectedProcedure);
         }
-        
-        // Get only the specific task
-        var taskProc = ProcedureManager.Instance.GetProcedureTask(PROCEDURE_NAME, TARGET_TASK_NAME);
-        if (taskProc == null)
+        else
         {
-            Debug.LogError($"ProceduresFlowManager: Task '{TARGET_TASK_NAME}' not found");
-            return;
-        }
-        
-        if (stepItemPrefab == null || stepsContainer == null)
-        {
-            Debug.LogError("ProceduresFlowManager: Missing prefab or container reference");
-            return;
-        }
-        
-        // Clear existing steps
-        foreach (Transform child in stepsContainer) 
-            Destroy(child.gameObject);
-        
-        // Populate steps for this task
-        for (int i = 0; i < taskProc.instructionSteps.Count; i++)
-        {
-            var item = Instantiate(stepItemPrefab, stepsContainer);
-            item.SetStep(i + 1, taskProc.instructionSteps[i].instructionText);
+            Debug.LogError("ProcedureDisplay or selectedProcedure is missing");
+            ShowTasksList(); // Go back to list
         }
     }
 
     // Method to manually verify the first step (umbilical connection)
     private void VerifyManualStep()
     {
-        if (procedureAutomation != null)
+        if (procedureDisplay != null)
         {
-            procedureAutomation.ManualCompleteStep();
+            // Mark the current step as complete in ProcedureDisplay
+            procedureDisplay.NextStep();
         }
     }
 
