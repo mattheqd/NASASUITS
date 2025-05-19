@@ -234,6 +234,72 @@ public class WsEvaTelemetryDataMessage
     public WsError error;
 }
 
+[Serializable]
+public class LtvData
+{
+    public bool ac_heating;
+    public bool ac_cooling;
+    public bool co2_scrubber;
+    public bool lights_on;
+    public bool internal_lights_on;
+    public bool brakes;
+    public bool in_sunlight;
+    public float throttle;
+    public float steering;
+    public float current_pos_x;
+    public float current_pos_y;
+    public float current_pos_alt;
+    public float heading;
+    public float pitch;
+    public float roll;
+    public float distance_traveled;
+    public float speed;
+    public float surface_incline;
+    public float oxygen_tank;
+    public float oxygen_pressure;
+    public float oxygen_levels;
+    public bool fan_pri;
+    public float ac_fan_pri;
+    public float ac_fan_sec;
+    public float cabin_pressure;
+    public float cabin_temperature;
+    public float battery_level;
+    public float power_consumption_rate;
+    public float solar_panel_efficiency;
+    public float external_temp;
+    public float pr_coolant_level;
+    public float pr_coolant_pressure;
+    public float pr_coolant_tank;
+    public float radiator;
+    public float motor_power_consumption;
+    public float terrain_condition;
+    public float solar_panel_dust_accum;
+    public float mission_elapsed_time;
+    public float mission_planned_time;
+    public float point_of_no_return;
+    public float distance_from_base;
+    public bool switch_dest;
+    public float dest_x;
+    public float dest_y;
+    public float dest_z;
+    public bool dust_wiper;
+    public bool sim_running;
+    public bool sim_paused;
+    public bool sim_completed;
+    public float latitude;
+    public float longitude;
+    public float[] lidar;
+}
+
+[Serializable]
+public class WsLtvDataMessage
+{
+    public string type;
+    public LtvData data;
+    public bool success;
+    public WsError error;
+}
+
 public class WebSocketClient : MonoBehaviour
 {
     private WebSocket ws;
@@ -306,6 +372,11 @@ public class WebSocketClient : MonoBehaviour
     // New static property
     public static CombinedEvaTelemetryData LatestCombinedEvaTelemetryData { get; private set; }
 
+    // Add LTV data property
+    public static LtvData LatestLtvData { get; private set; }
+    private float lastLtvDataProcessTime = 0f;
+    private const float LTV_DATA_RATE_LIMIT = 1.0f;
+
     private void Awake() {
         if (Instance != null && Instance != this) {
             Destroy(gameObject);
@@ -320,6 +391,7 @@ public class WebSocketClient : MonoBehaviour
         Subscribe("imu_data", HandleImuDataMessage);
         Subscribe("biometrics_data", HandleBiometricsDataMessage);
         Subscribe("eva_telemetry_data", HandleEvaTelemetryDataMessage);
+        Subscribe("ltv_data", HandleLtvDataMessage);
         ConnectToServer();
     }
 
@@ -459,6 +531,14 @@ public class WebSocketClient : MonoBehaviour
                         if (evaTelemetryMsg != null && evaTelemetryMsg.data != null)
                         {
                             HandleEvaTelemetryDataMessage(evaTelemetryMsg.data);
+                        }
+                        break;
+
+                    case "ltv_data":
+                        WsLtvDataMessage ltvDataMsg = JsonUtility.FromJson<WsLtvDataMessage>(message);
+                        if (ltvDataMsg != null && ltvDataMsg.data != null)
+                        {
+                            HandleLtvDataMessage(ltvDataMsg.data);
                         }
                         break;
 
@@ -1043,6 +1123,47 @@ public class WebSocketClient : MonoBehaviour
             {
                 // Subscribers will now receive the CombinedEvaTelemetryData object
                 handler(combinedData);
+            }
+        }
+    }
+
+    private void HandleLtvDataMessage(object data)
+    {
+        // Rate limit check
+        if (Time.time - lastLtvDataProcessTime < LTV_DATA_RATE_LIMIT)
+        {
+            return;
+        }
+        
+        lastLtvDataProcessTime = Time.time;
+        
+        LtvData ltvData = data as LtvData;
+        if (ltvData == null)
+        {
+            Debug.LogError($"[LTV] Data is not a LtvData object: {data?.GetType()}");
+            return;
+        }
+        
+        // Store latest LTV data
+        LatestLtvData = ltvData;
+        
+        // Log LTV data
+        StringBuilder logBuilder = new StringBuilder();
+        logBuilder.AppendLine($"[LTV_DATA] Processing at time: {Time.time}");
+        logBuilder.AppendLine($"  Position: ({ltvData.current_pos_x}, {ltvData.current_pos_y}, {ltvData.current_pos_alt})");
+        logBuilder.AppendLine($"  Heading: {ltvData.heading}, Pitch: {ltvData.pitch}, Roll: {ltvData.roll}");
+        logBuilder.AppendLine($"  Speed: {ltvData.speed}, Distance: {ltvData.distance_traveled}");
+        logBuilder.AppendLine($"  Battery: {ltvData.battery_level}%, Oxygen: {ltvData.oxygen_tank}%");
+        logBuilder.AppendLine($"  Cabin Temp: {ltvData.cabin_temperature}°C, Pressure: {ltvData.cabin_pressure}");
+        
+        Debug.Log(logBuilder.ToString());
+        
+        // Notify subscribers
+        if (messageHandlers.ContainsKey("ltv_data"))
+        {
+            foreach (var handler in messageHandlers["ltv_data"])
+            {
+                handler(ltvData);
             }
         }
     }
