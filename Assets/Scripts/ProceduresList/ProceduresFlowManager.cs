@@ -118,10 +118,36 @@ public class ProceduresFlowManager : MonoBehaviour
         voicePanel.SetActive(false);
         gpsPanel.SetActive(false);
         
-        // Set up button listeners
+        // Remove all existing listeners first to prevent duplicates
+        egressButton.onClick.RemoveAllListeners();
+        backButton.onClick.RemoveAllListeners();
+        startButton.onClick.RemoveAllListeners();
+        samplingButton.onClick.RemoveAllListeners();
+        samplingStart.onClick.RemoveAllListeners();
+        completeScanning.onClick.RemoveAllListeners();
+        completePicture.onClick.RemoveAllListeners();
+        completeVoice.onClick.RemoveAllListeners();
+        completeGps.onClick.RemoveAllListeners();
+        
+        if (ingressButton != null)
+        {
+            ingressButton.onClick.RemoveAllListeners();
+        }
+        
+        if (checkRockDataButton != null)
+        {
+            checkRockDataButton.onClick.RemoveAllListeners();
+        }
+        
+        if (verifyManuallyButton != null)
+        {
+            verifyManuallyButton.onClick.RemoveAllListeners();
+        }
+        
+        // Add listeners after removing all existing ones
         egressButton.onClick.AddListener(ShowTasksInfo);
         backButton.onClick.AddListener(ShowTasksList);
-        startButton.onClick.AddListener(() => ShowProcedure(currentProcedureNameToStart)); // Modified to use currentProcedureNameToStart
+        startButton.onClick.AddListener(() => ShowProcedure(currentProcedureNameToStart));
         samplingButton.onClick.AddListener(ShowSampling);
         samplingStart.onClick.AddListener(StartScan);
         completeScanning.onClick.AddListener(CompleteScan);
@@ -129,18 +155,16 @@ public class ProceduresFlowManager : MonoBehaviour
         completeVoice.onClick.AddListener(CompleteVoice);
         completeGps.onClick.AddListener(CompleteGps);
         
-        if (ingressButton != null) // Added listener for ingress button
+        if (ingressButton != null)
         {
             ingressButton.onClick.AddListener(ShowIngressProcedureInfo);
         }
         
-        // Set up rock data check button
         if (checkRockDataButton != null)
         {
             checkRockDataButton.onClick.AddListener(CheckForRockData);
         }
         
-        // Connect manual verification button if available
         if (verifyManuallyButton != null)
         {
             verifyManuallyButton.onClick.AddListener(VerifyManualStep);
@@ -475,7 +499,7 @@ public class ProceduresFlowManager : MonoBehaviour
     }
 
     // Show third panel (Procedures) when pressing Start
-    private void ShowProcedure(string procedureName) // Modified to accept procedureName
+    private void ShowProcedure(string procedureName)
     {
         Debug.Log($"ShowProcedure called for: {procedureName}");
         proceduresListPanel.SetActive(false);
@@ -498,7 +522,6 @@ public class ProceduresFlowManager : MonoBehaviour
             else
             {
                 Debug.LogError($"Procedure named '{procedureName}' not found in ProcedureLoader!");
-                // Fallback or error handling
                 ShowTasksList(); // Go back to list if procedure not found
                 return;
             }
@@ -512,6 +535,13 @@ public class ProceduresFlowManager : MonoBehaviour
 
         if (procedureDisplay != null && selectedProcedure != null)
         {
+            // Remove any existing listeners before loading the new procedure
+            if (procedureDisplay.onProcedureCompleted != null)
+            {
+                procedureDisplay.onProcedureCompleted.RemoveAllListeners();
+                procedureDisplay.onProcedureCompleted.AddListener(ShowTasksList);
+            }
+            
             Debug.Log($"Calling LoadProcedure for: {selectedProcedure.procedureName}");
             procedureDisplay.LoadProcedure(selectedProcedure);
         }
