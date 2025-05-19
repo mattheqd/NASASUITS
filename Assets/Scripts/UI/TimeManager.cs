@@ -12,10 +12,13 @@ public class TimeManager : MonoBehaviour
         if (timeText != null)
         {
             var combined = WebSocketClient.LatestCombinedEvaTelemetryData;
-            if (combined != null && combined.timestamp > 0)
+            if (combined != null && combined.evaTime > 0)
             {
-                var dateTime = DateTimeOffset.FromUnixTimeMilliseconds(combined.timestamp).UtcDateTime;
-                timeText.text = dateTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'");
+                int totalSeconds = combined.evaTime;
+                int hours = totalSeconds / 3600;
+                int minutes = (totalSeconds % 3600) / 60;
+                int seconds = totalSeconds % 60;
+                timeText.text = $"EVA Time: {hours:D2}:{minutes:D2}:{seconds:D2}";
             }
             else
             {

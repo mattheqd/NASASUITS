@@ -260,7 +260,7 @@ public class WebSocketClient : MonoBehaviour
     private const float UIA_DATA_RATE_LIMIT = 1.0f; // 1 second rate limit
     private const float HIGH_FREQ_RATE_LIMIT = 1.0f; // 1 second rate limit
     private const float BIOMETRICS_RATE_LIMIT = 1.0f; // 1 second rate limit
-    private const float EVA_TELEMETRY_RATE_LIMIT = 1.0f; // 1 second rate limit
+    private const float EVA_TELEMETRY_RATE_LIMIT = 0.5f; // 1 second rate limit
     
     // Queue for thread-safe message handling
     private readonly Queue<string> messageQueue = new Queue<string>();
