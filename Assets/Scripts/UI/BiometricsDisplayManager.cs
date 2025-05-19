@@ -61,9 +61,18 @@ public class BiometricsDisplayManager : MonoBehaviour
     public TextMeshProUGUI eva2_HelmetCO2PressureText;
     public TextMeshProUGUI eva2_CoolantLevelText;
 
+    [Header("LTV Gauges (Assign in Inspector)")]
+    public BiometricGauge ltv_BatteryLevelGauge;
+    public BiometricGauge ltv_OxygenTankGauge;
+    public BiometricGauge ltv_SpeedGauge;
+    public BiometricGauge ltv_CabinTemperatureGauge;
+    public BiometricGauge ltv_DistanceFromBaseGauge;
+    public BiometricGauge ltv_DistanceTraveledGauge;
+
     [Header("EVA Display Panels (Assign in Inspector)")]
     public GameObject eva1DisplayPanel;
-    public GameObject eva2DisplayPanel; // Assuming you'll have a similar setup for EVA2 later
+    public GameObject eva2DisplayPanel;
+    public GameObject ltvDisplayPanel;
 
     [Header("Icons (Assign in Inspector)")]
     public Sprite o2ConsumptionIcon;
@@ -94,19 +103,38 @@ public class BiometricsDisplayManager : MonoBehaviour
     private const float TOTAL_SUIT_PRESSURE_MIN = 0f;    // PSIa
     private const float TOTAL_SUIT_PRESSURE_MAX = 16f;   // PSIa (example)
 
+    // LTV Data Min/Max values
+    private const float BATTERY_LEVEL_MIN = 0f;
+    private const float BATTERY_LEVEL_MAX = 100f;
+    private const float OXYGEN_TANK_MIN = 0f;
+    private const float OXYGEN_TANK_MAX = 100f;
+    private const float SPEED_MIN = 0f;
+    private const float SPEED_MAX = 20f;  // 20 m/s max speed
+    private const float CABIN_TEMP_MIN = 15f;  // 15°C minimum
+    private const float CABIN_TEMP_MAX = 35f;  // 35°C maximum
+    private const float DISTANCE_MIN = 0f;
+    private const float DISTANCE_MAX = 1000f;  // 1000m max distance
+
     private float timeSinceLastUpdate = 0f;
     private const float updateInterval = 1.0f; // Update once per second
 
+    private string FormatTimeFromSeconds(int totalSeconds)
+    {
+        int hours = totalSeconds / 3600;
+        int minutes = (totalSeconds % 3600) / 60;
+        int seconds = totalSeconds % 60;
+        return $"{hours:D2}:{minutes:D2}:{seconds:D2}";
+    }
+
     void Start()
     {
-        // Set initial panel visibility: EVA1 active, EVA2 inactive
         if (eva1DisplayPanel != null)
         {
             eva1DisplayPanel.SetActive(true);
         }
         else
         {
-            Debug.LogWarning("EVA1 Display Panel is not assigned in the inspector. Initial state not set.");
+            Debug.LogWarning("EVA1 Display Panel is not assigned in the inspector.");
         }
 
         if (eva2DisplayPanel != null)
@@ -115,7 +143,16 @@ public class BiometricsDisplayManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("EVA2 Display Panel is not assigned in the inspector. Initial state not set.");
+            Debug.LogWarning("EVA2 Display Panel is not assigned in the inspector.");
+        }
+
+        if (ltvDisplayPanel != null)
+        {
+            ltvDisplayPanel.SetActive(false);
+        }
+        else
+        {
+            Debug.LogWarning("LTV Display Panel is not assigned in the inspector.");
         }
     }
 
@@ -136,6 +173,7 @@ public class BiometricsDisplayManager : MonoBehaviour
             // Update EVA 1 Gauges using only EvaTelemetryData
             SingleEvaTelemetryData eva1TelemetryData = WebSocketClient.LatestEva1TelemetryData;
             SingleEvaTelemetryData eva2TelemetryData = WebSocketClient.LatestEva2TelemetryData;
+            LtvData ltvData = WebSocketClient.LatestLtvData;
             
             Debug.Log("EVA 1 Telemetry Data: " + (eva1TelemetryData != null ? 
                 $"HR: {eva1TelemetryData.heartRate}, " +
@@ -157,7 +195,6 @@ public class BiometricsDisplayManager : MonoBehaviour
                 $"O2SecSto: {eva2TelemetryData.oxygenSecondaryStorage}, " +
                 $"SuitCO2: {eva2TelemetryData.suitPressureCO2}, " +
                 $"SuitPrTot: {eva2TelemetryData.suitPressureTotal}" 
-                // Add other EVA2 fields to log if needed, mirroring EVA1's full log
                 : "null"));
             
             if (eva1TelemetryData != null)
@@ -190,19 +227,19 @@ public class BiometricsDisplayManager : MonoBehaviour
 
                 // Update TextMeshPro Fields
                 if (eva1_EvaIdText != null) eva1_EvaIdText.text = $"EVA ID: 1";
-                if (eva1_O2TimeLeftText != null) eva1_O2TimeLeftText.text = $"O2 Time Left: {eva1TelemetryData.o2TimeLeft}s";
-                if (eva1_OxygenPrimaryPressureText != null) eva1_OxygenPrimaryPressureText.text = $"O2 Pri Press: {eva1TelemetryData.oxygenPrimaryPressure:F2} PSI";
-                if (eva1_OxygenSecondaryPressureText != null) eva1_OxygenSecondaryPressureText.text = $"O2 Sec Press: {eva1TelemetryData.oxygenSecondaryPressure:F2} PSI";
-                if (eva1_SuitPressureOxygenText != null) eva1_SuitPressureOxygenText.text = $"Suit O2 Press: {eva1TelemetryData.suitPressureOxygen:F2} PSIa";
-                if (eva1_SuitPressureOtherText != null) eva1_SuitPressureOtherText.text = $"Suit Other Press: {eva1TelemetryData.suitPressureOther:F2} PSIa";
-                if (eva1_ScrubberAPressureText != null) eva1_ScrubberAPressureText.text = $"Scrubber A: {eva1TelemetryData.scrubberAPressure:F2} PSI";
-                if (eva1_ScrubberBPressureText != null) eva1_ScrubberBPressureText.text = $"Scrubber B: {eva1TelemetryData.scrubberBPressure:F2} PSI";
-                if (eva1_H2OGasPressureText != null) eva1_H2OGasPressureText.text = $"H2O Gas: {eva1TelemetryData.h2oGasPressure:F2} PSI";
-                if (eva1_H2OLiquidPressureText != null) eva1_H2OLiquidPressureText.text = $"H2O Liquid: {eva1TelemetryData.h2oLiquidPressure:F2} PSI";
-                if (eva1_PrimaryFanRPMText != null) eva1_PrimaryFanRPMText.text = $"Pri Fan: {eva1TelemetryData.primaryFanRPM} RPM";
-                if (eva1_SecondaryFanRPMText != null) eva1_SecondaryFanRPMText.text = $"Sec Fan: {eva1TelemetryData.secondaryFanRPM} RPM";
-                if (eva1_HelmetCO2PressureText != null) eva1_HelmetCO2PressureText.text = $"Helmet CO2: {eva1TelemetryData.helmetCO2Pressure:F2} mmHg";
-                if (eva1_CoolantLevelText != null) eva1_CoolantLevelText.text = $"Coolant: {eva1TelemetryData.coolantLevel:F1}%";
+                if (eva1_O2TimeLeftText != null) eva1_O2TimeLeftText.text = $"{FormatTimeFromSeconds(eva1TelemetryData.o2TimeLeft)}";
+                if (eva1_OxygenPrimaryPressureText != null) eva1_OxygenPrimaryPressureText.text = $"O2 Pri Press:\n{eva1TelemetryData.oxygenPrimaryPressure:F2} PSI";
+                if (eva1_OxygenSecondaryPressureText != null) eva1_OxygenSecondaryPressureText.text = $"O2 Sec Press:\n{eva1TelemetryData.oxygenSecondaryPressure:F2} PSI";
+                if (eva1_SuitPressureOxygenText != null) eva1_SuitPressureOxygenText.text = $"Suit O2 Press:\n{eva1TelemetryData.suitPressureOxygen:F2} PSIa";
+                if (eva1_SuitPressureOtherText != null) eva1_SuitPressureOtherText.text = $"Suit Press:\n{eva1TelemetryData.suitPressureOther:F2} PSIa";
+                if (eva1_ScrubberAPressureText != null) eva1_ScrubberAPressureText.text = $"Scrubber A:\n{eva1TelemetryData.scrubberAPressure:F2} PSI";
+                if (eva1_ScrubberBPressureText != null) eva1_ScrubberBPressureText.text = $"Scrubber B:\n{eva1TelemetryData.scrubberBPressure:F2} PSI";
+                if (eva1_H2OGasPressureText != null) eva1_H2OGasPressureText.text = $"H2O Gas:\n{eva1TelemetryData.h2oGasPressure:F2} PSI";
+                if (eva1_H2OLiquidPressureText != null) eva1_H2OLiquidPressureText.text = $"H2O Liquid:\n{eva1TelemetryData.h2oLiquidPressure:F2} PSI";
+                if (eva1_PrimaryFanRPMText != null) eva1_PrimaryFanRPMText.text = $"Pri Fan:\n{eva1TelemetryData.primaryFanRPM} RPM";
+                if (eva1_SecondaryFanRPMText != null) eva1_SecondaryFanRPMText.text = $"Sec Fan:\n{eva1TelemetryData.secondaryFanRPM} RPM";
+                if (eva1_HelmetCO2PressureText != null) eva1_HelmetCO2PressureText.text = $"Helmet CO2:\n{eva1TelemetryData.helmetCO2Pressure:F2} mmHg";
+                if (eva1_CoolantLevelText != null) eva1_CoolantLevelText.text = $"Coolant:\n{eva1TelemetryData.coolantLevel:F1}%";
             }
 
             if (eva2TelemetryData != null)
@@ -229,19 +266,40 @@ public class BiometricsDisplayManager : MonoBehaviour
 
                 // Update EVA2 TextMeshPro Fields
                 if (eva2_EvaIdText != null) eva2_EvaIdText.text = $"EVA ID: 2";
-                if (eva2_O2TimeLeftText != null) eva2_O2TimeLeftText.text = $"O2 Time Left: {eva2TelemetryData.o2TimeLeft}s";
-                if (eva2_OxygenPrimaryPressureText != null) eva2_OxygenPrimaryPressureText.text = $"O2 Pri Press: {eva2TelemetryData.oxygenPrimaryPressure:F2} PSI";
-                if (eva2_OxygenSecondaryPressureText != null) eva2_OxygenSecondaryPressureText.text = $"O2 Sec Press: {eva2TelemetryData.oxygenSecondaryPressure:F2} PSI";
-                if (eva2_SuitPressureOxygenText != null) eva2_SuitPressureOxygenText.text = $"Suit O2 Press: {eva2TelemetryData.suitPressureOxygen:F2} PSIa";
-                if (eva2_SuitPressureOtherText != null) eva2_SuitPressureOtherText.text = $"Suit Other Press: {eva2TelemetryData.suitPressureOther:F2} PSIa";
-                if (eva2_ScrubberAPressureText != null) eva2_ScrubberAPressureText.text = $"Scrubber A: {eva2TelemetryData.scrubberAPressure:F2} PSI";
-                if (eva2_ScrubberBPressureText != null) eva2_ScrubberBPressureText.text = $"Scrubber B: {eva2TelemetryData.scrubberBPressure:F2} PSI";
-                if (eva2_H2OGasPressureText != null) eva2_H2OGasPressureText.text = $"H2O Gas: {eva2TelemetryData.h2oGasPressure:F2} PSI";
-                if (eva2_H2OLiquidPressureText != null) eva2_H2OLiquidPressureText.text = $"H2O Liquid: {eva2TelemetryData.h2oLiquidPressure:F2} PSI";
-                if (eva2_PrimaryFanRPMText != null) eva2_PrimaryFanRPMText.text = $"Pri Fan: {eva2TelemetryData.primaryFanRPM} RPM";
-                if (eva2_SecondaryFanRPMText != null) eva2_SecondaryFanRPMText.text = $"Sec Fan: {eva2TelemetryData.secondaryFanRPM} RPM";
-                if (eva2_HelmetCO2PressureText != null) eva2_HelmetCO2PressureText.text = $"Helmet CO2: {eva2TelemetryData.helmetCO2Pressure:F2} mmHg";
-                if (eva2_CoolantLevelText != null) eva2_CoolantLevelText.text = $"Coolant: {eva2TelemetryData.coolantLevel:F1}%";
+                if (eva2_O2TimeLeftText != null) eva2_O2TimeLeftText.text = $"{FormatTimeFromSeconds(eva2TelemetryData.o2TimeLeft)}";
+                if (eva2_OxygenPrimaryPressureText != null) eva2_OxygenPrimaryPressureText.text = $"O2 Pri Press:\n{eva2TelemetryData.oxygenPrimaryPressure:F2} PSI";
+                if (eva2_OxygenSecondaryPressureText != null) eva2_OxygenSecondaryPressureText.text = $"O2 Sec Press:\n{eva2TelemetryData.oxygenSecondaryPressure:F2} PSI";
+                if (eva2_SuitPressureOxygenText != null) eva2_SuitPressureOxygenText.text = $"Suit O2 Press:\n{eva2TelemetryData.suitPressureOxygen:F2} PSIa";
+                if (eva2_SuitPressureOtherText != null) eva2_SuitPressureOtherText.text = $"Suit Press:\n{eva2TelemetryData.suitPressureOther:F2} PSIa";
+                if (eva2_ScrubberAPressureText != null) eva2_ScrubberAPressureText.text = $"Scrubber A:\n{eva2TelemetryData.scrubberAPressure:F2} PSI";
+                if (eva2_ScrubberBPressureText != null) eva2_ScrubberBPressureText.text = $"Scrubber B:\n{eva2TelemetryData.scrubberBPressure:F2} PSI";
+                if (eva2_H2OGasPressureText != null) eva2_H2OGasPressureText.text = $"H2O Gas:\n{eva2TelemetryData.h2oGasPressure:F2} PSI";
+                if (eva2_H2OLiquidPressureText != null) eva2_H2OLiquidPressureText.text = $"H2O Liquid:\n{eva2TelemetryData.h2oLiquidPressure:F2} PSI";
+                if (eva2_PrimaryFanRPMText != null) eva2_PrimaryFanRPMText.text = $"Pri Fan:\n{eva2TelemetryData.primaryFanRPM} RPM";
+                if (eva2_SecondaryFanRPMText != null) eva2_SecondaryFanRPMText.text = $"Sec Fan:\n{eva2TelemetryData.secondaryFanRPM} RPM";
+                if (eva2_HelmetCO2PressureText != null) eva2_HelmetCO2PressureText.text = $"Helmet CO2:\n{eva2TelemetryData.helmetCO2Pressure:F2} mmHg";
+                if (eva2_CoolantLevelText != null) eva2_CoolantLevelText.text = $"Coolant:\n{eva2TelemetryData.coolantLevel:F1}%";
+            }
+
+            if (ltvData != null)
+            {
+                if (ltv_BatteryLevelGauge != null)
+                    ltv_BatteryLevelGauge.SetData("Battery", null, "%", ltvData.battery_level, BATTERY_LEVEL_MIN, BATTERY_LEVEL_MAX);
+                
+                if (ltv_OxygenTankGauge != null)
+                    ltv_OxygenTankGauge.SetData("O2 Tank", null, "%", ltvData.oxygen_tank, OXYGEN_TANK_MIN, OXYGEN_TANK_MAX);
+                
+                if (ltv_SpeedGauge != null)
+                    ltv_SpeedGauge.SetData("Speed", null, "m/s", ltvData.speed, SPEED_MIN, SPEED_MAX);
+                
+                if (ltv_CabinTemperatureGauge != null)
+                    ltv_CabinTemperatureGauge.SetData("Cabin Temp", null, "°C", ltvData.cabin_temperature, CABIN_TEMP_MIN, CABIN_TEMP_MAX);
+                
+                if (ltv_DistanceFromBaseGauge != null)
+                    ltv_DistanceFromBaseGauge.SetData("Dist from Base", null, "m", ltvData.distance_from_base, DISTANCE_MIN, DISTANCE_MAX);
+                
+                if (ltv_DistanceTraveledGauge != null)
+                    ltv_DistanceTraveledGauge.SetData("Dist Traveled", null, "m", ltvData.distance_traveled, DISTANCE_MIN, DISTANCE_MAX);
             }
         }
     }
@@ -249,53 +307,55 @@ public class BiometricsDisplayManager : MonoBehaviour
     // Public methods to be called by UI Buttons
     public void ToggleEva1Display()
     {
-        Debug.Log("ToggleEva1Display() called.");
         if (eva1DisplayPanel != null)
         {
-            Debug.Log($"Attempting to activate eva1DisplayPanel: {eva1DisplayPanel.name}. Current state: {eva1DisplayPanel.activeSelf}");
             eva1DisplayPanel.SetActive(true);
-            Debug.Log($"eva1DisplayPanel: {eva1DisplayPanel.name} new state: {eva1DisplayPanel.activeSelf}");
-        }
-        else
-        {
-            Debug.LogWarning("EVA1 Display Panel is not assigned in the inspector.");
         }
 
         if (eva2DisplayPanel != null)
         {
-            Debug.Log($"Attempting to deactivate eva2DisplayPanel: {eva2DisplayPanel.name}. Current state: {eva2DisplayPanel.activeSelf}");
             eva2DisplayPanel.SetActive(false);
-            Debug.Log($"eva2DisplayPanel: {eva2DisplayPanel.name} new state: {eva2DisplayPanel.activeSelf}");
         }
-        else
+
+        if (ltvDisplayPanel != null)
         {
-            Debug.LogWarning("EVA2 Display Panel is not assigned (when trying to deactivate in ToggleEva1Display).");
+            ltvDisplayPanel.SetActive(false);
         }
     }
 
     public void ToggleEva2Display()
     {
-        Debug.Log("ToggleEva2Display() called.");
-        if (eva2DisplayPanel != null)
-        {
-            Debug.Log($"Attempting to activate eva2DisplayPanel: {eva2DisplayPanel.name}. Current state: {eva2DisplayPanel.activeSelf}");
-            eva2DisplayPanel.SetActive(true);
-            Debug.Log($"eva2DisplayPanel: {eva2DisplayPanel.name} new state: {eva2DisplayPanel.activeSelf}");
-        }
-        else
-        {
-            Debug.LogWarning("EVA2 Display Panel is not assigned in the inspector.");
-        }
-
         if (eva1DisplayPanel != null)
         {
-            Debug.Log($"Attempting to deactivate eva1DisplayPanel: {eva1DisplayPanel.name}. Current state: {eva1DisplayPanel.activeSelf}");
             eva1DisplayPanel.SetActive(false);
-            Debug.Log($"eva1DisplayPanel: {eva1DisplayPanel.name} new state: {eva1DisplayPanel.activeSelf}");
         }
-         else
+
+        if (eva2DisplayPanel != null)
         {
-            Debug.LogWarning("EVA1 Display Panel is not assigned (when trying to deactivate in ToggleEva2Display).");
+            eva2DisplayPanel.SetActive(true);
+        }
+
+        if (ltvDisplayPanel != null)
+        {
+            ltvDisplayPanel.SetActive(false);
+        }
+    }
+
+    public void ToggleLtvDisplay()
+    {
+        if (eva1DisplayPanel != null)
+        {
+            eva1DisplayPanel.SetActive(false);
+        }
+
+        if (eva2DisplayPanel != null)
+        {
+            eva2DisplayPanel.SetActive(false);
+        }
+
+        if (ltvDisplayPanel != null)
+        {
+            ltvDisplayPanel.SetActive(true);
         }
     }
 } 
