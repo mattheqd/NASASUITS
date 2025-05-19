@@ -6,13 +6,13 @@ using UnityEngine;
 using UnityEngine.UI;
 using System;
 using Thresholds;
+using TMPro;
 
 public class MaxRangeCalculator : MonoBehaviour
 {
     //*--------- Variables -----------
     // UI elements
-    [SerializeField] private Text rangeDisplayText; // Text to display the maximum range
-    [SerializeField] private Image rangeColorIndicator; // White = safe, Orange = caution, Red = critical
+    [SerializeField] private TextMeshProUGUI RangeDisplayText; // Text to display the maximum range
     
     // Configuration parameters
     [Header("Astronaut Speed Settings")]
@@ -42,6 +42,15 @@ public class MaxRangeCalculator : MonoBehaviour
         // reference  to telemetry monitor
         telemetryMonitor = FindObjectOfType<TelemetryMonitor>();
         CalculateMaxRange();
+        
+        // Set default text if no data available
+        if (RangeDisplayText != null && string.IsNullOrEmpty(RangeDisplayText.text))
+        {
+            RangeDisplayText.text = "Initializing telemetry...";
+            RangeDisplayText.color = Color.white;
+        }
+        
+        Debug.Log("MaxRangeCalculator initialized");
     }
     // update the maximum range every updateInterval seconds
     void Update()
@@ -61,119 +70,96 @@ public class MaxRangeCalculator : MonoBehaviour
     // - The depletion rate of other consumable data (e.g. coolant, battery, etc.) listed in the websocket
     void CalculateMaxRange()
     {
-        // get latest telemetry data from WS client
+        Debug.Log("Calculating max range...");
+        
+        // Get telemetry data directly from WebSocketClient
+        SingleEvaTelemetryData evaTelemetry = WebSocketClient.LatestEva1TelemetryData;
         BiometricsData eva1Bio = WebSocketClient.LatestEva1BiometricsData;
         HighFrequencyData highFreqData = WebSocketClient.LatestHighFrequencyData;
-
-        // track limiting factors
+        
+        // Log data availability for debugging
+        Debug.Log($"EVA Telemetry: {(evaTelemetry != null ? "Available" : "NULL")}");
+        Debug.Log($"EVA1 Bio: {(eva1Bio != null ? "Available" : "NULL")}");
+        Debug.Log($"High Freq Data: {(highFreqData != null ? "Available" : "NULL")}");
+        
+        // Variables to track limiting factors
         float timeRemaining = float.MaxValue;
-        limitingFactor = "";
-
-        if (eva1Bio == null || highFreqData == null) {
+        limitingFactor = "Unknown";
+        
+        // Check if telemetry data available
+        if (evaTelemetry == null)
+        {
+            Debug.LogWarning("No EVA telemetry data available");
+            if (RangeDisplayText != null)
+            {
+                RangeDisplayText.text = "Awaiting telemetry data...";
+                RangeDisplayText.color = Color.yellow;
+            }
             return;
         }
-
-        // 1. check oxygen time remaining
-        SingleEvaTelemetryData evaTelemetry = WebSocketClient.LatestEva1TelemetryData;
-        float oxygenTimeRemaining = evaTelemetry != null ? evaTelemetry.o2TimeLeft : 0;
-        if (oxygenTimeRemaining > 0 && oxygenTimeRemaining < timeRemaining) {
+        
+        // Extract oxygen time left
+        float oxygenTimeRemaining = evaTelemetry.o2TimeLeft;
+        Debug.Log($"Oxygen time remaining: {oxygenTimeRemaining} seconds");
+        
+        // Extract battery time left
+        float batteryTimeRemaining = evaTelemetry.batteryTimeLeft;
+        Debug.Log($"Battery time remaining: {batteryTimeRemaining} seconds");
+        
+        // Find the limiting factor (the resource that will run out first)
+        if (oxygenTimeRemaining < timeRemaining)
+        {
             timeRemaining = oxygenTimeRemaining;
             limitingFactor = "Oxygen";
         }
-
-        // 2. Battery time remaining
-        float batteryTimeRemaining = evaTelemetry != null ? evaTelemetry.batteryTimeLeft : 0;
-        if (batteryTimeRemaining > 0 && batteryTimeRemaining < timeRemaining)
+        
+        if (batteryTimeRemaining < timeRemaining)
         {
             timeRemaining = batteryTimeRemaining;
             limitingFactor = "Battery";
         }
-
-        // 3. CO2 scrubber capacity remaining (calculated from CO2 production rate if available)
-        if (eva1Bio != null && eva1Bio.co2Production > 0)
-        {
-            // Estimate CO2 scrubber capacity based on CO2 production rate
-            // Typical scrubber can handle about 8 hours of CO2 at normal production rates
-            float scrubberACapacity = evaTelemetry.scrubberAPressure;
-            float scrubberBCapacity = evaTelemetry.scrubberBPressure;
-            
-            // Get the total remaining capacity across both scrubbers
-            float totalScrubberCapacity = scrubberACapacity + scrubberBCapacity;
-            
-            // If we have scrubber data, estimate time based on current CO2 production rate
-            if (totalScrubberCapacity > 0)
-            {
-                // Calculate remaining time based on current CO2 production rate (simplified model)
-                // Assuming a full scrubber can handle 8 hours of CO2 at 0.1 units/min production rate
-                float normalCO2Rate = 0.1f; // baseline CO2 production rate
-                float normalScrubberCapacity = 100f; // baseline full capacity
-                float scrubberTimeRemaining = (totalScrubberCapacity / normalScrubberCapacity) * 
-                                             (normalCO2Rate / eva1Bio.co2Production) * 
-                                             8 * 3600; // convert to seconds
-                
-                if (scrubberTimeRemaining > 0 && scrubberTimeRemaining < timeRemaining)
-                {
-                    timeRemaining = scrubberTimeRemaining;
-                    limitingFactor = "CO2 Scrubber";
-                }
-            }
-        }
         
-        // 4. Coolant level (if critically low)
-        if (evaTelemetry.coolantLevel < 20f)  // Assuming 20% is critically low
-        {
-            // Estimate remaining time based on coolant level (simplified model)
-            // Assume coolant depletes linearly over an 8 hour period
-            float coolantTimeRemaining = (evaTelemetry.coolantLevel / 100f) * 8 * 3600; // convert to seconds
-            
-            if (coolantTimeRemaining > 0 && coolantTimeRemaining < timeRemaining)
-            {
-                timeRemaining = coolantTimeRemaining;
-                limitingFactor = "Coolant";
-            }
-        }
+        // Calculate one-way time (half of total time with safety margin)
+        float safetyFactor = 1.0f - (safetyMarginPercent / 100.0f);
+        float oneWayTimeRemaining = (timeRemaining * safetyFactor) / 2.0f;
         
-        // Apply safety margin
-        float safeTimeRemaining = timeRemaining * (1.0f - safetyMarginPercent / 100f);
+        // Calculate max range based on walking speed
+        currentMaxRange = oneWayTimeRemaining * nominalWalkingSpeed;
         
-        // Convert time to distance (out and back)
-        // We divide by 2 because astronaut must return to base (round trip)
-        float oneWayTimeRemaining = safeTimeRemaining / 2.0f;
-        float maxDistance = oneWayTimeRemaining * nominalWalkingSpeed;
-        
-        // Update the current max range
-        currentMaxRange = maxDistance;
-        
-        // Debug log the calculation
-        Debug.Log($"Max Range Calculation: {limitingFactor} limited to {FormatTimeRemaining(timeRemaining)} → " +
-                  $"{FormatTimeRemaining(safeTimeRemaining)} (with safety margin) → " +
-                  $"{FormatTimeRemaining(oneWayTimeRemaining)} one-way → " +
-                  $"{currentMaxRange:F0}m");
-        
-        // Format distance nicely
+        // Format the time and distance for display
+        string timeStr = FormatTimeRemaining(timeRemaining);
         string distanceStr = FormatDistance(currentMaxRange);
         
-        // Update text with calculated values
-        if (rangeDisplayText != null)
+        Debug.Log($"Calculated max range: {distanceStr} limited by {limitingFactor}");
+        
+        // Update UI
+        if (RangeDisplayText != null)
         {
-            rangeDisplayText.text = $"Max Range: {distanceStr}\nLimited by: {limitingFactor}";
+            // Set the range text with detailed information
+            RangeDisplayText.text = $"Max Range: {distanceStr}\n";
+                                //    $"Limited by: {limitingFactor}\n" +
+                                //    $"O2 Remaining: {FormatTimeRemaining(oxygenTimeRemaining)}\n" +
+                                //    $"Battery: {FormatTimeRemaining(batteryTimeRemaining)}";
             
-            // Set warning colors based on range
+            // Color coding based on danger level
             if (currentMaxRange <= criticalThresholdMeters)
             {
-                rangeDisplayText.color = Color.red;
-                // if (rangeWarningIcon != null) rangeWarningIcon.color = Color.red;
+                RangeDisplayText.color = Color.red;
             }
             else if (currentMaxRange <= cautionThresholdMeters)
             {
-                rangeDisplayText.color = Color.yellow;
-                // if (rangeWarningIcon != null) rangeWarningIcon.color = Color.yellow;
+                RangeDisplayText.color = Color.yellow;
             }
             else
             {
-                rangeDisplayText.color = Color.green;
-                // if (rangeWarningIcon != null) rangeWarningIcon.color = Color.green;
+                RangeDisplayText.color = Color.white;
             }
+            
+            Debug.Log($"UI updated with text: {RangeDisplayText.text}");
+        }
+        else
+        {
+            Debug.LogError("RangeDisplayText is null! Make sure it's assigned in the Inspector.");
         }
     }
     
