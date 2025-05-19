@@ -12,6 +12,7 @@ public class ProcedureDisplay : MonoBehaviour
     [Header("UI References")]
     [SerializeField] private GameObject displayPanel;
     [SerializeField] private TextMeshProUGUI taskTitleText;
+    [SerializeField] private TextMeshProUGUI stepCounterText;
     [SerializeField] private Transform stepsPanel;
     [SerializeField] private GameObject stepItemPrefab;
     [SerializeField] private Button nextStepButton;
@@ -59,8 +60,16 @@ public class ProcedureDisplay : MonoBehaviour
         }
         var task = currentProcedure.tasks[currentTaskIndex];
         Debug.Log($"[ProcedureDisplay] Task: {task.taskName}, Steps: {task.instructionSteps?.Count ?? 0}");
-        taskTitleText.text = $"{currentProcedure.procedureName} - {task.taskName}";
+        taskTitleText.text = task.taskName;
+        
         currentStepIndex = 0;
+        
+        // Update step counter after setting currentStepIndex to 0
+        if (stepCounterText != null)
+        {
+            stepCounterText.text = $"Step {currentStepIndex + 1}/{task.instructionSteps.Count}";
+        }
+        
         for (int i = 0; i < task.instructionSteps.Count; i++)
         {
             GameObject stepObj = Instantiate(stepItemPrefab, stepsPanel);
@@ -100,6 +109,12 @@ public class ProcedureDisplay : MonoBehaviour
             LoadCurrentTask();
             return;
         }
+        
+        if (stepCounterText != null)
+        {
+            stepCounterText.text = $"Step {currentStepIndex + 1}/{task.instructionSteps.Count}";
+        }
+        
         UpdateStepDisplay();
         TryStartAutoVerificationForCurrentStep();
     }
@@ -251,4 +266,4 @@ public class InstructionStep
     public string location;
     public string targetKey;
     public string targetValue;
-} 
+}

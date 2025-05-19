@@ -42,6 +42,7 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI rockDataText; // Text to display rock data
     
     [Header("Rock Data UI Fields")]
+    [SerializeField] private GameObject compositionDataPanel; // Master panel containing all composition data
     [SerializeField] private TextMeshProUGUI rockEvaIdText;
     [SerializeField] private TextMeshProUGUI rockSpecIdText;
     [SerializeField] private TextMeshProUGUI rockNameText;
@@ -202,6 +203,9 @@ public class ProceduresFlowManager : MonoBehaviour
         // Start monitoring for rock data changes
         StartRockDataMonitoring();
         
+        // Hide composition data panel initially
+        if (compositionDataPanel != null) compositionDataPanel.SetActive(false);
+        
         samplingPanel.SetActive(false);
         scanningPanel.SetActive(true);
     }
@@ -217,7 +221,7 @@ public class ProceduresFlowManager : MonoBehaviour
             DisplayRockDataDetails(baselineRockData); // Display baseline details
             if (rockDataText != null)
             {
-                rockDataText.text = "<color=#FFCC00>Scanning for rock sample... Waiting for data to change</color>";
+                rockDataText.text = "<color=#FFCC00>Scan a rock sample</color>";
             }
         }
         else
@@ -275,7 +279,7 @@ public class ProceduresFlowManager : MonoBehaviour
             if (rockDataText != null)
             {
                 animationFrame = (animationFrame + 1) % loadingStates.Length;
-                rockDataText.text = $"<color=#FFCC00>Scanning for rock sample...</color> {loadingStates[animationFrame]} Waiting for new data...";
+                rockDataText.text = $"<color=#FFCC00>Scan a rock sample</color> {loadingStates[animationFrame]}";
             }
             DisplayRockDataDetails(null); // Clear details while waiting for new specId
             
@@ -292,7 +296,17 @@ public class ProceduresFlowManager : MonoBehaviour
                     // Update the baseline to the new data to prevent multiple detections
                     baselineRockData = currentRockData;
                     
-                    DisplayRockDataDetails(currentRockData); // Display new rock data details
+                    // Show analyzing message
+                    if (rockDataText != null)
+                    {
+                        rockDataText.text = "<color=#FFCC00>Analyzing Sample...</color>";
+                    }
+                    
+                    // Wait for 5 seconds to show analyzing message
+                    yield return new WaitForSeconds(3f);
+                    
+                    // Display the new rock data details
+                    DisplayRockDataDetails(currentRockData);
                     if (rockDataText != null)
                     {
                         rockDataText.text = "🆕 <color=#00FF00>NEW SAMPLE DETECTED!</color>";
@@ -602,7 +616,7 @@ public class ProceduresFlowManager : MonoBehaviour
         {
             // Show instructional text rather than old data
             if (rockDataText != null) {
-                rockDataText.text = "<color=#FFCC00>Scan Rock, new data will appear once complete</color>";
+                rockDataText.text = "<color=#FFCC00>Start scanning for rock samples</color>";
             }
             DisplayRockDataDetails(null); // Clear details
             Debug.Log("[ROCK_CHECK] Waiting for new rock data...");
@@ -682,6 +696,9 @@ public class ProceduresFlowManager : MonoBehaviour
 
             if (data.composition != null)
             {
+                // Show composition data panel
+                if (compositionDataPanel != null) compositionDataPanel.SetActive(true);
+                
                 if (rockSiO2Text != null) rockSiO2Text.text = $"{data.composition.SiO2:F2}%";
                 if (rockAl2O3Text != null) rockAl2O3Text.text = $"{data.composition.Al2O3:F2}%";
                 if (rockMnOText != null) rockMnOText.text = $"{data.composition.MnO:F2}%";
@@ -695,17 +712,8 @@ public class ProceduresFlowManager : MonoBehaviour
             }
             else
             {
-                // If composition is null, set oxide fields to placeholder
-                if (rockSiO2Text != null) rockSiO2Text.text = placeholder;
-                if (rockAl2O3Text != null) rockAl2O3Text.text = placeholder;
-                if (rockMnOText != null) rockMnOText.text = placeholder;
-                if (rockCaOText != null) rockCaOText.text = placeholder;
-                if (rockP2O3Text != null) rockP2O3Text.text = placeholder;
-                if (rockTiO2Text != null) rockTiO2Text.text = placeholder;
-                if (rockFeOText != null) rockFeOText.text = placeholder;
-                if (rockMgOText != null) rockMgOText.text = placeholder;
-                if (rockK2OText != null) rockK2OText.text = placeholder;
-                if (rockOtherText != null) rockOtherText.text = placeholder;
+                // Hide composition data panel if no composition data
+                if (compositionDataPanel != null) compositionDataPanel.SetActive(false);
             }
         }
         else
@@ -713,17 +721,8 @@ public class ProceduresFlowManager : MonoBehaviour
             if (rockEvaIdText != null) rockEvaIdText.text = placeholder;
             if (rockSpecIdText != null) rockSpecIdText.text = placeholder;
             if (rockNameText != null) rockNameText.text = placeholder;
-            // Set all composition fields to placeholder if data is null
-            if (rockSiO2Text != null) rockSiO2Text.text = placeholder;
-            if (rockAl2O3Text != null) rockAl2O3Text.text = placeholder;
-            if (rockMnOText != null) rockMnOText.text = placeholder;
-            if (rockCaOText != null) rockCaOText.text = placeholder;
-            if (rockP2O3Text != null) rockP2O3Text.text = placeholder;
-            if (rockTiO2Text != null) rockTiO2Text.text = placeholder;
-            if (rockFeOText != null) rockFeOText.text = placeholder;
-            if (rockMgOText != null) rockMgOText.text = placeholder;
-            if (rockK2OText != null) rockK2OText.text = placeholder;
-            if (rockOtherText != null) rockOtherText.text = placeholder;
+            // Hide composition data panel if no data
+            if (compositionDataPanel != null) compositionDataPanel.SetActive(false);
         }
     }
 } 

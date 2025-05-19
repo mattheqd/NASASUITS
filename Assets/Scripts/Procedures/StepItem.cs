@@ -10,6 +10,9 @@ public class StepItem : MonoBehaviour
     [SerializeField] private GameObject completionIndicator; // Optional indicator for completion
     [SerializeField] private GameObject activeIndicator; // Optional indicator for active step
     private LayoutElement layoutElement;
+    private Image backgroundImage; // Reference to the background image component
+    private bool isCompleted = false; // Track completion state
+    private bool isActive = false; // Track active state
 
     //private AutomationTrigger currentAutoTrigger; // Added for automation
     //public AutomationTrigger CurrentAutoTrigger => currentAutoTrigger; // Getter for automation trigger
@@ -23,6 +26,9 @@ public class StepItem : MonoBehaviour
             layoutElement.preferredHeight = -1;
             layoutElement.flexibleHeight = 1;
         }
+        
+        // Get the background image component
+        backgroundImage = GetComponent<Image>();
     }
 
     // Original method - Keep for backward compatibility
@@ -58,22 +64,47 @@ public class StepItem : MonoBehaviour
     // Methods for step state
     public void MarkCompleted(bool completed)
     {
+        isCompleted = completed;
         if (completionIndicator != null)
             completionIndicator.SetActive(completed);
             
-        // Optional: Change the color to indicate completion
-        if (completed && stepNumberText != null && stepInstructionText != null)
+        // Only update text color if not active
+        if (!isActive && stepNumberText != null && stepInstructionText != null)
         {
-            Color completedColor = new Color(0.556f, 0.556f, 0.556f); // #8E8E8E
-            stepNumberText.color = completedColor;
-            stepInstructionText.color = completedColor;
+            Color textColor = completed ? new Color(0.556f, 0.556f, 0.556f) : Color.white; // Grey when completed, white when not
+            stepNumberText.color = textColor;
+            stepInstructionText.color = textColor;
         }
     }
     
     public void SetActiveStep(bool active)
     {
+        isActive = active;
         if (activeIndicator != null)
             activeIndicator.SetActive(active);
+            
+        // Change the background color to cyan when active and text to black
+        if (backgroundImage != null)
+        {
+            if (active)
+            {
+                backgroundImage.color = new Color(0, 1, 1, 1); // Cyan color
+                if (stepNumberText != null)
+                    stepNumberText.color = Color.black;
+                if (stepInstructionText != null)
+                    stepInstructionText.color = Color.black;
+            }
+            else
+            {
+                backgroundImage.color = new Color(0.16862746f, 0.1764706f, 0.18431373f, 1); // Default dark color
+                // Reset text color based on completion state
+                Color textColor = isCompleted ? new Color(0.556f, 0.556f, 0.556f) : Color.white;
+                if (stepNumberText != null)
+                    stepNumberText.color = textColor;
+                if (stepInstructionText != null)
+                    stepInstructionText.color = textColor;
+            }
+        }
     }
 
     // public void SetAutomationTrigger(AutomationTrigger trigger) // Added for automation
