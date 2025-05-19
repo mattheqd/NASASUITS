@@ -159,6 +159,7 @@ public class SingleEvaTelemetryData
     public int heartRate;
     public float temperature;
     public float coolantLevel;
+    public float batteryTimeLeft;
 }
 
 [Serializable]
