@@ -32,4 +32,30 @@ public class MaxRangeCalculator : MonoBehaviour
     private float timeToNextUpdate = 0f; // Time until next update based on updateInterval
     private float currentMaxRange = 0f; // Current maximum range based on the limiting factor
     private string limitingFactor = ""; // The main limiting factor (oxygen, CO2, etc.)
+
+    // Reference to telemetry monitor for threshold information
+    private TelemetryMonitor telemetryMonitor;
+
+    //*--------- Unity Functions -----------
+    void Start()
+    {
+        // reference  to telemetry monitor
+        telemetryMonitor = FindObjectOfType<TelemetryMonitor>();
+        CalculateMaxRange();
+    }
+    // update the maximum range every updateInterval seconds
+    void Update()
+    {
+        timeToNextUpdate -= Time.deltaTime;
+        if (timeToNextUpdate <= 0) {
+            CalculateMaxRange();
+            timeToNextUpdate = updateInterval;
+        }
+    }
+
+    //*--------- Calculation Functions -----------
+    void CalculateMaxRange()
+    {
+        
+    }
 }
