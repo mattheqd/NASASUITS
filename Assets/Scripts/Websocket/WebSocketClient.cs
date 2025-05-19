@@ -66,9 +66,9 @@ public class LowFrequencyData
 [Serializable]
 public class ErrorData
 {
-    public float eva1_fan_error;
-    public float eva1_o2_error;
-    public float eva1_pump_error;
+    public bool eva1_fan_error;
+    public bool eva1_o2_error;
+    public bool eva1_pump_error;
 }
 
 [Serializable]
@@ -120,6 +120,8 @@ public class CombinedImuData
     public ImuData eva2;
     public long timestamp;
 }
+
+
 
 [Serializable]
 public class BiometricsData
@@ -283,15 +285,22 @@ public class WebSocketClient : MonoBehaviour
     public static HighFrequencyData LatestHighFrequencyData { get; private set; }
     
     // Latest IMU data
-    public static CombinedImuData LatestImuData { get; private set; }
+    public static CombinedImuData LatestImuData { get; private set;
+    }
     
     // Latest biometrics data for EVA1 and EVA2
     public static BiometricsData LatestEva1BiometricsData { get; private set; }
     public static BiometricsData LatestEva2BiometricsData { get; private set; }
 
+
+    // Static getters for telemetry data - add to WebSocketClient.cs
+    public static LowFrequencyData LatestLowFrequencyData { get; private set; }
+    public static ErrorData LatestErrorData { get; private set; }
+
     // Latest EVA Telemetry data for EVA1 and EVA2
     public static SingleEvaTelemetryData LatestEva1TelemetryData { get; private set; }
     public static SingleEvaTelemetryData LatestEva2TelemetryData { get; private set; }
+
 
     private void Awake() {
         if (Instance != null && Instance != this) {
@@ -1212,5 +1221,59 @@ public class WebSocketClient : MonoBehaviour
         rockDataHashByEvaId.Clear();
         lastProcessedSpecId = -1;
         Debug.Log("[ROCK_RESET] Rock data tracking completely reset");
+    }
+
+    private void ProcessTelemetryData(string jsonData)
+    {
+        try 
+        {
+            // Example processing for different message types
+            WsMessage baseMessage = JsonUtility.FromJson<WsMessage>(jsonData);
+            if (baseMessage == null) return;
+            
+            switch (baseMessage.type)
+            {
+                case "dcu_data":
+                    // Process DCU data - high frequency
+                    DcuData dcuData = JsonUtility.FromJson<DcuData>(jsonData);
+                    if (dcuData != null)
+                    {
+                        // Convert DCU data to high frequency format
+                        LatestHighFrequencyData = new HighFrequencyData {
+                            timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                            data = new Dictionary<string, float> {
+                                { "eva1_batt", dcuData.battery },
+                                { "eva1_oxy", dcuData.oxygen },
+                                { "eva1_fan", dcuData.fan },
+                                { "eva1_pump", dcuData.pump },
+                                { "eva1_co2", dcuData.co2 },
+                                { "eva1_comm", dcuData.comm }
+                            }
+                        };
+                    }
+                    break;
+                    
+                case "biometrics_data":
+                    // Process biometrics data
+                    BiometricsData bioData = JsonUtility.FromJson<BiometricsData>(jsonData);
+                    if (bioData != null)
+                    {
+                        if (bioData.evaId == 1)
+                            LatestEva1BiometricsData = bioData;
+                        else if (bioData.evaId == 2)
+                            LatestEva2BiometricsData = bioData;
+                    }
+                    break;
+                    
+                case "error_data":
+                    // Process error data
+                    LatestErrorData = JsonUtility.FromJson<ErrorData>(jsonData);
+                    break;
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Error processing telemetry data: {e.Message}");
+        }
     }
 }
