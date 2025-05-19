@@ -26,7 +26,7 @@ public class MaxRangeCalculator : MonoBehaviour
     [SerializeField] private float criticalThresholdMeters = 200f; // Distance at which to show critical warning
     
     [Header("Refresh Rate")]
-    [SerializeField] private float updateInterval = 5.0f; // How often to update calculations
+    [SerializeField] private float updateInterval = 1.0f; // How often to update calculations
 
     // Private variables to track
     private float timeToNextUpdate = 0f; // Time until next update based on updateInterval
@@ -42,6 +42,7 @@ public class MaxRangeCalculator : MonoBehaviour
         // reference  to telemetry monitor
         telemetryMonitor = FindObjectOfType<TelemetryMonitor>();
         CalculateMaxRange();
+        timeToNextUpdate = updateInterval; // Set the timer for the next update
         
         // Set default text if no data available
         if (RangeDisplayText != null && string.IsNullOrEmpty(RangeDisplayText.text))
@@ -50,15 +51,16 @@ public class MaxRangeCalculator : MonoBehaviour
             RangeDisplayText.color = Color.white;
         }
         
-        Debug.Log("MaxRangeCalculator initialized");
+        Debug.Log("MaxRangeCalculator initialized. First calculation performed.");
     }
     // update the maximum range every updateInterval seconds
     void Update()
     {
         timeToNextUpdate -= Time.deltaTime;
-        if (timeToNextUpdate <= 0) {
+        if (timeToNextUpdate <= 0)
+        {
             CalculateMaxRange();
-            timeToNextUpdate = updateInterval;
+            timeToNextUpdate = updateInterval; // Reset timer for the next interval
         }
     }
 
@@ -74,13 +76,13 @@ public class MaxRangeCalculator : MonoBehaviour
         
         // Get telemetry data directly from WebSocketClient
         SingleEvaTelemetryData evaTelemetry = WebSocketClient.LatestEva1TelemetryData;
-        BiometricsData eva1Bio = WebSocketClient.LatestEva1BiometricsData;
-        HighFrequencyData highFreqData = WebSocketClient.LatestHighFrequencyData;
+        // BiometricsData eva1Bio = WebSocketClient.LatestEva1BiometricsData; // Uncomment if used
+        // HighFrequencyData highFreqData = WebSocketClient.LatestHighFrequencyData; // Uncomment if used
         
         // Log data availability for debugging
         Debug.Log($"EVA Telemetry: {(evaTelemetry != null ? "Available" : "NULL")}");
-        Debug.Log($"EVA1 Bio: {(eva1Bio != null ? "Available" : "NULL")}");
-        Debug.Log($"High Freq Data: {(highFreqData != null ? "Available" : "NULL")}");
+        // Debug.Log($"EVA1 Bio: {(eva1Bio != null ? "Available" : "NULL")}");
+        // Debug.Log($"High Freq Data: {(highFreqData != null ? "Available" : "NULL")}");
         
         // Variables to track limiting factors
         float timeRemaining = float.MaxValue;
@@ -89,12 +91,14 @@ public class MaxRangeCalculator : MonoBehaviour
         // Check if telemetry data available
         if (evaTelemetry == null)
         {
-            Debug.LogWarning("No EVA telemetry data available");
+            Debug.LogWarning("No EVA telemetry data available for MaxRangeCalculator.");
             if (RangeDisplayText != null)
             {
                 RangeDisplayText.text = "Awaiting telemetry data...";
                 RangeDisplayText.color = Color.yellow;
             }
+            currentMaxRange = 0;
+            limitingFactor = "No Data";
             return;
         }
         
@@ -107,16 +111,39 @@ public class MaxRangeCalculator : MonoBehaviour
         Debug.Log($"Battery time remaining: {batteryTimeRemaining} seconds");
         
         // Find the limiting factor (the resource that will run out first)
-        if (oxygenTimeRemaining < timeRemaining)
-        {
-            timeRemaining = oxygenTimeRemaining;
-            limitingFactor = "Oxygen";
+        if (oxygenTimeRemaining <= 0 && batteryTimeRemaining <= 0) {
+            timeRemaining = 0;
+            limitingFactor = "All Consumables Depleted";
+        } else {
+            if (oxygenTimeRemaining > 0 && oxygenTimeRemaining < timeRemaining)
+            {
+                timeRemaining = oxygenTimeRemaining;
+                limitingFactor = "Oxygen";
+            }
+            
+            if (batteryTimeRemaining > 0 && batteryTimeRemaining < timeRemaining)
+            {
+                timeRemaining = batteryTimeRemaining;
+                limitingFactor = "Battery";
+            }
+             // If one is zero and the other isn't, the non-zero one is the limit if it was previously MaxValue
+            else if (limitingFactor == "Unknown") { // If neither was less than MaxValue but one might be >0
+                if (oxygenTimeRemaining > 0) {
+                    timeRemaining = oxygenTimeRemaining;
+                    limitingFactor = "Oxygen";
+                } else if (batteryTimeRemaining > 0) {
+                    timeRemaining = batteryTimeRemaining;
+                    limitingFactor = "Battery";
+                } else { // Both are zero or negative
+                    timeRemaining = 0;
+                    limitingFactor = "Consumables Depleted";
+                }
+            }
         }
-        
-        if (batteryTimeRemaining < timeRemaining)
-        {
-            timeRemaining = batteryTimeRemaining;
-            limitingFactor = "Battery";
+
+        if (timeRemaining == float.MaxValue) { // Should not happen if data is valid and >0
+            timeRemaining = 0;
+            limitingFactor = "Data Error";
         }
         
         // Calculate one-way time (half of total time with safety margin)
@@ -136,10 +163,9 @@ public class MaxRangeCalculator : MonoBehaviour
         if (RangeDisplayText != null)
         {
             // Set the range text with detailed information
-            RangeDisplayText.text = $"Max Range: {distanceStr}\n";
-                                //    $"Limited by: {limitingFactor}\n" +
-                                //    $"O2 Remaining: {FormatTimeRemaining(oxygenTimeRemaining)}\n" +
-                                //    $"Battery: {FormatTimeRemaining(batteryTimeRemaining)}";
+            RangeDisplayText.text = $"Max Range: {distanceStr}\n" +
+                                   $"Limited by: {limitingFactor}\n" +
+                                   $"O2: {FormatTimeRemaining(oxygenTimeRemaining)} | Batt: {FormatTimeRemaining(batteryTimeRemaining)}";
             
             // Color coding based on danger level
             if (currentMaxRange <= criticalThresholdMeters)
@@ -166,11 +192,9 @@ public class MaxRangeCalculator : MonoBehaviour
     // Helper method to format time remaining in a readable format
     private string FormatTimeRemaining(float seconds)
     {
+        if (seconds < 0) seconds = 0;
         TimeSpan timeSpan = TimeSpan.FromSeconds(seconds);
-        return string.Format("{0:D2}:{1:D2}:{2:D2}", 
-            timeSpan.Hours, 
-            timeSpan.Minutes, 
-            timeSpan.Seconds);
+        return $"{timeSpan.Hours:D2}:{timeSpan.Minutes:D2}:{timeSpan.Seconds:D2}";
     }
     
     // Helper method to format distance in a readable format
@@ -200,7 +224,7 @@ public class MaxRangeCalculator : MonoBehaviour
     public string GetDetailedConsumablesReport()
     {
         SingleEvaTelemetryData evaTelemetry = WebSocketClient.LatestEva1TelemetryData;
-        BiometricsData eva1Bio = WebSocketClient.LatestEva1BiometricsData;
+        // BiometricsData eva1Bio = WebSocketClient.LatestEva1BiometricsData; // Uncomment if used
         
         if (evaTelemetry == null)
             return "No telemetry data available";
@@ -223,12 +247,12 @@ public class MaxRangeCalculator : MonoBehaviour
         report += $"Coolant: {evaTelemetry.coolantLevel:F0}%\n";
         
         // Add current consumption rates if biometrics data is available
-        if (eva1Bio != null)
-        {
-            report += $"\nCurrent Rates:\n";
-            report += $"O2 Consumption: {eva1Bio.o2Consumption:F2} L/min\n";
-            report += $"CO2 Production: {eva1Bio.co2Production:F2} L/min\n";
-        }
+        // if (eva1Bio != null)
+        // {
+        //     report += $"\nCurrent Rates:\n";
+        //     report += $"O2 Consumption: {eva1Bio.o2Consumption:F2} L/min\n";
+        //     report += $"CO2 Production: {eva1Bio.co2Production:F2} L/min\n";
+        // }
         
         return report;
     }
