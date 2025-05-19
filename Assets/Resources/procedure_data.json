@@ -28,7 +28,7 @@
               "targetValue": ""
             },
             {
-              "instructionText": "Announce that PR operations are complete, will now begin monitoring EVA. Turning operations over to EVA.",
+              "instructionText": "Announce that PR operations are complete, will now begin EVA.",
               "isAutoVerifiable": false,
               "location": "",
               "targetKey": "",
