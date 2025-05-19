@@ -330,16 +330,17 @@ public class ProceduresFlowManager : MonoBehaviour
         // Save scanning data to current sample
         if (currentSample != null)
         {
-            // Set the sample type based on scanning results if it wasn't already set
-            if (string.IsNullOrEmpty(currentSample.sampleType) || currentSample.sampleType == "Rock Sample")
-            {
-                currentSample.sampleType = "Rock Sample"; // Or whatever type is determined from scanning
-            }
-
             // Get the latest rock data
             RockData currentRockData = WebSocketClient.GetRockDataForEva(currentEvaId);
             if (currentRockData != null && currentRockData.composition != null)
             {
+                // Format the rock name: remove underscores and capitalize first letters
+                string formattedName = string.Join(" ", 
+                    currentRockData.name.Split('_')
+                        .Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower())
+                );
+                currentSample.sampleType = formattedName;
+
                 // Save rock composition data
                 currentSample.rockComposition = new RockComposition
                 {
