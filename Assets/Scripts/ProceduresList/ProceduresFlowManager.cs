@@ -18,6 +18,7 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private GameObject picturePanel;    // Sixth screen - Picture in hierarchy
     [SerializeField] private GameObject voicePanel;    // Seventh screen - Video in hierarchy
     [SerializeField] private GameObject gpsPanel;    // Eighth screen - Video in hierarchy
+    [SerializeField] private GameObject sampleDetailsPanel;    // Final screen - Sample Details in hierarchy
 
     [Header("UI Elements")]
     [SerializeField] private Button egressButton;          // Button to go from TasksList to TasksInfo
@@ -32,6 +33,8 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private Button completeVoice;  // Button to manually verify umbilical connection
     [SerializeField] private Button completeGps;  // Button to manually verify umbilical connection
     [SerializeField] private Button checkRockDataButton; // Button to check rock data
+    [SerializeField] private Button scanAgainButton; // Button to start a new scan
+    [SerializeField] private Button finishButton; // Button to return to procedures list
 
     [Header("Component References")]
     [SerializeField] private ProcedureDisplay procedureDisplay; // Main procedure handler
@@ -56,6 +59,10 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI rockMgOText;
     [SerializeField] private TextMeshProUGUI rockK2OText;
     [SerializeField] private TextMeshProUGUI rockOtherText;
+
+    [Header("Sample Details")]
+    [SerializeField] private GameObject sampleInfoPrefab; // Prefab for displaying sample info
+    private SampleDetailsPanel currentSampleInfo; // Reference to the current sample info instance
 
     [Header("WebSocket")]
     [SerializeField] private WebSocketClient webSocketClient;
@@ -118,6 +125,7 @@ public class ProceduresFlowManager : MonoBehaviour
         picturePanel.SetActive(false);
         voicePanel.SetActive(false);
         gpsPanel.SetActive(false);
+        sampleDetailsPanel.SetActive(false);
         
         // Remove all existing listeners first to prevent duplicates
         egressButton.onClick.RemoveAllListeners();
@@ -129,6 +137,8 @@ public class ProceduresFlowManager : MonoBehaviour
         completePicture.onClick.RemoveAllListeners();
         completeVoice.onClick.RemoveAllListeners();
         completeGps.onClick.RemoveAllListeners();
+        scanAgainButton.onClick.RemoveAllListeners();
+        finishButton.onClick.RemoveAllListeners();
         
         if (ingressButton != null)
         {
@@ -155,6 +165,9 @@ public class ProceduresFlowManager : MonoBehaviour
         completePicture.onClick.AddListener(CompletePicture);
         completeVoice.onClick.AddListener(CompleteVoice);
         completeGps.onClick.AddListener(CompleteGps);
+        scanAgainButton.onClick.AddListener(StartNewScan);
+        finishButton.onClick.AddListener(FinishSampling);
+
         
         if (ingressButton != null)
         {
@@ -190,6 +203,17 @@ public class ProceduresFlowManager : MonoBehaviour
             return webSocketClient.GetEVA1Heading();
         }
         return 0f;
+    }
+    private void StartNewScan()
+    {
+        sampleDetailsPanel.SetActive(false);
+        StartScan();
+    }
+
+    private void FinishSampling()
+    {
+        sampleDetailsPanel.SetActive(false);
+        proceduresListPanel.SetActive(true);
     }
 
     private void StartScan()
@@ -466,16 +490,38 @@ public class ProceduresFlowManager : MonoBehaviour
             // Save the complete sample to storage
             GeoSampleStorage.Instance.AddSample(currentSample);
             
+            // Show the sample details panel
+            gpsPanel.SetActive(false);
+            sampleDetailsPanel.SetActive(true);
+
+            // Create and display the sample info
+            if (sampleInfoPrefab != null)
+            {
+                // Destroy any existing sample info
+                if (currentSampleInfo != null)
+                {
+                    Destroy(currentSampleInfo.gameObject);
+                }
+
+                // Create new sample info
+                GameObject sampleInfoObj = Instantiate(sampleInfoPrefab, sampleDetailsPanel.transform);
+                currentSampleInfo = sampleInfoObj.GetComponent<SampleDetailsPanel>();
+                
+                if (currentSampleInfo != null)
+                {
+                    currentSampleInfo.ShowSampleDetails(currentSample);
+                }
+            }
+            
             // Clear the current sample to prevent duplicates
             currentSample = null;
         }
         else
         {
             Debug.LogWarning("[GEOSAMPLE] No current sample to save GPS data to");
+            gpsPanel.SetActive(false);
+            proceduresListPanel.SetActive(true);
         }
-        
-        gpsPanel.SetActive(false);
-        proceduresListPanel.SetActive(true);
     }
 
     //* ---- Starting screens----//

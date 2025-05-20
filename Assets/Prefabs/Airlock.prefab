@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 7076561641922796930}
   - component: {fileID: 5543929403714137221}
   m_Layer: 5
-  m_Name: POI Icon
+  m_Name: Airlock
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -65,7 +65,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 6aa764b3c53fde142a6f695ec34ce716, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 3d2b55f9f90b43943a4a592e97818b81, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
