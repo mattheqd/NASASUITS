@@ -47,21 +47,21 @@
               "targetValue": ""
             },
             {
-              "instructionText": "EV-1, EMU PWR – ON",
+              "instructionText": "EV-1, Turn EMU Power ON",
               "isAutoVerifiable": true,
               "location": "UIA",
               "targetKey": "emu1_power",
               "targetValue": "1"
             },
             {
-              "instructionText": "BATT – UMB",
+              "instructionText": "Switch Battery to UMB",
               "isAutoVerifiable": true,
               "location": "DCU",
               "targetKey": "battery",
               "targetValue": "1"
             },
             {
-              "instructionText": "DEPRESS PUMP PWR – ON",
+              "instructionText": "DEPRESS PUMP Power ON",
               "isAutoVerifiable": true,
               "location": "UIA",
               "targetKey": "depress_pump",
@@ -73,7 +73,7 @@
           "taskName": "Prep O2 Tanks",
           "instructionSteps": [
             {
-              "instructionText": "OXYGEN O2 VENT – OPEN",
+              "instructionText": "Open OXYGEN O2 VENT",
               "isAutoVerifiable": true,
               "location": "UIA",
               "targetKey": "o2_vent",
@@ -87,21 +87,21 @@
               "targetValue": ""
             },
             {
-              "instructionText": "OXYGEN O2 VENT – CLOSE",
+              "instructionText": "Close OXYGEN O2 VENT",
               "isAutoVerifiable": true,
               "location": "UIA",
               "targetKey": "o2_vent",
               "targetValue": "0"
             },
             {
-              "instructionText": "OXY – PRI",
+              "instructionText": "Switch OXYGEN to Primary",
               "isAutoVerifiable": true,
               "location": "DCU",
               "targetKey": "oxygen",
               "targetValue": "1"
             },
             {
-              "instructionText": "OXYGEN EMU-1 – OPEN",
+              "instructionText": "Open OXYGEN EMU-1",
               "isAutoVerifiable": false,
               "location": "",
               "targetKey": "",
@@ -113,6 +113,20 @@
               "location": "HMD",
               "targetKey": "",
               "targetValue": ""
+            },
+            {
+              "instructionText": "Close OXYGEN EMU-1",
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "o2_vent",
+              "targetValue": "0"
+            },
+            {
+              "instructionText": "Switch OXYGEN to Secondary",
+              "isAutoVerifiable": true,
+              "location": "DCU",
+              "targetKey": "oxygen",
+              "targetValue": "0"
             }
           ]
         },
