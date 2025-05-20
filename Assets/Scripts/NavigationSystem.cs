@@ -42,8 +42,11 @@ public class NavigationSystem : MonoBehaviour
     private List<GameObject> poiIcons = new List<GameObject>();
     public GameObject pinPrefab; // Prefab for dropped pins
     private List<GameObject> droppedPins = new List<GameObject>();
+    public GameObject airlockPrefab; // Prefab for airlock location
+    private GameObject airlockIcon; // Reference to the airlock icon instance
 
     public Vector2 endLocation = new Vector2(-5600, -9940);
+    private Vector2 airlockLocation = new Vector2(-5673.19f, -10033.67f); // Default airlock position
     private List<Node> currentPath = new List<Node>();
     private bool isMoving = false;
     private bool shouldRecalculatePath = false;
@@ -145,6 +148,14 @@ public class NavigationSystem : MonoBehaviour
             playerIcon = null;
         }
 
+        // Clean up existing airlock icon
+        if (airlockIcon != null)
+        {
+            Debug.Log("[NavigationSystem] Destroying existing airlock icon");
+            Destroy(airlockIcon);
+            airlockIcon = null;
+        }
+
         // Clean up existing path dots
         Debug.Log($"[NavigationSystem] Cleaning up {pathDots.Count} path dots");
         foreach (var dot in pathDots)
@@ -181,6 +192,36 @@ public class NavigationSystem : MonoBehaviour
         if (playerIcon == null)
         {
             Debug.LogError("[NavigationSystem] Failed to get RectTransform from player icon!");
+        }
+        else
+        {
+            // Set the size and pivot of the player icon
+            playerIcon.sizeDelta = new Vector2(500, 500); // Set size to 200x200
+            playerIcon.pivot = Vector2.zero; // Set pivot to (0,0)
+            playerIcon.anchorMin = Vector2.zero; // Set anchor min to (0,0)
+            playerIcon.anchorMax = Vector2.zero; // Set anchor max to (0,0)
+        }
+
+        // Create airlock icon
+        if (airlockPrefab != null)
+        {
+            Debug.Log("[NavigationSystem] Creating airlock icon");
+            GameObject airlockObj = Instantiate(airlockPrefab, minimapRect);
+            RectTransform airlockRect = airlockObj.GetComponent<RectTransform>();
+            if (airlockRect != null)
+            {
+                Vector2 minimapPos = WorldToMinimap(airlockLocation);
+                airlockRect.anchoredPosition = minimapPos;
+                airlockRect.anchorMin = Vector2.zero;
+                airlockRect.anchorMax = Vector2.zero;
+                airlockRect.pivot = Vector2.zero;
+                airlockRect.sizeDelta = new Vector2(200, 200); // Set size to 200x200
+                airlockIcon = airlockObj;
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[NavigationSystem] Airlock prefab not assigned!");
         }
         
         Debug.Log("[NavigationSystem] Initializing nodes");
@@ -706,14 +747,10 @@ public class NavigationSystem : MonoBehaviour
                 poiRect.anchoredPosition = minimapPos;
                 poiRect.anchorMin = Vector2.zero;
                 poiRect.anchorMax = Vector2.zero;
-                poiRect.pivot = new Vector2(0.5f, 0.5f);
+                poiRect.pivot = Vector2.zero;
+                poiRect.sizeDelta = new Vector2(200, 200); // Set size to 300x300
             }
-            // Set color to cyan if Image component exists
-            var img = poiObj.GetComponent<UnityEngine.UI.Image>();
-            if (img != null)
-            {
-                img.color = Color.cyan;
-            }
+            
             poiIcons.Add(poiObj);
         }
     }

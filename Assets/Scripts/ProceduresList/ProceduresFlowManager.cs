@@ -18,6 +18,7 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private GameObject picturePanel;    // Sixth screen - Picture in hierarchy
     [SerializeField] private GameObject voicePanel;    // Seventh screen - Video in hierarchy
     [SerializeField] private GameObject gpsPanel;    // Eighth screen - Video in hierarchy
+    [SerializeField] private GameObject sampleDetailsPanel;    // Final screen - Sample Details in hierarchy
 
     [Header("UI Elements")]
     [SerializeField] private Button egressButton;          // Button to go from TasksList to TasksInfo
@@ -32,6 +33,8 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private Button completeVoice;  // Button to manually verify umbilical connection
     [SerializeField] private Button completeGps;  // Button to manually verify umbilical connection
     [SerializeField] private Button checkRockDataButton; // Button to check rock data
+    [SerializeField] private Button scanAgainButton; // Button to start a new scan
+    [SerializeField] private Button finishButton; // Button to return to procedures list
 
     [Header("Component References")]
     [SerializeField] private ProcedureDisplay procedureDisplay; // Main procedure handler
@@ -42,6 +45,7 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI rockDataText; // Text to display rock data
     
     [Header("Rock Data UI Fields")]
+    [SerializeField] private GameObject compositionDataPanel; // Master panel containing all composition data
     [SerializeField] private TextMeshProUGUI rockEvaIdText;
     [SerializeField] private TextMeshProUGUI rockSpecIdText;
     [SerializeField] private TextMeshProUGUI rockNameText;
@@ -55,6 +59,10 @@ public class ProceduresFlowManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI rockMgOText;
     [SerializeField] private TextMeshProUGUI rockK2OText;
     [SerializeField] private TextMeshProUGUI rockOtherText;
+
+    [Header("Sample Details")]
+    [SerializeField] private GameObject sampleInfoPrefab; // Prefab for displaying sample info
+    private SampleDetailsPanel currentSampleInfo; // Reference to the current sample info instance
 
     [Header("WebSocket")]
     [SerializeField] private WebSocketClient webSocketClient;
@@ -117,6 +125,7 @@ public class ProceduresFlowManager : MonoBehaviour
         picturePanel.SetActive(false);
         voicePanel.SetActive(false);
         gpsPanel.SetActive(false);
+        sampleDetailsPanel.SetActive(false);
         
         // Remove all existing listeners first to prevent duplicates
         egressButton.onClick.RemoveAllListeners();
@@ -128,6 +137,8 @@ public class ProceduresFlowManager : MonoBehaviour
         completePicture.onClick.RemoveAllListeners();
         completeVoice.onClick.RemoveAllListeners();
         completeGps.onClick.RemoveAllListeners();
+        scanAgainButton.onClick.RemoveAllListeners();
+        finishButton.onClick.RemoveAllListeners();
         
         if (ingressButton != null)
         {
@@ -154,6 +165,9 @@ public class ProceduresFlowManager : MonoBehaviour
         completePicture.onClick.AddListener(CompletePicture);
         completeVoice.onClick.AddListener(CompleteVoice);
         completeGps.onClick.AddListener(CompleteGps);
+        scanAgainButton.onClick.AddListener(StartNewScan);
+        finishButton.onClick.AddListener(FinishSampling);
+
         
         if (ingressButton != null)
         {
@@ -190,6 +204,17 @@ public class ProceduresFlowManager : MonoBehaviour
         }
         return 0f;
     }
+    private void StartNewScan()
+    {
+        sampleDetailsPanel.SetActive(false);
+        StartScan();
+    }
+
+    private void FinishSampling()
+    {
+        sampleDetailsPanel.SetActive(false);
+        proceduresListPanel.SetActive(true);
+    }
 
     private void StartScan()
     {
@@ -201,6 +226,9 @@ public class ProceduresFlowManager : MonoBehaviour
         
         // Start monitoring for rock data changes
         StartRockDataMonitoring();
+        
+        // Hide composition data panel initially
+        if (compositionDataPanel != null) compositionDataPanel.SetActive(false);
         
         samplingPanel.SetActive(false);
         scanningPanel.SetActive(true);
@@ -217,7 +245,7 @@ public class ProceduresFlowManager : MonoBehaviour
             DisplayRockDataDetails(baselineRockData); // Display baseline details
             if (rockDataText != null)
             {
-                rockDataText.text = "<color=#FFCC00>Scanning for rock sample... Waiting for data to change</color>";
+                rockDataText.text = "<color=#FFCC00>Scan a rock sample</color>";
             }
         }
         else
@@ -275,7 +303,7 @@ public class ProceduresFlowManager : MonoBehaviour
             if (rockDataText != null)
             {
                 animationFrame = (animationFrame + 1) % loadingStates.Length;
-                rockDataText.text = $"<color=#FFCC00>Scanning for rock sample...</color> {loadingStates[animationFrame]} Waiting for new data...";
+                rockDataText.text = $"<color=#FFCC00>Scan a rock sample</color> {loadingStates[animationFrame]}";
             }
             DisplayRockDataDetails(null); // Clear details while waiting for new specId
             
@@ -292,7 +320,17 @@ public class ProceduresFlowManager : MonoBehaviour
                     // Update the baseline to the new data to prevent multiple detections
                     baselineRockData = currentRockData;
                     
-                    DisplayRockDataDetails(currentRockData); // Display new rock data details
+                    // Show analyzing message
+                    if (rockDataText != null)
+                    {
+                        rockDataText.text = "<color=#FFCC00>Analyzing Sample...</color>";
+                    }
+                    
+                    // Wait for 5 seconds to show analyzing message
+                    yield return new WaitForSeconds(3f);
+                    
+                    // Display the new rock data details
+                    DisplayRockDataDetails(currentRockData);
                     if (rockDataText != null)
                     {
                         rockDataText.text = "🆕 <color=#00FF00>NEW SAMPLE DETECTED!</color>";
@@ -452,16 +490,38 @@ public class ProceduresFlowManager : MonoBehaviour
             // Save the complete sample to storage
             GeoSampleStorage.Instance.AddSample(currentSample);
             
+            // Show the sample details panel
+            gpsPanel.SetActive(false);
+            sampleDetailsPanel.SetActive(true);
+
+            // Create and display the sample info
+            if (sampleInfoPrefab != null)
+            {
+                // Destroy any existing sample info
+                if (currentSampleInfo != null)
+                {
+                    Destroy(currentSampleInfo.gameObject);
+                }
+
+                // Create new sample info
+                GameObject sampleInfoObj = Instantiate(sampleInfoPrefab, sampleDetailsPanel.transform);
+                currentSampleInfo = sampleInfoObj.GetComponent<SampleDetailsPanel>();
+                
+                if (currentSampleInfo != null)
+                {
+                    currentSampleInfo.ShowSampleDetails(currentSample);
+                }
+            }
+            
             // Clear the current sample to prevent duplicates
             currentSample = null;
         }
         else
         {
             Debug.LogWarning("[GEOSAMPLE] No current sample to save GPS data to");
+            gpsPanel.SetActive(false);
+            proceduresListPanel.SetActive(true);
         }
-        
-        gpsPanel.SetActive(false);
-        proceduresListPanel.SetActive(true);
     }
 
     //* ---- Starting screens----//
@@ -602,7 +662,7 @@ public class ProceduresFlowManager : MonoBehaviour
         {
             // Show instructional text rather than old data
             if (rockDataText != null) {
-                rockDataText.text = "<color=#FFCC00>Scan Rock, new data will appear once complete</color>";
+                rockDataText.text = "<color=#FFCC00>Start scanning for rock samples</color>";
             }
             DisplayRockDataDetails(null); // Clear details
             Debug.Log("[ROCK_CHECK] Waiting for new rock data...");
@@ -682,6 +742,9 @@ public class ProceduresFlowManager : MonoBehaviour
 
             if (data.composition != null)
             {
+                // Show composition data panel
+                if (compositionDataPanel != null) compositionDataPanel.SetActive(true);
+                
                 if (rockSiO2Text != null) rockSiO2Text.text = $"{data.composition.SiO2:F2}%";
                 if (rockAl2O3Text != null) rockAl2O3Text.text = $"{data.composition.Al2O3:F2}%";
                 if (rockMnOText != null) rockMnOText.text = $"{data.composition.MnO:F2}%";
@@ -695,17 +758,8 @@ public class ProceduresFlowManager : MonoBehaviour
             }
             else
             {
-                // If composition is null, set oxide fields to placeholder
-                if (rockSiO2Text != null) rockSiO2Text.text = placeholder;
-                if (rockAl2O3Text != null) rockAl2O3Text.text = placeholder;
-                if (rockMnOText != null) rockMnOText.text = placeholder;
-                if (rockCaOText != null) rockCaOText.text = placeholder;
-                if (rockP2O3Text != null) rockP2O3Text.text = placeholder;
-                if (rockTiO2Text != null) rockTiO2Text.text = placeholder;
-                if (rockFeOText != null) rockFeOText.text = placeholder;
-                if (rockMgOText != null) rockMgOText.text = placeholder;
-                if (rockK2OText != null) rockK2OText.text = placeholder;
-                if (rockOtherText != null) rockOtherText.text = placeholder;
+                // Hide composition data panel if no composition data
+                if (compositionDataPanel != null) compositionDataPanel.SetActive(false);
             }
         }
         else
@@ -713,17 +767,8 @@ public class ProceduresFlowManager : MonoBehaviour
             if (rockEvaIdText != null) rockEvaIdText.text = placeholder;
             if (rockSpecIdText != null) rockSpecIdText.text = placeholder;
             if (rockNameText != null) rockNameText.text = placeholder;
-            // Set all composition fields to placeholder if data is null
-            if (rockSiO2Text != null) rockSiO2Text.text = placeholder;
-            if (rockAl2O3Text != null) rockAl2O3Text.text = placeholder;
-            if (rockMnOText != null) rockMnOText.text = placeholder;
-            if (rockCaOText != null) rockCaOText.text = placeholder;
-            if (rockP2O3Text != null) rockP2O3Text.text = placeholder;
-            if (rockTiO2Text != null) rockTiO2Text.text = placeholder;
-            if (rockFeOText != null) rockFeOText.text = placeholder;
-            if (rockMgOText != null) rockMgOText.text = placeholder;
-            if (rockK2OText != null) rockK2OText.text = placeholder;
-            if (rockOtherText != null) rockOtherText.text = placeholder;
+            // Hide composition data panel if no data
+            if (compositionDataPanel != null) compositionDataPanel.SetActive(false);
         }
     }
 } 
