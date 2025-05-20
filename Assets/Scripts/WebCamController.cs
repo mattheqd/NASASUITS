@@ -114,6 +114,28 @@ public class WebCamController : MonoBehaviour
         return currentImagePath;
     }
 
+    // Reset the current picture and display
+    public void ResetPicture()
+    {
+        // Clear the current image path
+        currentImagePath = null;
+        
+        // Clear the display
+        if (displayImage != null)
+        {
+            displayImage.texture = null;
+        }
+        
+        // Clean up the texture
+        if (cameraTexture != null)
+        {
+            Destroy(cameraTexture);
+            cameraTexture = null;
+        }
+        
+        LogToScreen("Picture display has been reset");
+    }
+
     void OnDestroy()
     {
         if (cameraTexture != null)

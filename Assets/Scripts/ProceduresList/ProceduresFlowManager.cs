@@ -245,7 +245,7 @@ public class ProceduresFlowManager : MonoBehaviour
             DisplayRockDataDetails(baselineRockData); // Display baseline details
             if (rockDataText != null)
             {
-                rockDataText.text = "<color=#FFCC00>Scan a rock sample</color>";
+                rockDataText.text = "🔍 Scan a rock sample";
             }
         }
         else
@@ -303,7 +303,7 @@ public class ProceduresFlowManager : MonoBehaviour
             if (rockDataText != null)
             {
                 animationFrame = (animationFrame + 1) % loadingStates.Length;
-                rockDataText.text = $"<color=#FFCC00>Scan a rock sample</color> {loadingStates[animationFrame]}";
+                rockDataText.text = $"🔍 Scan a rock sample";
             }
             DisplayRockDataDetails(null); // Clear details while waiting for new specId
             
@@ -323,7 +323,7 @@ public class ProceduresFlowManager : MonoBehaviour
                     // Show analyzing message
                     if (rockDataText != null)
                     {
-                        rockDataText.text = "<color=#FFCC00>Analyzing Sample...</color>";
+                        rockDataText.text = "🔄 Analyzing Sample... ";
                     }
                     
                     // Wait for 5 seconds to show analyzing message
@@ -333,7 +333,7 @@ public class ProceduresFlowManager : MonoBehaviour
                     DisplayRockDataDetails(currentRockData);
                     if (rockDataText != null)
                     {
-                        rockDataText.text = "🆕 <color=#00FF00>NEW SAMPLE DETECTED!</color>";
+                        rockDataText.text = "🆕 NEW SAMPLE DETECTED!";
                     }
                     
                     // Update the sample type with the new spec ID
@@ -398,6 +398,10 @@ public class ProceduresFlowManager : MonoBehaviour
         }
         scanningPanel.SetActive(false);
         picturePanel.SetActive(true);
+        if (webCamController != null)
+        {
+            webCamController.ResetPicture();
+        }
     }
 
     private void CompletePicture()
@@ -447,7 +451,7 @@ public class ProceduresFlowManager : MonoBehaviour
             }
             
             // Format and display the coordinates
-            coordinateText.text = $"EVA1 Coordinates: ({evaPosition.x:F2}, {evaPosition.y:F2})";
+            coordinateText.text = $"Location: ({evaPosition.x:F2}, {evaPosition.y:F2})";
         }
         
         voicePanel.SetActive(false);
@@ -646,7 +650,7 @@ public class ProceduresFlowManager : MonoBehaviour
             // Format and display the rock data
             DisplayRockDataDetails(rockData); // Display new rock data details
             if (rockDataText != null) {
-                rockDataText.text = "🆕 <color=#00FF00>NEW SAMPLE DETECTED!</color>";
+                rockDataText.text = "🆕 NEW SAMPLE DETECTED!";
             }
             
             Debug.Log($"[ROCK_CHECK] Found new unique rock data from EVA{rockData.evaId}, Sample ID: {rockData.specId}");
@@ -662,7 +666,7 @@ public class ProceduresFlowManager : MonoBehaviour
         {
             // Show instructional text rather than old data
             if (rockDataText != null) {
-                rockDataText.text = "<color=#FFCC00>Start scanning for rock samples</color>";
+                rockDataText.text = "🔍 Start scanning for rock samples";
             }
             DisplayRockDataDetails(null); // Clear details
             Debug.Log("[ROCK_CHECK] Waiting for new rock data...");
@@ -689,7 +693,7 @@ public class ProceduresFlowManager : MonoBehaviour
             // Update the waiting animation
             animationFrame = (animationFrame + 1) % loadingStates.Length;
             if (rockDataText != null) {
-                rockDataText.text = $"<color=#FFCC00>Scan Rock, new data will appear once complete</color> {loadingStates[animationFrame]} Waiting for data...";
+                rockDataText.text = $"<color=#FFCC00>Scan Rock, new data will appear once complete</color>  Waiting for data...";
             }
             DisplayRockDataDetails(null); // Clear details while waiting
             
