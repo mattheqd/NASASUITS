@@ -11,7 +11,6 @@ public class AlertDisplay : MonoBehaviour {
     [Header("UI References")]
     [SerializeField] private Transform AlertContainer;
     [SerializeField] private GameObject AlertPrefab; // contains the alert message and icon
-    [SerializeField] private TextMeshProUGUI AlertStatusText; // contains the alert message
     
     [Header("Data Sources")]
     [SerializeField] private TelemetryMonitor telemetryMonitor;
@@ -42,10 +41,6 @@ public class AlertDisplay : MonoBehaviour {
         telemetryMonitor.onReturnToNominal.AddListener(HandleNominalAlert);
         
         Debug.Log("Registered telemetry event listeners");
-        
-        // Set initial status text
-        if (AlertStatusText != null)
-            AlertStatusText.text = "Telemetry Monitoring Active - All Systems Nominal";
     }
     
     void Update()
@@ -84,7 +79,7 @@ public class AlertDisplay : MonoBehaviour {
                         parameterName = errorKey,
                         value = 1,
                         status = Thresholds.TelemetryThresholds.Status.Critical,
-                        message = $"LTV {alertName.ToUpper()} Critical Error",
+                        message = GetLtvCustomMessage(alertName, true),
                         timestamp = DateTime.Now
                     };
                     HandleCriticalAlert(alert);
@@ -101,7 +96,7 @@ public class AlertDisplay : MonoBehaviour {
                         parameterName = errorKey,
                         value = 0,
                         status = Thresholds.TelemetryThresholds.Status.Nominal,
-                        message = $"RESOLVED: LTV {alertName.ToUpper()} Critical Error",
+                        message = GetLtvCustomMessage(alertName, false),
                         timestamp = DateTime.Now
                     };
                     HandleNominalAlert(alert);
@@ -111,6 +106,42 @@ public class AlertDisplay : MonoBehaviour {
         }
     }
     
+    // Helper method to generate custom LTV alert messages
+    private string GetLtvCustomMessage(string alertName, bool isCritical)
+    {
+        string baseMessage;
+        switch (alertName.ToLower()) // Using ToLower() for case-insensitive matching
+        {
+            case "battery":
+                baseMessage = "LTV Battery Level";
+                break;
+            case "co2":
+                baseMessage = "LTV CO2 Scrubber";
+                break;
+            case "coolant":
+                baseMessage = "LTV Coolant System";
+                break;
+            case "oxygen":
+                baseMessage = "LTV Oxygen Supply";
+                break;
+            case "temperature":
+                baseMessage = "LTV Cabin Temperature";
+                break;
+            default:
+                baseMessage = $"LTV {alertName.ToUpper()} System"; // Fallback for unknown alerts
+                break;
+        }
+
+        if (isCritical)
+        {
+            return $"CRITICAL: {baseMessage} is critical!";
+        }
+        else
+        {
+            return $"RESOLVED: {baseMessage} is now nominal.";
+        }
+    }
+
     void ProcessAlertQueue()
     {
         // Remove expired ignores
@@ -164,11 +195,6 @@ public class AlertDisplay : MonoBehaviour {
     {
         Debug.Log($"RESOLVED ALERT: {alert.astronautId} {alert.parameterName} returned to nominal");
         RemoveAlert(alert.astronautId + "_" + alert.parameterName);
-        if (activeAlerts.Count == 0 && AlertStatusText != null)
-        {
-            AlertStatusText.text = "Telemetry Monitoring Active - All Systems Nominal";
-            AlertStatusText.color = Color.white;
-        }
         if (currentAlert != null && currentAlert.astronautId + "_" + currentAlert.parameterName == alert.astronautId + "_" + alert.parameterName)
         {
             currentAlert = null;
@@ -181,7 +207,7 @@ public class AlertDisplay : MonoBehaviour {
         string alertId = alert.astronautId + "_" + alert.parameterName;
         if (ignoredAlerts.TryGetValue(alertId, out float ignoreUntil) && Time.time < ignoreUntil)
             return;
-        // If alert already exists, update it
+
         if (activeAlerts.TryGetValue(alertId, out GameObject alertObj))
         {
             TextMeshProUGUI AlertText = alertObj.GetComponentInChildren<TextMeshProUGUI>();
@@ -217,26 +243,12 @@ public class AlertDisplay : MonoBehaviour {
                     bgColor.a = 0.3f;
                     bgImage.color = bgColor;
                 }
-                // Add dismiss button logic
                 var button = newAlert.GetComponentInChildren<UnityEngine.UI.Button>();
                 if (button != null)
                 {
                     button.onClick.RemoveAllListeners();
                     button.onClick.AddListener(() => DismissAlert(alertId));
                 }
-            }
-        }
-        if (AlertStatusText != null)
-        {
-            if (alert.status == TelemetryThresholds.Status.Critical)
-            {
-                AlertStatusText.text = alert.message;
-                AlertStatusText.color = Color.red;
-            }
-            else if (alert.status == TelemetryThresholds.Status.Caution)
-            {
-                AlertStatusText.text = alert.message;
-                AlertStatusText.color = Color.yellow;
             }
         }
     }
