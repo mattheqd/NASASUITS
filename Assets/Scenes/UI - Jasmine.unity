@@ -2074,6 +2074,9 @@ MonoBehaviour:
   - name: Site 2
     position: {x: -5610, y: -9971}
     description: desc
+  - name: Site 3
+    position: {x: -5615, y: -9995}
+    description: desc
 --- !u!114 &131108318
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10349,7 +10352,6 @@ MonoBehaviour:
   pathDotPrefab: {fileID: 9011896807242633772, guid: 010114904fce6a940bd1d32a91874708, type: 3}
   startNavigationButton: {fileID: 914874855}
   poiIconPrefab: {fileID: 1935131872001031994, guid: 33e5481e2392c474586203e20f41eda2, type: 3}
-  pinPrefab: {fileID: 1935131872001031994, guid: a485f6884f2413245b02f1fdbdaa176d, type: 3}
   airlockPrefab: {fileID: 1935131872001031994, guid: fb480f542c0db264793d98a503393d35, type: 3}
   endLocation: {x: -5620, y: -9960}
 --- !u!114 &718600904
@@ -22338,7 +22340,7 @@ MonoBehaviour:
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 0
   m_ChildControlWidth: 1
-  m_ChildControlHeight: 0
+  m_ChildControlHeight: 1
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0

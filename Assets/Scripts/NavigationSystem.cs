@@ -40,8 +40,6 @@ public class NavigationSystem : MonoBehaviour
     private List<GameObject> pathDots = new List<GameObject>();
     public GameObject poiIconPrefab; // Prefab for POI icons
     private List<GameObject> poiIcons = new List<GameObject>();
-    public GameObject pinPrefab; // Prefab for dropped pins
-    private List<GameObject> droppedPins = new List<GameObject>();
     public GameObject airlockPrefab; // Prefab for airlock location
     private GameObject airlockIcon; // Reference to the airlock icon instance
 
@@ -59,6 +57,8 @@ public class NavigationSystem : MonoBehaviour
     private Queue<Vector2> positionHistory = new Queue<Vector2>();
     private const int HISTORY_SIZE = 3;
     private const float OUTLIER_THRESHOLD = 1.5f; // Multiplier for standard deviation to detect outliers
+    private bool isHazardOverride = false;
+    private Node lastSafeNode = null;
 
     // Predefined coordinates for movement
     private readonly Vector2[] movementCoordinates = new Vector2[]
@@ -369,12 +369,12 @@ public class NavigationSystem : MonoBehaviour
     private void InitializeNodes()
     {
         allNodes.Clear();
-        int gridLines = 15; // 15x15 grid lines
+        int gridLines = 45; // 45x45 grid lines for higher accuracy
         float xStart = -5730f;
         float yStart = -9940f;
         float xEnd = -5590f;
         float yEnd = -10080f;
-        float increment = 10f;
+        float increment = 3.33f; // Reduced increment for finer grid (140 units / 42 spaces ≈ 3.33)
 
         Debug.Log("=== Hazard Node Coordinates ===");
         // Create nodes at each grid line intersection
@@ -401,52 +401,74 @@ public class NavigationSystem : MonoBehaviour
         Debug.Log("=== End Hazard Coordinates ===");
 
         // Connect neighboring nodes (8-way connectivity)
-        foreach (Node node in allNodes)
+        for (int i = 0; i < gridLines; i++)
         {
-            foreach (Node otherNode in allNodes)
+            for (int j = 0; j < gridLines; j++)
             {
-                if (node == otherNode) continue;
-                float dx = Mathf.Abs(node.position.x - otherNode.position.x);
-                float dy = Mathf.Abs(node.position.y - otherNode.position.y);
-                if ((dx == increment && dy == 0) || (dx == 0 && dy == increment) || (dx == increment && dy == increment))
+                Node currentNode = allNodes[i * gridLines + j];
+                
+                // Check all 8 directions
+                for (int di = -1; di <= 1; di++)
                 {
-                    node.neighbors.Add(otherNode);
+                    for (int dj = -1; dj <= 1; dj++)
+                    {
+                        if (di == 0 && dj == 0) continue; // Skip self
+
+                        int ni = i + di;
+                        int nj = j + dj;
+
+                        // Check if neighbor is within bounds
+                        if (ni >= 0 && ni < gridLines && nj >= 0 && nj < gridLines)
+                        {
+                            Node neighborNode = allNodes[ni * gridLines + nj];
+                            if (!neighborNode.isObstacle)
+                            {
+                                currentNode.neighbors.Add(neighborNode);
+                            }
+                        }
+                    }
                 }
             }
         }
+
+        Debug.Log($"[NavigationSystem] Initialized {allNodes.Count} nodes with connections");
     }
 
     private bool IsHazardCoordinate(int i, int j)
     {
-        // i and j are already in 0-14 range from the grid creation
-        switch (j)
+        // Convert from 45x45 grid to equivalent 15x15 grid positions
+        int oldI = Mathf.FloorToInt(i / 3f);
+        int oldJ = Mathf.FloorToInt(j / 3f);
+
+        // i and j are now in 0-44 range, convert to equivalent 0-14 range
+        switch (oldJ)
         {
             case 0:
-                return i >= 0 && i <= 14;
+                return oldI >= 0 && oldI <= 14;
             case 1:
-                return (i >= 0 && i <= 6) || (i >= 8 && i <= 14);
+                return (oldI >= 0 && oldI <= 6) || (oldI >= 8 && oldI <= 14);
             case 2:
-                return (i >= 0 && i <= 6) || (i >= 12 && i <= 14);
+                return (oldI >= 0 && oldI <= 6) || (oldI >= 12 && oldI <= 14);
             case 3:
-                return (i >= 0 && i <= 6) || i == 11 || i == 14;
+                return (oldI >= 0 && oldI <= 6) || oldI == 11 || oldI == 14;
             case 4:
-                return (i >= 0 && i <= 7) || i == 11 || i == 12 || i == 14;
+                return (oldI >= 0 && oldI <= 7) || oldI == 11 || oldI == 12 || oldI == 14;
             case 5:
-                return (i >= 0 && i <= 7) || i == 11 || i == 13 || i == 14;
+                return (oldI >= 0 && oldI <= 7) || oldI == 11 || oldI == 13 || oldI == 14;
             case 6:
-                return i == 0 || i == 1 || (i >= 4 && i <= 6) || i == 13 || i == 14;
+                return oldI == 0 || oldI == 1 || (oldI >= 4 && oldI <= 6) || oldI == 13 || oldI == 14;
             case 7:
             case 8:
             case 10:
-                return i == 0 || i == 1 || (i >= 7 && i <= 14);
+                return oldI == 0 || oldI == 1 || (oldI >= 7 && oldI <= 14);
             case 9:
-                return i == 0 || (i >= 7 && i <= 14);
+                return oldI == 0 || (oldI >= 7 && oldI <= 14);
             case 11:
             case 12:
-                return (i >= 0 && i <= 5) || (i >= 8 && i <= 14);
+                return (oldI >= 0 && oldI <= 5) || (oldI >= 8 && oldI <= 14);
             case 13:
             case 14:
-                return (i >= 0 && i <= 5) || (i >= 7 && i <= 14);
+                return (oldI >= 0 && oldI <= 5) || (oldI >= 7 && oldI <= 14);
             default:
                 return false;
         }
@@ -478,38 +500,156 @@ public class NavigationSystem : MonoBehaviour
         }
     }
 
+    private Node FindNearestSafeNode(Vector2 position)
+    {
+        Node nearest = null;
+        float minDistance = float.MaxValue;
+
+        foreach (Node node in allNodes)
+        {
+            if (!node.isObstacle) // Only consider non-hazard nodes
+            {
+                float distance = Vector2.Distance(node.position, position);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    nearest = node;
+                }
+            }
+        }
+
+        if (nearest == null)
+        {
+            Debug.LogError($"[NavigationSystem] No safe node found near position ({position.x}, {position.y})");
+        }
+        else
+        {
+            Debug.Log($"[NavigationSystem] Found nearest safe node at ({nearest.position.x}, {nearest.position.y}) with distance {minDistance}");
+        }
+        
+        return nearest;
+    }
+
     public List<Node> FindPath(Vector2 startPos, Vector2 endPos)
     {
         startNode = FindNearestNode(startPos);
         endNode = FindNearestNode(endPos);
 
         if (startNode == null || endNode == null)
+        {
+            Debug.LogError($"[NavigationSystem] Failed to find valid start or end nodes. Start: {startNode != null}, End: {endNode != null}");
             return null;
+        }
+
+        // If end node is in a hazard zone, find the nearest safe node
+        if (endNode.isObstacle)
+        {
+            Debug.Log("[NavigationSystem] End position is in hazard zone, finding nearest safe point");
+            Node safeEndNode = FindNearestSafeNode(endPos);
+            if (safeEndNode != null)
+            {
+                Debug.Log($"[NavigationSystem] Redirecting path to safe point at ({safeEndNode.position.x}, {safeEndNode.position.y})");
+                endNode = safeEndNode;
+            }
+            else
+            {
+                Debug.LogError("[NavigationSystem] Could not find a safe point near the destination");
+                return null;
+            }
+        }
+
+        Debug.Log($"[NavigationSystem] Finding path from ({startNode.position.x}, {startNode.position.y}) to ({endNode.position.x}, {endNode.position.y})");
+
+        // Check if we're in a hazard zone
+        bool isInHazardZone = startNode.isObstacle;
+        
+        // If we're in a hazard zone and not already in override mode, enable it
+        if (isInHazardZone && !isHazardOverride)
+        {
+            Debug.Log("[NavigationSystem] User in hazard zone, temporarily overriding hazard checks");
+            isHazardOverride = true;
+            lastSafeNode = null;
+        }
+        // If we're not in a hazard zone and were in override mode, disable it
+        else if (!isInHazardZone && isHazardOverride)
+        {
+            Debug.Log("[NavigationSystem] User now in safe zone, restoring normal hazard checks");
+            isHazardOverride = false;
+            lastSafeNode = startNode;
+        }
+        // If we're in a safe zone, update the last safe node
+        else if (!isInHazardZone)
+        {
+            lastSafeNode = startNode;
+        }
+
+        // Try to find path with current hazard settings
+        List<Node> path = TryFindPath(startNode, endNode);
+        
+        // If no path found and we're not in hazard override mode, try again with hazards ignored
+        if (path == null && !isHazardOverride)
+        {
+            Debug.Log("[NavigationSystem] No path found with normal settings, temporarily overriding hazards");
+            isHazardOverride = true;
+            path = TryFindPath(startNode, endNode);
+            
+            // If we found a path with hazard override, try to find a path to the nearest safe node first
+            if (path != null && lastSafeNode != null)
+            {
+                Debug.Log("[NavigationSystem] Found path with hazard override, checking for path to safe zone first");
+                List<Node> safePath = TryFindPath(startNode, lastSafeNode);
+                if (safePath != null)
+                {
+                    Debug.Log("[NavigationSystem] Found path to safe zone, will continue to destination after");
+                    return safePath;
+                }
+            }
+        }
+
+        return path;
+    }
+
+    private List<Node> TryFindPath(Node start, Node end)
+    {
+        // Reset costs
+        foreach (Node node in allNodes)
+        {
+            node.gCost = float.MaxValue;
+            node.hCost = 0;
+            node.parent = null;
+        }
 
         List<Node> openSet = new List<Node>();
         HashSet<Node> closedSet = new HashSet<Node>();
-        openSet.Add(startNode);
+        
+        start.gCost = 0;
+        start.hCost = Vector2.Distance(start.position, end.position);
+        openSet.Add(start);
 
         while (openSet.Count > 0)
         {
             Node currentNode = openSet.OrderBy(x => x.fCost).First();
 
-            if (currentNode == endNode)
-                return RetracePath(startNode, endNode);
+            if (currentNode == end)
+            {
+                Debug.Log("[NavigationSystem] Path found!");
+                return RetracePath(start, end);
+            }
 
             openSet.Remove(currentNode);
             closedSet.Add(currentNode);
 
             foreach (Node neighbor in currentNode.neighbors)
             {
-                if (closedSet.Contains(neighbor) || neighbor.isObstacle)
+                // Skip obstacles unless we're in hazard override mode
+                if (closedSet.Contains(neighbor) || (!isHazardOverride && neighbor.isObstacle))
                     continue;
 
                 float newMovementCostToNeighbor = currentNode.gCost + Vector2.Distance(currentNode.position, neighbor.position);
                 if (newMovementCostToNeighbor < neighbor.gCost || !openSet.Contains(neighbor))
                 {
                     neighbor.gCost = newMovementCostToNeighbor;
-                    neighbor.hCost = Vector2.Distance(neighbor.position, endNode.position);
+                    neighbor.hCost = Vector2.Distance(neighbor.position, end.position);
                     neighbor.parent = currentNode;
 
                     if (!openSet.Contains(neighbor))
@@ -518,7 +658,7 @@ public class NavigationSystem : MonoBehaviour
             }
         }
 
-        return null; // No path found
+        return null;
     }
 
     private Node FindNearestNode(Vector2 position)
@@ -669,7 +809,7 @@ public class NavigationSystem : MonoBehaviour
             GameObject lineObj = Instantiate(pathDotPrefab, minimapRect);
             RectTransform lineRect = lineObj.GetComponent<RectTransform>();
             Image line = lineObj.GetComponent<Image>();
-            line.color = Color.yellow;
+            line.color = new Color(0f, 1f, 0f, 1f); // Bright green color
 
             // Set anchors and pivot to (0,0)
             lineRect.anchorMin = Vector2.zero;
@@ -813,7 +953,6 @@ public class NavigationSystem : MonoBehaviour
     /// <param name="poiPositions">List of world positions for POIs</param>
     public void PlacePOIIcons(List<Vector2> poiPositions)
     {
-        ClearPOIIcons();
         if (poiIconPrefab == null)
         {
             Debug.LogError("[NavigationSystem] POI Icon Prefab not assigned!");
@@ -830,11 +969,38 @@ public class NavigationSystem : MonoBehaviour
                 poiRect.anchorMin = Vector2.zero;
                 poiRect.anchorMax = Vector2.zero;
                 poiRect.pivot = Vector2.zero;
-                poiRect.sizeDelta = new Vector2(200, 200); // Set size to 300x300
+                poiRect.anchoredPosition = minimapPos;
+                poiRect.sizeDelta = new Vector2(200, 200);
             }
             
             poiIcons.Add(poiObj);
         }
+    }
+
+    /// <summary>
+    /// Places a single POI icon on the minimap at the given world position.
+    /// </summary>
+    /// <param name="poiPosition">World position for the POI</param>
+    public void PlacePOIIcon(Vector2 poiPosition)
+    {
+        if (poiIconPrefab == null)
+        {
+            Debug.LogError("[NavigationSystem] POI Icon Prefab not assigned!");
+            return;
+        }
+        GameObject poiObj = Instantiate(poiIconPrefab, minimapRect);
+        RectTransform poiRect = poiObj.GetComponent<RectTransform>();
+        if (poiRect != null)
+        {
+            Vector2 minimapPos = WorldToMinimap(poiPosition);
+            poiRect.anchorMin = Vector2.zero;
+            poiRect.anchorMax = Vector2.zero;
+            poiRect.pivot = Vector2.zero;
+            poiRect.anchoredPosition = minimapPos;
+            poiRect.sizeDelta = new Vector2(200, 200);
+        }
+        
+        poiIcons.Add(poiObj);
     }
 
     /// <summary>
@@ -853,47 +1019,19 @@ public class NavigationSystem : MonoBehaviour
     /// <summary>
     /// Drops a pin at the current IMU position.
     /// </summary>
-    public void DropPin()
+    public Vector2 DropPin()
     {
-        if (pinPrefab == null)
-        {
-            Debug.LogError("[NavigationSystem] Pin Prefab not assigned!");
-            return;
-        }
         if (WebSocketClient.LatestImuData == null || 
             WebSocketClient.LatestImuData.eva1 == null || 
             WebSocketClient.LatestImuData.eva1.position == null)
         {
             Debug.LogWarning("[NavigationSystem] No IMU data available for dropping pin.");
-            return;
+            return Vector2.zero;
         }
         Vector2 currentPos = new Vector2(
             WebSocketClient.LatestImuData.eva1.position.x,
             WebSocketClient.LatestImuData.eva1.position.y
         );
-        GameObject pinObj = Instantiate(pinPrefab, minimapRect);
-        RectTransform pinRect = pinObj.GetComponent<RectTransform>();
-        if (pinRect != null)
-        {
-            Vector2 minimapPos = WorldToMinimap(currentPos);
-            pinRect.anchoredPosition = minimapPos;
-            pinRect.anchorMin = Vector2.zero;
-            pinRect.anchorMax = Vector2.zero;
-            pinRect.pivot = new Vector2(0.5f, 0.5f);
-        }
-        droppedPins.Add(pinObj);
-    }
-
-    /// <summary>
-    /// Clears all dropped pins from the minimap.
-    /// </summary>
-    public void ClearDroppedPins()
-    {
-        foreach (var pin in droppedPins)
-        {
-            if (pin != null)
-                Destroy(pin);
-        }
-        droppedPins.Clear();
+        return currentPos;
     }
 } 

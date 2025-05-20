@@ -69,7 +69,7 @@ public class NavigationManager : MonoBehaviour
         // Set up drop pin button
         if (dropPinButton != null)
         {
-            dropPinButton.onClick.AddListener(() => navigationSystem.DropPin());
+            dropPinButton.onClick.AddListener(OnDropPinClicked);
         }
         else
         {
@@ -182,5 +182,59 @@ public class NavigationManager : MonoBehaviour
         Debug.Log("[NavigationManager] Showing both panels");
         if (poiListPanel != null) poiListPanel.SetActive(true);
         if (navigationPanel != null) navigationPanel.SetActive(true);
+    }
+
+    private void OnDropPinClicked()
+    {
+        Vector2 pinPosition = navigationSystem.DropPin();
+        if (pinPosition != Vector2.zero)
+        {
+            // Create a new POI for the dropped pin
+            POILocation newPOI = new POILocation
+            {
+                name = $"Pin {poiLocations.Count + 1}",
+                position = pinPosition,
+                description = "Dropped pin location"
+            };
+            
+            AddNewPOI(newPOI);
+        }
+    }
+
+    private void AddNewPOI(POILocation newPOI)
+    {
+        poiLocations.Add(newPOI);
+        
+        // Create button for the new POI
+        Button poiButton = Instantiate(poiButtonPrefab, poiListContent);
+        if (poiButton != null)
+        {
+            // Set button text
+            TextMeshProUGUI buttonText = poiButton.GetComponentInChildren<TextMeshProUGUI>();
+            if (buttonText != null)
+            {
+                buttonText.text = newPOI.name;
+            }
+
+            // Add click handler
+            POILocation capturedPoi = newPOI;
+            poiButton.onClick.AddListener(() => NavigateToPOI(capturedPoi));
+
+            // Ensure the button is properly sized and positioned
+            RectTransform rectTransform = poiButton.GetComponent<RectTransform>();
+            if (rectTransform != null)
+            {
+                rectTransform.anchorMin = new Vector2(0, 1);
+                rectTransform.anchorMax = new Vector2(1, 1);
+                rectTransform.pivot = new Vector2(0.5f, 1);
+                rectTransform.anchoredPosition = Vector2.zero;
+            }
+        }
+
+        // Add POI icon to the minimap
+        if (navigationSystem != null)
+        {
+            navigationSystem.PlacePOIIcon(newPOI.position);
+        }
     }
 } 
