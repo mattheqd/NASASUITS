@@ -300,6 +300,24 @@ public class WsLtvDataMessage
     public WsError error;
 }
 
+[Serializable]
+public class LtvCriticalData
+{
+    public string criticalType;
+    public string message;
+    public int level;
+    public Dictionary<string, int> alerts;
+}
+
+[Serializable]
+public class WsLtvCriticalDataMessage
+{
+    public string type;
+    public LtvCriticalData data;
+    public bool success;
+    public WsError error;
+}
+
 public class WebSocketClient : MonoBehaviour
 {
     private WebSocket ws;
@@ -377,6 +395,8 @@ public class WebSocketClient : MonoBehaviour
     private float lastLtvDataProcessTime = 0f;
     private const float LTV_DATA_RATE_LIMIT = 1.0f;
 
+    public static LtvCriticalData LatestLtvCriticalData { get; private set; }
+
     private void Awake() {
         if (Instance != null && Instance != this) {
             Destroy(gameObject);
@@ -392,6 +412,7 @@ public class WebSocketClient : MonoBehaviour
         Subscribe("biometrics_data", HandleBiometricsDataMessage);
         Subscribe("eva_telemetry_data", HandleEvaTelemetryDataMessage);
         Subscribe("ltv_data", HandleLtvDataMessage);
+        Subscribe("ltv_critical", HandleLtvCriticalDataMessage);
         ConnectToServer();
     }
 
@@ -539,6 +560,14 @@ public class WebSocketClient : MonoBehaviour
                         if (ltvDataMsg != null && ltvDataMsg.data != null)
                         {
                             HandleLtvDataMessage(ltvDataMsg.data);
+                        }
+                        break;
+
+                    case "ltv_critical":
+                        WsLtvCriticalDataMessage criticalMsg = JsonUtility.FromJson<WsLtvCriticalDataMessage>(message);
+                        if (criticalMsg != null && criticalMsg.data != null)
+                        {
+                            HandleLtvCriticalDataMessage(criticalMsg.data);
                         }
                         break;
 
@@ -1168,6 +1197,40 @@ public class WebSocketClient : MonoBehaviour
         }
     }
 
+    private void HandleLtvCriticalDataMessage(object data)
+    {
+        LtvCriticalData criticalData = data as LtvCriticalData;
+        if (criticalData == null)
+        {
+            Debug.LogError("[LTV_CRITICAL] Received data is not of type LtvCriticalData.");
+            return;
+        }
+
+        StringBuilder logBuilder = new StringBuilder();
+        logBuilder.AppendLine($"[LTV_CRITICAL_DATA] Received new LTV Critical Data:");
+        logBuilder.AppendLine($"  Timestamp: {DateTime.UtcNow.ToString("o")}"); // Log timestamp
+        logBuilder.AppendLine($"  CriticalType: {criticalData.criticalType ?? "N/A"}");
+        logBuilder.AppendLine($"  Message: {criticalData.message ?? "N/A"}");
+        logBuilder.AppendLine($"  Level: {criticalData.level}");
+
+        if (criticalData.alerts != null && criticalData.alerts.Count > 0)
+        {
+            logBuilder.AppendLine("  Alerts:");
+            foreach (var kvp in criticalData.alerts)
+            {
+                logBuilder.AppendLine($"    {kvp.Key}: {kvp.Value}");
+            }
+        }
+        else
+        {
+            logBuilder.AppendLine("  Alerts: None");
+        }
+        
+        Debug.Log(logBuilder.ToString());
+
+        LatestLtvCriticalData = criticalData; // Store the data
+    }
+
     public void Send(string type, object data)
     {
         if (!isConnected) {
@@ -1403,3 +1466,4 @@ public class WebSocketClient : MonoBehaviour
         }
     }
 }
+

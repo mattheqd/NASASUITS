@@ -21,6 +21,11 @@ public class AlertDisplay : MonoBehaviour {
     
     private Dictionary<string, GameObject> activeAlerts = new Dictionary<string, GameObject>();
     private float timeSinceLastUpdate = 0f;
+    private Dictionary<string, bool> ltvCriticalActive = new Dictionary<string, bool>();
+    private Dictionary<string, float> ignoredAlerts = new Dictionary<string, float>();
+    private float ignoreDuration = 60f; // seconds
+    private Queue<TelemetryMonitor.TelemetryAlert> alertQueue = new Queue<TelemetryMonitor.TelemetryAlert>();
+    private TelemetryMonitor.TelemetryAlert currentAlert = null;
 
     //* ---- Functions ----
     void Start()
@@ -45,12 +50,13 @@ public class AlertDisplay : MonoBehaviour {
     
     void Update()
     {    
-        // Automatic updates
         timeSinceLastUpdate += Time.deltaTime;
         if (timeSinceLastUpdate >= updateInterval)
         {
             timeSinceLastUpdate = 0f;
             CheckTelemetry();
+            CheckLtvCritical();
+            ProcessAlertQueue();
         }
     }
     
@@ -59,29 +65,113 @@ public class AlertDisplay : MonoBehaviour {
         telemetryMonitor.UpdateTelemetry();
     }
     
+    void CheckLtvCritical()
+    {
+        var ltv = WebSocketClient.LatestLtvCriticalData;
+        if (ltv == null || ltv.alerts == null) return;
+        foreach (var kvp in ltv.alerts)
+        {
+            string alertName = kvp.Key;
+            int alertValue = kvp.Value;
+            string errorKey = $"LTV_{alertName.ToUpper()}";
+            if (alertValue == 1)
+            {
+                if (!ltvCriticalActive.ContainsKey(errorKey) || !ltvCriticalActive[errorKey])
+                {
+                    var alert = new TelemetryMonitor.TelemetryAlert
+                    {
+                        astronautId = "LTV",
+                        parameterName = errorKey,
+                        value = 1,
+                        status = Thresholds.TelemetryThresholds.Status.Critical,
+                        message = $"LTV {alertName.ToUpper()} Critical Error",
+                        timestamp = DateTime.Now
+                    };
+                    HandleCriticalAlert(alert);
+                    ltvCriticalActive[errorKey] = true;
+                }
+            }
+            else
+            {
+                if (ltvCriticalActive.ContainsKey(errorKey) && ltvCriticalActive[errorKey])
+                {
+                    var alert = new TelemetryMonitor.TelemetryAlert
+                    {
+                        astronautId = "LTV",
+                        parameterName = errorKey,
+                        value = 0,
+                        status = Thresholds.TelemetryThresholds.Status.Nominal,
+                        message = $"RESOLVED: LTV {alertName.ToUpper()} Critical Error",
+                        timestamp = DateTime.Now
+                    };
+                    HandleNominalAlert(alert);
+                    ltvCriticalActive[errorKey] = false;
+                }
+            }
+        }
+    }
+    
+    void ProcessAlertQueue()
+    {
+        // Remove expired ignores
+        var expired = new List<string>();
+        foreach (var kvp in ignoredAlerts)
+        {
+            if (Time.time >= kvp.Value)
+                expired.Add(kvp.Key);
+        }
+        foreach (var key in expired)
+            ignoredAlerts.Remove(key);
+
+        // If no current alert, show next in queue
+        if (currentAlert == null && alertQueue.Count > 0)
+        {
+            var next = alertQueue.Dequeue();
+            ShowAlert(next);
+        }
+    }
+
+    void ShowAlert(TelemetryMonitor.TelemetryAlert alert)
+    {
+        string alertId = alert.astronautId + "_" + alert.parameterName;
+        if (ignoredAlerts.TryGetValue(alertId, out float ignoreUntil) && Time.time < ignoreUntil)
+            return;
+        CreateOrUpdateAlert(alert, alert.status == Thresholds.TelemetryThresholds.Status.Critical ? Color.red : Color.yellow);
+        currentAlert = alert;
+    }
+
+    void DismissAlert(string alertId)
+    {
+        RemoveAlert(alertId);
+        ignoredAlerts[alertId] = Time.time + ignoreDuration;
+        currentAlert = null;
+    }
+    
     //* ---- Alert Handlers ----
     void HandleCautionAlert(TelemetryMonitor.TelemetryAlert alert)
     {
         Debug.Log($"CAUTION ALERT: {alert.astronautId} {alert.parameterName}: {alert.value}");
-        CreateOrUpdateAlert(alert, Color.yellow);
+        EnqueueAlert(alert);
     }
     
     void HandleCriticalAlert(TelemetryMonitor.TelemetryAlert alert)
     {
         Debug.Log($"CRITICAL ALERT: {alert.astronautId} {alert.parameterName}: {alert.value}");
-        CreateOrUpdateAlert(alert, Color.red);
+        EnqueueAlert(alert);
     }
     
     void HandleNominalAlert(TelemetryMonitor.TelemetryAlert alert)
     {
         Debug.Log($"RESOLVED ALERT: {alert.astronautId} {alert.parameterName} returned to nominal");
         RemoveAlert(alert.astronautId + "_" + alert.parameterName);
-        
-        // If no more alerts, set status to nominal
         if (activeAlerts.Count == 0 && AlertStatusText != null)
         {
             AlertStatusText.text = "Telemetry Monitoring Active - All Systems Nominal";
             AlertStatusText.color = Color.white;
+        }
+        if (currentAlert != null && currentAlert.astronautId + "_" + currentAlert.parameterName == alert.astronautId + "_" + alert.parameterName)
+        {
+            currentAlert = null;
         }
     }
     
@@ -89,19 +179,17 @@ public class AlertDisplay : MonoBehaviour {
     void CreateOrUpdateAlert(TelemetryMonitor.TelemetryAlert alert, Color color)
     {
         string alertId = alert.astronautId + "_" + alert.parameterName;
-        
+        if (ignoredAlerts.TryGetValue(alertId, out float ignoreUntil) && Time.time < ignoreUntil)
+            return;
         // If alert already exists, update it
         if (activeAlerts.TryGetValue(alertId, out GameObject alertObj))
         {
-            // Update existing alert
             TextMeshProUGUI AlertText = alertObj.GetComponentInChildren<TextMeshProUGUI>();
             if (AlertText != null)
             {
                 AlertText.text = $"{alert.message}";
                 AlertText.color = color;
             }
-            
-            // Update background
             Image bgImage = alertObj.GetComponent<Image>();
             if (bgImage != null)
             {
@@ -112,21 +200,16 @@ public class AlertDisplay : MonoBehaviour {
         }
         else
         {
-            // Create new alert if container and prefab exist
             if (AlertContainer != null && AlertPrefab != null)
             {
                 GameObject newAlert = Instantiate(AlertPrefab, AlertContainer);
                 activeAlerts[alertId] = newAlert;
-                
-                // Set alert text
                 TextMeshProUGUI AlertText = newAlert.GetComponentInChildren<TextMeshProUGUI>();
                 if (AlertText != null)
                 {
                     AlertText.text = $"{alert.message}";
                     AlertText.color = color;
                 }
-                
-                // Set background color
                 Image bgImage = newAlert.GetComponent<Image>();
                 if (bgImage != null)
                 {
@@ -134,10 +217,15 @@ public class AlertDisplay : MonoBehaviour {
                     bgColor.a = 0.3f;
                     bgImage.color = bgColor;
                 }
+                // Add dismiss button logic
+                var button = newAlert.GetComponentInChildren<UnityEngine.UI.Button>();
+                if (button != null)
+                {
+                    button.onClick.RemoveAllListeners();
+                    button.onClick.AddListener(() => DismissAlert(alertId));
+                }
             }
         }
-        
-        // Update status text
         if (AlertStatusText != null)
         {
             if (alert.status == TelemetryThresholds.Status.Critical)
@@ -160,6 +248,24 @@ public class AlertDisplay : MonoBehaviour {
         {
             Destroy(alertObj);
             activeAlerts.Remove(alertId);
+        }
+    }
+
+    void EnqueueAlert(TelemetryMonitor.TelemetryAlert alert)
+    {
+        string alertId = alert.astronautId + "_" + alert.parameterName;
+        if (ignoredAlerts.TryGetValue(alertId, out float ignoreUntil) && Time.time < ignoreUntil)
+            return;
+        // If this is the only alert, show immediately
+        if (currentAlert == null)
+        {
+            ShowAlert(alert);
+        }
+        else
+        {
+            // Otherwise, add to queue if not already present
+            if (!alertQueue.Contains(alert))
+                alertQueue.Enqueue(alert);
         }
     }
 }
