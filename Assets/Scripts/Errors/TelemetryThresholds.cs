@@ -273,5 +273,60 @@ namespace Thresholds {
                 maxCritical = float.MaxValue
             };
         }
+
+        public static TelemetryThresholds LtvBattery()
+        {
+            return new TelemetryThresholds {
+                parameterName = "ltv_battery",
+                minCritical = 0,
+                minNominal = 0,
+                maxNominal = 0,
+                maxCritical = 1
+            };
+        }
+
+        public static TelemetryThresholds LtvCO2()
+        {
+            return new TelemetryThresholds {
+                parameterName = "ltv_co2",
+                minCritical = 0,
+                minNominal = 0,
+                maxNominal = 0,
+                maxCritical = 1
+            };
+        }
+
+        public static TelemetryThresholds LtvCoolant()
+        {
+            return new TelemetryThresholds {
+                parameterName = "ltv_coolant",
+                minCritical = 0,
+                minNominal = 0,
+                maxNominal = 0,
+                maxCritical = 1
+            };
+        }
+
+        public static TelemetryThresholds LtvOxygen()
+        {
+            return new TelemetryThresholds {
+                parameterName = "ltv_oxygen",
+                minCritical = 0,
+                minNominal = 0,
+                maxNominal = 0,
+                maxCritical = 1
+            };
+        }
+
+        public static TelemetryThresholds LtvTemperature()
+        {
+            return new TelemetryThresholds {
+                parameterName = "ltv_temperature",
+                minCritical = 0,
+                minNominal = 0,
+                maxNominal = 0,
+                maxCritical = 1
+            };
+        }
     }
 }

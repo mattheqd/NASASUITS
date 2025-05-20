@@ -70,12 +70,44 @@ public class TelemetryMonitor : MonoBehaviour
         Debug.Log("TelemetryMonitor: Checking for telemetry updates");
         
         // Directly access WebSocketClient data
-        // Returns data in this format: 
         HighFrequencyData highFreqData = WebSocketClient.LatestHighFrequencyData;
         LowFrequencyData lowFreqData = WebSocketClient.LatestLowFrequencyData;
         ErrorData errorData = WebSocketClient.LatestErrorData;
         BiometricsData eva1Bio = WebSocketClient.LatestEva1BiometricsData;
         BiometricsData eva2Bio = WebSocketClient.LatestEva2BiometricsData;
+        
+        // Check LTV critical data
+        var ltvCriticalData = WebSocketClient.LatestLtvCriticalData;
+        if (ltvCriticalData != null && ltvCriticalData.alerts != null)
+        {
+            foreach (var kvp in ltvCriticalData.alerts)
+            {
+                string alertName = kvp.Key;
+                int alertValue = kvp.Value;
+                string parameterName = $"ltv_{alertName.ToLower()}";
+                
+                // Create alert for LTV critical data
+                TelemetryAlert alert = new TelemetryAlert
+                {
+                    astronautId = "LTV",
+                    parameterName = parameterName,
+                    value = alertValue,
+                    status = alertValue == 1 ? TelemetryThresholds.Status.Critical : TelemetryThresholds.Status.Nominal,
+                    message = GetLtvAlertMessage(alertName, alertValue),
+                    timestamp = DateTime.Now
+                };
+
+                // Fire appropriate event based on status
+                if (alertValue == 1)
+                {
+                    onCriticalDetected.Invoke(alert);
+                }
+                else
+                {
+                    onReturnToNominal.Invoke(alert);
+                }
+            }
+        }
         
         // Process high frequency data (DCU data)
         if (highFreqData != null && highFreqData.data != null)
@@ -427,13 +459,52 @@ public class TelemetryMonitor : MonoBehaviour
         thresholds.Add(TelemetryThresholds.CoolantLiquidPressure());
         thresholds.Add(TelemetryThresholds.CoolantGasPressure());
         
-        // Add HelmetPressureCO2 only if it's defined (uncomment in TelemetryThresholds.cs)
-        // thresholds.Add(TelemetryThresholds.HelmetPressureCO2());
+        // Add LTV thresholds
+        thresholds.Add(TelemetryThresholds.LtvBattery());
+        thresholds.Add(TelemetryThresholds.LtvCO2());
+        thresholds.Add(TelemetryThresholds.LtvCoolant());
+        thresholds.Add(TelemetryThresholds.LtvOxygen());
+        thresholds.Add(TelemetryThresholds.LtvTemperature());
         
         // Log all available thresholds for debugging
         Debug.Log($"Total thresholds initialized: {thresholds.Count}");
         foreach (var t in thresholds) {
             Debug.Log($"Loaded threshold: {t.parameterName}");
+        }
+    }
+
+    private string GetLtvAlertMessage(string alertName, int value)
+    {
+        string baseMessage;
+        switch (alertName.ToLower())
+        {
+            case "battery":
+                baseMessage = "LTV Battery Level";
+                break;
+            case "co2":
+                baseMessage = "LTV CO2 Scrubber";
+                break;
+            case "coolant":
+                baseMessage = "LTV Coolant System";
+                break;
+            case "oxygen":
+                baseMessage = "LTV Oxygen Supply";
+                break;
+            case "temperature":
+                baseMessage = "LTV Cabin Temperature";
+                break;
+            default:
+                baseMessage = $"LTV {alertName.ToUpper()} System";
+                break;
+        }
+
+        if (value == 1)
+        {
+            return $"CRITICAL: {baseMessage} is critical!";
+        }
+        else
+        {
+            return $"RESOLVED: {baseMessage} is now nominal.";
         }
     }
 }
