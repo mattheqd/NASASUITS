@@ -16,6 +16,9 @@ public class ProcedureDisplay : MonoBehaviour
     [SerializeField] private StepItem currentStepItem;
     [SerializeField] private Button nextStepButton;
     [SerializeField] private Button skipStepButton;
+    [SerializeField] private Image taskProgressBar;
+    [SerializeField] private Image stepLocationImage;
+    [SerializeField] private List<Sprite> uiaStepSprites;
 
     [Header("Events")]
     public UnityEvent onProcedureCompleted;
@@ -25,6 +28,19 @@ public class ProcedureDisplay : MonoBehaviour
     private int currentTaskIndex = 0;
     private int currentStepIndex = 0;
     private Coroutine autoVerificationCoroutine;
+    private Dictionary<string, Sprite> uiaSpriteMap;
+
+    private void Awake()
+    {
+        uiaSpriteMap = new Dictionary<string, Sprite>();
+        if (uiaStepSprites != null)
+        {
+            foreach (var sprite in uiaStepSprites)
+            {
+                uiaSpriteMap[sprite.name] = sprite;
+            }
+        }
+    }
 
     // Call this to start a procedure
     public void LoadProcedure(Procedure procedure)
@@ -56,7 +72,7 @@ public class ProcedureDisplay : MonoBehaviour
         }
         var task = currentProcedure.tasks[currentTaskIndex];
         Debug.Log($"[ProcedureDisplay] Task: {task.taskName}, Steps: {task.instructionSteps?.Count ?? 0}");
-        taskTitleText.text = task.taskName;
+        taskTitleText.text = $"Task: {task.taskName}";
         
         currentStepIndex = 0;
         
@@ -115,6 +131,30 @@ public class ProcedureDisplay : MonoBehaviour
         {
             currentStepItem.SetStep(currentStepIndex + 1, currentStep.instructionText);
             currentStepItem.MarkCompleted(false);
+        }
+        if (taskProgressBar != null && task.instructionSteps.Count > 0)
+        {
+            taskProgressBar.fillAmount = ((float)currentStepIndex + 1) / task.instructionSteps.Count;
+        }
+        if (stepLocationImage != null)
+        {
+            if (currentStep.location == "UIA")
+            {
+                Sprite spriteToShow = null;
+                if (uiaSpriteMap != null && uiaSpriteMap.TryGetValue(currentStep.targetKey, out spriteToShow))
+                {
+                    stepLocationImage.sprite = spriteToShow;
+                    stepLocationImage.enabled = true;
+                }
+                else
+                {
+                    stepLocationImage.enabled = false;
+                }
+            }
+            else
+            {
+                stepLocationImage.enabled = false;
+            }
         }
     }
 

@@ -26,13 +26,6 @@
               "location": "",
               "targetKey": "",
               "targetValue": ""
-            },
-            {
-              "instructionText": "Announce that PR operations are complete, will now begin monitoring EVA. Turning operations over to EVA.",
-              "isAutoVerifiable": false,
-              "location": "",
-              "targetKey": "",
-              "targetValue": ""
             }
           ]
         },
