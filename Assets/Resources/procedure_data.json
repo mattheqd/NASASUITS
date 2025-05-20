@@ -174,6 +174,18 @@
               "targetValue": ""
             }
           ]
+        },
+        {
+          "taskName": "Procedure Complete!",
+          "instructionSteps": [
+            {
+              "instructionText": "Procedure complete!",
+              "isAutoVerifiable": false,
+              "location": "",
+              "targetKey": "",
+              "targetValue": ""
+            }
+          ]
         }
       ]
     },

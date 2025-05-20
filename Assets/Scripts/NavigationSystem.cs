@@ -53,6 +53,12 @@ public class NavigationSystem : MonoBehaviour
     private float moveTimer = 0f;
     private WebSocketClient webSocketClient;
     private bool isInitialized = false;
+    private Vector2 lastValidPosition;
+    private float maxPositionChange = 10f; // Maximum allowed position change per update
+    private float smoothingFactor = 0.5f; // Smoothing factor (0-1)
+    private Queue<Vector2> positionHistory = new Queue<Vector2>();
+    private const int HISTORY_SIZE = 3;
+    private const float OUTLIER_THRESHOLD = 1.5f; // Multiplier for standard deviation to detect outliers
 
     // Predefined coordinates for movement
     private readonly Vector2[] movementCoordinates = new Vector2[]
@@ -275,13 +281,89 @@ public class NavigationSystem : MonoBehaviour
                 WebSocketClient.LatestImuData.eva1 != null && 
                 WebSocketClient.LatestImuData.eva1.position != null)
             {
-                Vector2 currentPos = new Vector2(
+                Vector2 rawPos = new Vector2(
                     WebSocketClient.LatestImuData.eva1.position.x,
                     WebSocketClient.LatestImuData.eva1.position.y
                 );
-                UpdateAgentUI(currentPos);
+                
+                // Validate and smooth the position
+                Vector2 smoothedPos = ValidateAndSmoothPosition(rawPos);
+                UpdateAgentUI(smoothedPos);
             }
         }
+    }
+
+    private Vector2 ValidateAndSmoothPosition(Vector2 newPos)
+    {
+        // Add new position to history
+        positionHistory.Enqueue(newPos);
+        if (positionHistory.Count > HISTORY_SIZE)
+        {
+            positionHistory.Dequeue();
+        }
+
+        // If we don't have enough history yet, just use the new position
+        if (positionHistory.Count < HISTORY_SIZE)
+        {
+            lastValidPosition = newPos;
+            return newPos;
+        }
+
+        // Calculate average position excluding outliers
+        Vector2[] positions = positionHistory.ToArray();
+        Vector2 avgPos = Vector2.zero;
+        int validCount = 0;
+
+        // First pass: calculate mean
+        Vector2 mean = Vector2.zero;
+        foreach (Vector2 pos in positions)
+        {
+            mean += pos;
+        }
+        mean /= positions.Length;
+
+        // Second pass: calculate standard deviation
+        float sumSquaredDiff = 0;
+        foreach (Vector2 pos in positions)
+        {
+            sumSquaredDiff += Vector2.SqrMagnitude(pos - mean);
+        }
+        float stdDev = Mathf.Sqrt(sumSquaredDiff / positions.Length);
+
+        // Third pass: calculate average excluding outliers
+        foreach (Vector2 pos in positions)
+        {
+            float pointDistance = Vector2.Distance(pos, mean);
+            if (pointDistance <= stdDev * OUTLIER_THRESHOLD)
+            {
+                avgPos += pos;
+                validCount++;
+            }
+        }
+
+        if (validCount > 0)
+        {
+            avgPos /= validCount;
+        }
+        else
+        {
+            // If all points are outliers, use the mean
+            avgPos = mean;
+        }
+
+        // Check if the new position is too far from the average
+        float distance = Vector2.Distance(avgPos, newPos);
+        if (distance > maxPositionChange)
+        {
+            Debug.LogWarning($"[NavigationSystem] Position change too large ({distance}), using average position");
+            lastValidPosition = avgPos;
+            return avgPos;
+        }
+
+        // Smooth the position
+        Vector2 smoothedPos = Vector2.Lerp(lastValidPosition, newPos, smoothingFactor);
+        lastValidPosition = smoothedPos;
+        return smoothedPos;
     }
 
     private void InitializeNodes()

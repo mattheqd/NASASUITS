@@ -13,8 +13,7 @@ public class ProcedureDisplay : MonoBehaviour
     [SerializeField] private GameObject displayPanel;
     [SerializeField] private TextMeshProUGUI taskTitleText;
     [SerializeField] private TextMeshProUGUI stepCounterText;
-    [SerializeField] private Transform stepsPanel;
-    [SerializeField] private GameObject stepItemPrefab;
+    [SerializeField] private StepItem currentStepItem;
     [SerializeField] private Button nextStepButton;
     [SerializeField] private Button skipStepButton;
 
@@ -25,8 +24,6 @@ public class ProcedureDisplay : MonoBehaviour
     private Procedure currentProcedure;
     private int currentTaskIndex = 0;
     private int currentStepIndex = 0;
-    private List<GameObject> stepItems = new List<GameObject>();
-
     private Coroutine autoVerificationCoroutine;
 
     // Call this to start a procedure
@@ -49,7 +46,6 @@ public class ProcedureDisplay : MonoBehaviour
     private void LoadCurrentTask()
     {
         Debug.Log($"[ProcedureDisplay] LoadCurrentTask: currentTaskIndex={currentTaskIndex}");
-        ClearStepItems();
         StopAutoVerificationCoroutine();
 
         if (currentProcedure == null || currentTaskIndex >= currentProcedure.tasks.Count)
@@ -64,25 +60,12 @@ public class ProcedureDisplay : MonoBehaviour
         
         currentStepIndex = 0;
         
-        // Update step counter after setting currentStepIndex to 0
         if (stepCounterText != null)
         {
             stepCounterText.text = $"Step {currentStepIndex + 1}/{task.instructionSteps.Count}";
         }
         
-        for (int i = 0; i < task.instructionSteps.Count; i++)
-        {
-            GameObject stepObj = Instantiate(stepItemPrefab, stepsPanel);
-            StepItem stepItem = stepObj.GetComponent<StepItem>();
-            if (stepItem != null)
-            {
-                stepItem.SetStep(i + 1, task.instructionSteps[i].instructionText);
-                stepItem.MarkCompleted(false);
-                stepItem.SetActiveStep(i == currentStepIndex);
-            }
-            stepItems.Add(stepObj);
-        }
-        UpdateStepDisplay();
+        UpdateCurrentStepDisplay();
         TryStartAutoVerificationForCurrentStep();
     }
 
@@ -94,17 +77,14 @@ public class ProcedureDisplay : MonoBehaviour
         StopAutoVerificationCoroutine();
 
         var task = currentProcedure.tasks[currentTaskIndex];
-        // Mark current step as completed
-        if (currentStepIndex < stepItems.Count)
+        if (currentStepItem != null)
         {
-            StepItem stepItem = stepItems[currentStepIndex].GetComponent<StepItem>();
-            if (stepItem != null) stepItem.MarkCompleted(true);
+            currentStepItem.MarkCompleted(true);
         }
         currentStepIndex++;
         if (currentStepIndex >= task.instructionSteps.Count)
         {
             Debug.Log($"[ProcedureDisplay] Task complete. Moving to next task.");
-            // Move to next task
             currentTaskIndex++;
             LoadCurrentTask();
             return;
@@ -115,7 +95,7 @@ public class ProcedureDisplay : MonoBehaviour
             stepCounterText.text = $"Step {currentStepIndex + 1}/{task.instructionSteps.Count}";
         }
         
-        UpdateStepDisplay();
+        UpdateCurrentStepDisplay();
         TryStartAutoVerificationForCurrentStep();
     }
 
@@ -124,25 +104,18 @@ public class ProcedureDisplay : MonoBehaviour
         NextStep();
     }
 
-    private void UpdateStepDisplay()
+    private void UpdateCurrentStepDisplay()
     {
-        for (int i = 0; i < stepItems.Count; i++)
-        {
-            StepItem stepItem = stepItems[i].GetComponent<StepItem>();
-            if (stepItem != null)
-            {
-                stepItem.SetActiveStep(i == currentStepIndex);
-            }
-        }
-    }
+        if (currentProcedure == null || currentTaskIndex >= currentProcedure.tasks.Count) return;
+        var task = currentProcedure.tasks[currentTaskIndex];
+        if (currentStepIndex >= task.instructionSteps.Count) return;
 
-    private void ClearStepItems()
-    {
-        foreach (var obj in stepItems)
+        var currentStep = task.instructionSteps[currentStepIndex];
+        if (currentStepItem != null)
         {
-            Destroy(obj);
+            currentStepItem.SetStep(currentStepIndex + 1, currentStep.instructionText);
+            currentStepItem.MarkCompleted(false);
         }
-        stepItems.Clear();
     }
 
     private void CompleteProcedure()
