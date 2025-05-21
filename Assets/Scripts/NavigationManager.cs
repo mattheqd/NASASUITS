@@ -13,6 +13,7 @@ public class NavigationManager : MonoBehaviour
     public Transform poiListContent; // Content transform for the POI buttons
     public Button resetPathButton; // Button to clear the current path
     public Button dropPinButton; // Button to drop a pin at current location
+    public TextMeshProUGUI selectedPathText; // Text field to show selected path type
 
     [Header("Path Options")]
     public Button safestPathButton;
@@ -35,6 +36,9 @@ public class NavigationManager : MonoBehaviour
     public List<POILocation> poiLocations = new List<POILocation>();
 
     private POILocation selectedPOI; // Store the selected POI for the two-step process
+    private NavigationSystem.PathType currentPathType; // Store the current path type
+    private float updateTimer = 0f; // Timer for updating path
+    private const float UPDATE_INTERVAL = 1f; // Update every second
 
     private void Start()
     {
@@ -92,7 +96,7 @@ public class NavigationManager : MonoBehaviour
         }
         if (finishButton != null)
         {
-            finishButton.onClick.AddListener(OnFinishClicked);
+            finishButton.onClick.AddListener(OnFinishButtonClicked);
         }
 
         // Set up reset button
@@ -134,6 +138,7 @@ public class NavigationManager : MonoBehaviour
         if (poiListPanel != null) poiListPanel.SetActive(true);
         if (navigationPanel != null) navigationPanel.SetActive(true);
         if (pathOptionsPanel != null) pathOptionsPanel.SetActive(false);
+        if (selectedPathText != null) selectedPathText.gameObject.SetActive(false);
     }
 
     private void ShowPathOptionsPanel()
@@ -224,6 +229,42 @@ public class NavigationManager : MonoBehaviour
         ShowPathOptionsPanel();
     }
 
+    private void Update()
+    {
+        if (selectedPOI != null)
+        {
+            updateTimer += Time.deltaTime;
+            if (updateTimer >= UPDATE_INTERVAL)
+            {
+                updateTimer = 0f;
+                UpdatePathAndETA();
+            }
+        }
+    }
+
+    private void UpdatePathAndETA()
+    {
+        if (selectedPOI == null || navigationSystem == null) return;
+
+        // Update the path with current position
+        navigationSystem.UpdatePathToLocation(selectedPOI.position, currentPathType);
+        
+        // Calculate new distance and ETA
+        float pathDistance = CalculatePathDistance(selectedPOI.position);
+        float etaMinutes = CalculateETA(pathDistance);
+        
+        // Convert to minutes and seconds
+        int minutes = Mathf.FloorToInt(etaMinutes);
+        int seconds = Mathf.FloorToInt((etaMinutes - minutes) * 60);
+        
+        // Update the text field
+        if (selectedPathText != null)
+        {
+            selectedPathText.gameObject.SetActive(true);
+            selectedPathText.text = $"{Mathf.Round(pathDistance)} meters away eta time: {minutes}:{seconds:D2}";
+        }
+    }
+
     private void OnPathOptionSelected(NavigationSystem.PathType pathType)
     {
         if (selectedPOI == null)
@@ -234,14 +275,70 @@ public class NavigationManager : MonoBehaviour
 
         Debug.Log($"[NavigationManager] Selected path type: {pathType} for POI: {selectedPOI.name}");
         
-        // Pass the path type to the navigation system
-        navigationSystem.UpdatePathToLocation(selectedPOI.position, pathType);
+        // Store the current path type
+        currentPathType = pathType;
+        
+        // Show the text field
+        if (selectedPathText != null)
+        {
+            selectedPathText.gameObject.SetActive(true);
+        }
+        
+        // Initial path update
+        UpdatePathAndETA();
     }
 
-    private void OnFinishClicked()
+    private float CalculatePathDistance(Vector2 destination)
+    {
+        if (navigationSystem == null) return 0f;
+
+        // Get the current path from the navigation system
+        List<NavigationSystem.Node> path = navigationSystem.GetCurrentPath();
+        if (path == null || path.Count < 2) return 0f;
+
+        float totalDistance = 0f;
+        // Calculate distance between each consecutive node in the path
+        for (int i = 0; i < path.Count - 1; i++)
+        {
+            totalDistance += Vector2.Distance(path[i].position, path[i + 1].position);
+        }
+
+        return totalDistance;
+    }
+
+    private float CalculateETA(float distanceMeters)
+    {
+        // Convert 3 mph to meters per minute
+        // 3 mph = 4.82803 km/h = 80.4672 meters per minute
+        float speedMetersPerMinute = 80.4672f;
+        
+        // Calculate time in minutes
+        return distanceMeters / speedMetersPerMinute;
+    }
+
+    private void OnFinishButtonClicked()
     {
         Debug.Log("[NavigationManager] Finish button clicked");
-        ResetCurrentPath();
+        
+        // Clear the current path
+        navigationSystem.ClearCurrentPath();
+        
+        // Hide path options and show POI list
+        pathOptionsPanel.SetActive(false);
+        poiListPanel.SetActive(true);
+        
+        // Hide finish button when returning to POI selection
+        finishButton.gameObject.SetActive(false);
+        
+        // Hide the selected path text
+        if (selectedPathText != null)
+        {
+            selectedPathText.gameObject.SetActive(false);
+        }
+        
+        // Clear current POI and path type
+        selectedPOI = null;
+        currentPathType = NavigationSystem.PathType.Safest;
     }
 
     private void OnDropPinClicked()

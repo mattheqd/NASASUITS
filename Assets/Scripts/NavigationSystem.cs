@@ -834,6 +834,49 @@ public class NavigationSystem : MonoBehaviour
         // Start with the start node position
         Vector2 previousPos = WorldToMinimap(startNode.position);
 
+        // Determine path color based on type and characteristics
+        Color pathColor;
+        switch (currentPathType)
+        {
+            case PathType.Direct:
+                pathColor = Color.red;
+                break;
+            case PathType.Recommended:
+                // Check if recommended path is same as safe path
+                List<Node> safePath = FindSafePath(startNode.position, endNode.position);
+                bool isSameAsSafePath = false;
+                if (safePath != null && safePath.Count == path.Count)
+                {
+                    isSameAsSafePath = true;
+                    for (int i = 0; i < path.Count; i++)
+                    {
+                        if (safePath[i].position != path[i].position)
+                        {
+                            isSameAsSafePath = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (isSameAsSafePath)
+                {
+                    pathColor = new Color(0f, 1f, 0f, 1f); // Bright green
+                }
+                else if (path.Count == 3 && path[1] == FindNearestSafeNode(startNode.position))
+                {
+                    pathColor = Color.yellow; // Hybrid path
+                }
+                else
+                {
+                    pathColor = Color.red; // Direct path fallback
+                }
+                break;
+            case PathType.Safest:
+            default:
+                pathColor = new Color(0f, 1f, 0f, 1f); // Bright green
+                break;
+        }
+
         // Process each node in the path
         for (int i = 0; i < path.Count; i++)
         {
@@ -845,7 +888,7 @@ public class NavigationSystem : MonoBehaviour
             GameObject lineObj = Instantiate(pathDotPrefab, minimapRect);
             RectTransform lineRect = lineObj.GetComponent<RectTransform>();
             Image line = lineObj.GetComponent<Image>();
-            line.color = new Color(0f, 1f, 0f, 1f); // Bright green color
+            line.color = pathColor;
 
             // Set anchors and pivot to (0,0)
             lineRect.anchorMin = Vector2.zero;
@@ -1048,5 +1091,10 @@ public class NavigationSystem : MonoBehaviour
             WebSocketClient.LatestImuData.eva1.position.y
         );
         return currentPos;
+    }
+
+    public List<Node> GetCurrentPath()
+    {
+        return currentPath;
     }
 } 
