@@ -4,32 +4,6 @@
       "procedureName": "EVA Egress",
       "tasks": [
         {
-          "taskName": "Verify LTV Coordination",
-          "instructionSteps": [
-            {
-              "instructionText": "Verify ping has been received from LTV",
-              "isAutoVerifiable": false,
-              "location": "",
-              "targetKey": "",
-              "targetValue": ""
-            },
-            {
-              "instructionText": "Verify worksite POI locations have been provided by LTV",
-              "isAutoVerifiable": false,
-              "location": "",
-              "targetKey": "",
-              "targetValue": ""
-            },
-            {
-              "instructionText": "Verify that EV1 has received LTV POIs",
-              "isAutoVerifiable": false,
-              "location": "",
-              "targetKey": "",
-              "targetValue": ""
-            }
-          ]
-        },
-        {
           "taskName": "Connect UIA to DCU and start Depress",
           "instructionSteps": [
             {
@@ -95,10 +69,10 @@
             },
             {
               "instructionText": "Open OXYGEN EMU-1",
-              "isAutoVerifiable": false,
-              "location": "",
-              "targetKey": "",
-              "targetValue": ""
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "ev1_oxygen",
+              "targetValue": "1"
             },
             {
               "instructionText": "Wait until EV1 Primary O2 tank > 3000 psi",
@@ -111,7 +85,7 @@
               "instructionText": "Close OXYGEN EMU-1",
               "isAutoVerifiable": true,
               "location": "UIA",
-              "targetKey": "o2_vent",
+              "targetKey": "ev1_oxygen",
               "targetValue": "0"
             },
             {
@@ -125,7 +99,7 @@
               "instructionText": "Open OXYGEN EMU-1",
               "isAutoVerifiable": true,
               "location": "UIA",
-              "targetKey": "o2_vent",
+              "targetKey": "ev1_oxygen",
               "targetValue": "1"
             },
             {
@@ -139,7 +113,7 @@
               "instructionText": "Close OXYGEN EMU-1",
               "isAutoVerifiable": true,
               "location": "UIA",
-              "targetKey": "o2_vent",
+              "targetKey": "ev1_oxygen",
               "targetValue": "0"
             },
             {
