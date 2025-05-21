@@ -8,10 +8,17 @@ public class NavigationManager : MonoBehaviour
     [Header("UI References")]
     public GameObject poiListPanel; // Panel containing the list of POI buttons
     public GameObject navigationPanel; // Panel containing the minimap
+    public GameObject pathOptionsPanel; // Panel containing path options
     public Button poiButtonPrefab; // Prefab for POI buttons
     public Transform poiListContent; // Content transform for the POI buttons
     public Button resetPathButton; // Button to clear the current path
     public Button dropPinButton; // Button to drop a pin at current location
+
+    [Header("Path Options")]
+    public Button safestPathButton;
+    public Button recommendedPathButton;
+    public Button directPathButton;
+    public Button finishButton;
 
     [Header("Navigation System")]
     public NavigationSystem navigationSystem; // Reference to the NavigationSystem
@@ -27,6 +34,8 @@ public class NavigationManager : MonoBehaviour
     [Header("POI Locations")]
     public List<POILocation> poiLocations = new List<POILocation>();
 
+    private POILocation selectedPOI; // Store the selected POI for the two-step process
+
     private void Start()
     {
         Debug.Log("[NavigationManager] Starting initialization...");
@@ -40,6 +49,11 @@ public class NavigationManager : MonoBehaviour
         if (navigationPanel == null)
         {
             Debug.LogError("[NavigationManager] Navigation Panel not assigned!");
+            return;
+        }
+        if (pathOptionsPanel == null)
+        {
+            Debug.LogError("[NavigationManager] Path Options Panel not assigned!");
             return;
         }
         if (poiListContent == null)
@@ -63,6 +77,24 @@ public class NavigationManager : MonoBehaviour
             return;
         }
 
+        // Set up path option buttons
+        if (safestPathButton != null)
+        {
+            safestPathButton.onClick.AddListener(() => OnPathOptionSelected(NavigationSystem.PathType.Safest));
+        }
+        if (recommendedPathButton != null)
+        {
+            recommendedPathButton.onClick.AddListener(() => OnPathOptionSelected(NavigationSystem.PathType.Recommended));
+        }
+        if (directPathButton != null)
+        {
+            directPathButton.onClick.AddListener(() => OnPathOptionSelected(NavigationSystem.PathType.Direct));
+        }
+        if (finishButton != null)
+        {
+            finishButton.onClick.AddListener(OnFinishClicked);
+        }
+
         // Set up reset button
         resetPathButton.onClick.AddListener(ResetCurrentPath);
 
@@ -79,8 +111,8 @@ public class NavigationManager : MonoBehaviour
         // Initialize POI list
         PopulatePOIList();
 
-        // Show both panels
-        ShowBothPanels();
+        // Show initial panels
+        ShowInitialPanels();
 
         // Place POI icons on the minimap
         if (navigationSystem != null && poiLocations != null && poiLocations.Count > 0)
@@ -96,10 +128,26 @@ public class NavigationManager : MonoBehaviour
         Debug.Log("[NavigationManager] Initialization complete");
     }
 
+    private void ShowInitialPanels()
+    {
+        Debug.Log("[NavigationManager] Showing initial panels");
+        if (poiListPanel != null) poiListPanel.SetActive(true);
+        if (navigationPanel != null) navigationPanel.SetActive(true);
+        if (pathOptionsPanel != null) pathOptionsPanel.SetActive(false);
+    }
+
+    private void ShowPathOptionsPanel()
+    {
+        Debug.Log("[NavigationManager] Showing path options panel");
+        if (poiListPanel != null) poiListPanel.SetActive(false);
+        if (pathOptionsPanel != null) pathOptionsPanel.SetActive(true);
+    }
+
     private void ResetCurrentPath()
     {
         Debug.Log("[NavigationManager] Resetting current path");
         navigationSystem.ClearCurrentPath();
+        ShowInitialPanels();
     }
 
     private void PopulatePOIList()
@@ -171,17 +219,29 @@ public class NavigationManager : MonoBehaviour
 
     private void NavigateToPOI(POILocation poi)
     {
-        Debug.Log($"[NavigationManager] Navigating to POI: {poi.name} at position ({poi.position.x}, {poi.position.y})");
-        
-        // Update the path to the new POI location
-        navigationSystem.UpdatePathToLocation(poi.position);
+        Debug.Log($"[NavigationManager] POI selected: {poi.name} at position ({poi.position.x}, {poi.position.y})");
+        selectedPOI = poi;
+        ShowPathOptionsPanel();
     }
 
-    private void ShowBothPanels()
+    private void OnPathOptionSelected(NavigationSystem.PathType pathType)
     {
-        Debug.Log("[NavigationManager] Showing both panels");
-        if (poiListPanel != null) poiListPanel.SetActive(true);
-        if (navigationPanel != null) navigationPanel.SetActive(true);
+        if (selectedPOI == null)
+        {
+            Debug.LogError("[NavigationManager] No POI selected!");
+            return;
+        }
+
+        Debug.Log($"[NavigationManager] Selected path type: {pathType} for POI: {selectedPOI.name}");
+        
+        // Pass the path type to the navigation system
+        navigationSystem.UpdatePathToLocation(selectedPOI.position, pathType);
+    }
+
+    private void OnFinishClicked()
+    {
+        Debug.Log("[NavigationManager] Finish button clicked");
+        ResetCurrentPath();
     }
 
     private void OnDropPinClicked()

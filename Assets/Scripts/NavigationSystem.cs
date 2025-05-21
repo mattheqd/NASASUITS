@@ -5,6 +5,13 @@ using UnityEngine.UI;
 
 public class NavigationSystem : MonoBehaviour
 {
+    public enum PathType
+    {
+        Safest,
+        Recommended,
+        Direct
+    }
+
     [System.Serializable]
     public class Node
     {
@@ -59,6 +66,8 @@ public class NavigationSystem : MonoBehaviour
     private const float OUTLIER_THRESHOLD = 1.5f; // Multiplier for standard deviation to detect outliers
     private bool isHazardOverride = false;
     private Node lastSafeNode = null;
+
+    private PathType currentPathType = PathType.Safest;
 
     // Predefined coordinates for movement
     private readonly Vector2[] movementCoordinates = new Vector2[]
@@ -532,78 +541,54 @@ public class NavigationSystem : MonoBehaviour
 
     public List<Node> FindPath(Vector2 startPos, Vector2 endPos)
     {
+        Debug.Log($"[NavigationSystem] Finding path from ({startPos.x}, {startPos.y}) to ({endPos.x}, {endPos.y}) with type: {currentPathType}");
+
+        switch (currentPathType)
+        {
+            case PathType.Direct:
+                return FindDirectPath(startPos, endPos);
+            case PathType.Recommended:
+                return FindRecommendedPath(startPos, endPos);
+            case PathType.Safest:
+            default:
+                return FindSafePath(startPos, endPos);
+        }
+    }
+
+    private List<Node> FindDirectPath(Vector2 startPos, Vector2 endPos)
+    {
+        Debug.Log("[NavigationSystem] Finding direct path");
+        
+        // Create a simple two-node path
+        Node startNode = new Node { position = startPos };
+        Node endNode = new Node { position = endPos };
+        
+        // Connect the nodes
+        startNode.neighbors.Add(endNode);
+        endNode.neighbors.Add(startNode);
+        
+        // Return the direct path
+        return new List<Node> { startNode, endNode };
+    }
+
+    private List<Node> FindSafePath(Vector2 startPos, Vector2 endPos)
+    {
+        // Find the nearest nodes to start and end positions
         startNode = FindNearestNode(startPos);
         endNode = FindNearestNode(endPos);
 
         if (startNode == null || endNode == null)
         {
-            Debug.LogError($"[NavigationSystem] Failed to find valid start or end nodes. Start: {startNode != null}, End: {endNode != null}");
-            return null;
+            Debug.LogError("[NavigationSystem] Could not find valid start or end nodes!");
+            return new List<Node>();
         }
 
-        // If end node is in a hazard zone, find the nearest safe node
-        if (endNode.isObstacle)
-        {
-            Debug.Log("[NavigationSystem] End position is in hazard zone, finding nearest safe point");
-            Node safeEndNode = FindNearestSafeNode(endPos);
-            if (safeEndNode != null)
-            {
-                Debug.Log($"[NavigationSystem] Redirecting path to safe point at ({safeEndNode.position.x}, {safeEndNode.position.y})");
-                endNode = safeEndNode;
-            }
-            else
-            {
-                Debug.LogError("[NavigationSystem] Could not find a safe point near the destination");
-                return null;
-            }
-        }
-
-        Debug.Log($"[NavigationSystem] Finding path from ({startNode.position.x}, {startNode.position.y}) to ({endNode.position.x}, {endNode.position.y})");
-
-        // Check if we're in a hazard zone
-        bool isInHazardZone = startNode.isObstacle;
-        
-        // If we're in a hazard zone and not already in override mode, enable it
-        if (isInHazardZone && !isHazardOverride)
-        {
-            Debug.Log("[NavigationSystem] User in hazard zone, temporarily overriding hazard checks");
-            isHazardOverride = true;
-            lastSafeNode = null;
-        }
-        // If we're not in a hazard zone and were in override mode, disable it
-        else if (!isInHazardZone && isHazardOverride)
-        {
-            Debug.Log("[NavigationSystem] User now in safe zone, restoring normal hazard checks");
-            isHazardOverride = false;
-            lastSafeNode = startNode;
-        }
-        // If we're in a safe zone, update the last safe node
-        else if (!isInHazardZone)
-        {
-            lastSafeNode = startNode;
-        }
-
-        // Try to find path with current hazard settings
+        // Try to find a path
         List<Node> path = TryFindPath(startNode, endNode);
-        
-        // If no path found and we're not in hazard override mode, try again with hazards ignored
-        if (path == null && !isHazardOverride)
+        if (path == null || path.Count == 0)
         {
-            Debug.Log("[NavigationSystem] No path found with normal settings, temporarily overriding hazards");
-            isHazardOverride = true;
-            path = TryFindPath(startNode, endNode);
-            
-            // If we found a path with hazard override, try to find a path to the nearest safe node first
-            if (path != null && lastSafeNode != null)
-            {
-                Debug.Log("[NavigationSystem] Found path with hazard override, checking for path to safe zone first");
-                List<Node> safePath = TryFindPath(startNode, lastSafeNode);
-                if (safePath != null)
-                {
-                    Debug.Log("[NavigationSystem] Found path to safe zone, will continue to destination after");
-                    return safePath;
-                }
-            }
+            Debug.LogWarning("[NavigationSystem] No valid path found!");
+            return new List<Node>();
         }
 
         return path;
@@ -714,6 +699,57 @@ public class NavigationSystem : MonoBehaviour
         }
 
         return path;
+    }
+
+    private List<Node> FindRecommendedPath(Vector2 startPos, Vector2 endPos)
+    {
+        Debug.Log("[NavigationSystem] Finding recommended path");
+        
+        // First try to find a safe path
+        List<Node> safePath = FindSafePath(startPos, endPos);
+        if (safePath != null && safePath.Count > 0)
+        {
+            Debug.Log("[NavigationSystem] Found safe path, using it as recommended path");
+            return safePath;
+        }
+
+        Debug.Log("[NavigationSystem] No safe path found, trying hybrid approach");
+        
+        // Find nearest safe node to start position
+        Node nearestSafeNode = FindNearestSafeNode(startPos);
+        if (nearestSafeNode == null)
+        {
+            Debug.LogWarning("[NavigationSystem] Could not find nearest safe node, falling back to direct path");
+            return FindDirectPath(startPos, endPos);
+        }
+
+        // Create direct path to nearest safe node
+        Node startNode = new Node { position = startPos };
+        startNode.neighbors.Add(nearestSafeNode);
+        nearestSafeNode.neighbors.Add(startNode);
+
+        // Try to find safe path from safe node to end
+        List<Node> secondPath = FindSafePath(nearestSafeNode.position, endPos);
+        
+        // If no safe path found for second part, make it direct
+        if (secondPath == null || secondPath.Count == 0)
+        {
+            Debug.Log("[NavigationSystem] No safe path found for second part, using direct path");
+            Node endNode = new Node { position = endPos };
+            nearestSafeNode.neighbors.Add(endNode);
+            endNode.neighbors.Add(nearestSafeNode);
+            
+            // Combine paths
+            List<Node> directHybridPath = new List<Node> { startNode, nearestSafeNode, endNode };
+            return directHybridPath;
+        }
+
+        // Combine the direct path to safe node with the safe path to end
+        List<Node> safeHybridPath = new List<Node> { startNode, nearestSafeNode };
+        safeHybridPath.AddRange(secondPath.Skip(1)); // Skip the first node of second path as it's already included
+        
+        Debug.Log($"[NavigationSystem] Created hybrid path with {safeHybridPath.Count} nodes");
+        return safeHybridPath;
     }
 
     // For debugging and visualization
@@ -900,33 +936,12 @@ public class NavigationSystem : MonoBehaviour
         UpdateAgentUI(startPos);
     }
 
-    public void UpdatePathToLocation(Vector2 newEndLocation)
+    public void UpdatePathToLocation(Vector2 newEndLocation, PathType pathType = PathType.Safest)
     {
-        Debug.Log($"[NavigationSystem] Updating path to new location: ({newEndLocation.x}, {newEndLocation.y})");
-        
-        if (!isInitialized)
-        {
-            Debug.LogWarning("[NavigationSystem] System not initialized yet, cannot update path");
-            return;
-        }
-
+        Debug.Log($"[NavigationSystem] Updating path to location ({newEndLocation.x}, {newEndLocation.y}) with path type: {pathType}");
         endLocation = newEndLocation;
-        
-        // Get current position from IMU
-        if (WebSocketClient.LatestImuData != null && 
-            WebSocketClient.LatestImuData.eva1 != null && 
-            WebSocketClient.LatestImuData.eva1.position != null)
-        {
-            Vector2 currentPos = new Vector2(
-                WebSocketClient.LatestImuData.eva1.position.x,
-                WebSocketClient.LatestImuData.eva1.position.y
-            );
-            CalculateAndDrawPath(currentPos);
-        }
-        else
-        {
-            Debug.LogWarning("[NavigationSystem] No IMU data available for path update");
-        }
+        currentPathType = pathType;
+        shouldRecalculatePath = true;
     }
 
     public void ClearCurrentPath()
