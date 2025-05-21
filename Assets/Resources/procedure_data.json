@@ -129,7 +129,7 @@
           "taskName": "END Depress, Check Switches and Disconnect",
           "instructionSteps": [
             {
-              "instructionText": "Wait until SUIT PRESSURE and O2 Pressure = 4psi",
+              "instructionText": "Wait until SUIT PRESSURE = 4psi",
               "isAutoVerifiable": false,
               "location": "BIO",
               "targetKey": "",

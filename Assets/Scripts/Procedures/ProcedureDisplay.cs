@@ -36,6 +36,7 @@ public class ProcedureDisplay : MonoBehaviour
     private int currentTaskIndex = 0;
     private int currentStepIndex = 0;
     private Coroutine autoVerificationCoroutine;
+    private Coroutine gaugeUpdateCoroutine;
     private Dictionary<string, Sprite> uiaSpriteMap;
 
     private void Awake()
@@ -47,6 +48,55 @@ public class ProcedureDisplay : MonoBehaviour
             {
                 uiaSpriteMap[sprite.name] = sprite;
             }
+        }
+    }
+
+    private void OnEnable()
+    {
+        StartGaugeUpdates();
+    }
+
+    private void OnDisable()
+    {
+        StopGaugeUpdates();
+    }
+
+    private void StartGaugeUpdates()
+    {
+        StopGaugeUpdates();
+        gaugeUpdateCoroutine = StartCoroutine(UpdateGauges());
+    }
+
+    private void StopGaugeUpdates()
+    {
+        if (gaugeUpdateCoroutine != null)
+        {
+            StopCoroutine(gaugeUpdateCoroutine);
+            gaugeUpdateCoroutine = null;
+        }
+    }
+
+    private IEnumerator UpdateGauges()
+    {
+        while (true)
+        {
+            var data = WebSocketClient.LatestEva1TelemetryData;
+            if (data != null)
+            {
+                if (primaryO2Gauge != null)
+                    primaryO2Gauge.SetData("Primary O2", null, "PSI", data.oxygenPrimaryPressure, 0f, 4000f);
+                if (secondaryO2Gauge != null)
+                    secondaryO2Gauge.SetData("Secondary O2", null, "PSI", data.oxygenSecondaryPressure, 0f, 4000f);
+                if (suitPressureGauge != null)
+                    suitPressureGauge.SetData("Suit Pressure", null, "PSIa", data.suitPressureTotal, 0f, 16f);
+                if (oxygenPressureGauge != null)
+                    oxygenPressureGauge.SetData("O2 Pressure", null, "PSI", data.oxygenPrimaryPressure, 0f, 4000f);
+                if (heartRateGauge != null)
+                    heartRateGauge.SetData("Heart Rate", null, "BPM", data.heartRate, 40f, 180f);
+                if (coolantGauge != null)
+                    coolantGauge.SetData("Coolant", null, "%", data.coolantLevel, 0f, 100f);
+            }
+            yield return new WaitForSeconds(0.1f);
         }
     }
 
@@ -166,39 +216,11 @@ public class ProcedureDisplay : MonoBehaviour
         }
         if (biometricsPanel != null)
         {
-            if (currentStep.location == "BIO")
-            {
-                biometricsPanel.SetActive(true);
-                var data = WebSocketClient.LatestEva1TelemetryData;
-                if (primaryO2Gauge != null)
-                    primaryO2Gauge.SetData("Primary O2", null, "%", data != null ? data.oxygenPrimaryStorage : 0f, 0f, 100f);
-                if (secondaryO2Gauge != null)
-                    secondaryO2Gauge.SetData("Secondary O2", null, "%", data != null ? data.oxygenSecondaryStorage : 0f, 0f, 100f);
-                if (suitPressureGauge != null)
-                    suitPressureGauge.SetData("Suit Pressure", null, "PSIa", data != null ? data.suitPressureTotal : 0f, 0f, 16f);
-                if (oxygenPressureGauge != null)
-                    oxygenPressureGauge.SetData("O2 Pressure", null, "PSI", data != null ? data.oxygenPrimaryPressure : 0f, 0f, 4000f);
-                if (heartRateGauge != null)
-                    heartRateGauge.SetData("Heart Rate", null, "BPM", data != null ? data.heartRate : 0f, 40f, 180f);
-            }
-            else
-            {
-                biometricsPanel.SetActive(false);
-            }
+            biometricsPanel.SetActive(currentStep.location == "BIO");
         }
         if (coolantPanel != null)
         {
-            if (currentStep.location == "COOLANT")
-            {
-                coolantPanel.SetActive(true);
-                var data = WebSocketClient.LatestEva1TelemetryData;
-                if (coolantGauge != null)
-                    coolantGauge.SetData("Coolant", null, "%", data != null ? data.coolantLevel : 0f, 0f, 100f);
-            }
-            else
-            {
-                coolantPanel.SetActive(false);
-            }
+            coolantPanel.SetActive(currentStep.location == "COOLANT");
         }
     }
 
