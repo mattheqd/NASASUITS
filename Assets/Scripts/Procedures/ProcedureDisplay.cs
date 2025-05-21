@@ -19,6 +19,14 @@ public class ProcedureDisplay : MonoBehaviour
     [SerializeField] private Image taskProgressBar;
     [SerializeField] private Image stepLocationImage;
     [SerializeField] private List<Sprite> uiaStepSprites;
+    [SerializeField] private GameObject biometricsPanel;
+    [SerializeField] private BiometricGauge primaryO2Gauge;
+    [SerializeField] private BiometricGauge secondaryO2Gauge;
+    [SerializeField] private BiometricGauge suitPressureGauge;
+    [SerializeField] private BiometricGauge oxygenPressureGauge;
+    [SerializeField] private BiometricGauge heartRateGauge;
+    [SerializeField] private GameObject coolantPanel;
+    [SerializeField] private BiometricGauge coolantGauge;
 
     [Header("Events")]
     public UnityEvent onProcedureCompleted;
@@ -78,7 +86,7 @@ public class ProcedureDisplay : MonoBehaviour
         
         if (stepCounterText != null)
         {
-            stepCounterText.text = $"Step {currentStepIndex + 1}/{task.instructionSteps.Count}";
+            stepCounterText.text = $"{currentStepIndex + 1}/{task.instructionSteps.Count}";
         }
         
         UpdateCurrentStepDisplay();
@@ -108,7 +116,7 @@ public class ProcedureDisplay : MonoBehaviour
         
         if (stepCounterText != null)
         {
-            stepCounterText.text = $"Step {currentStepIndex + 1}/{task.instructionSteps.Count}";
+            stepCounterText.text = $"{currentStepIndex + 1}/{task.instructionSteps.Count}";
         }
         
         UpdateCurrentStepDisplay();
@@ -154,6 +162,42 @@ public class ProcedureDisplay : MonoBehaviour
             else
             {
                 stepLocationImage.enabled = false;
+            }
+        }
+        if (biometricsPanel != null)
+        {
+            if (currentStep.location == "BIO")
+            {
+                biometricsPanel.SetActive(true);
+                var data = WebSocketClient.LatestEva1TelemetryData;
+                if (primaryO2Gauge != null)
+                    primaryO2Gauge.SetData("Primary O2", null, "%", data != null ? data.oxygenPrimaryStorage : 0f, 0f, 100f);
+                if (secondaryO2Gauge != null)
+                    secondaryO2Gauge.SetData("Secondary O2", null, "%", data != null ? data.oxygenSecondaryStorage : 0f, 0f, 100f);
+                if (suitPressureGauge != null)
+                    suitPressureGauge.SetData("Suit Pressure", null, "PSIa", data != null ? data.suitPressureTotal : 0f, 0f, 16f);
+                if (oxygenPressureGauge != null)
+                    oxygenPressureGauge.SetData("O2 Pressure", null, "PSI", data != null ? data.oxygenPrimaryPressure : 0f, 0f, 4000f);
+                if (heartRateGauge != null)
+                    heartRateGauge.SetData("Heart Rate", null, "BPM", data != null ? data.heartRate : 0f, 40f, 180f);
+            }
+            else
+            {
+                biometricsPanel.SetActive(false);
+            }
+        }
+        if (coolantPanel != null)
+        {
+            if (currentStep.location == "COOLANT")
+            {
+                coolantPanel.SetActive(true);
+                var data = WebSocketClient.LatestEva1TelemetryData;
+                if (coolantGauge != null)
+                    coolantGauge.SetData("Coolant", null, "%", data != null ? data.coolantLevel : 0f, 0f, 100f);
+            }
+            else
+            {
+                coolantPanel.SetActive(false);
             }
         }
     }

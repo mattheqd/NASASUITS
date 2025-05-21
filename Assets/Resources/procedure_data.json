@@ -75,7 +75,7 @@
             {
               "instructionText": "Wait until both Primary and Secondary OXY tanks are < 10psi",
               "isAutoVerifiable": false,
-              "location": "HMD",
+              "location": "BIO",
               "targetKey": "",
               "targetValue": ""
             },
@@ -103,7 +103,7 @@
             {
               "instructionText": "Wait until EV1 Primary O2 tank > 3000 psi",
               "isAutoVerifiable": false,
-              "location": "HMD",
+              "location": "BIO",
               "targetKey": "",
               "targetValue": ""
             },
@@ -120,6 +120,34 @@
               "location": "DCU",
               "targetKey": "oxygen",
               "targetValue": "0"
+            },
+            {
+              "instructionText": "Open OXYGEN EMU-1",
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "o2_vent",
+              "targetValue": "1"
+            },
+            {
+              "instructionText": "Wait until EV1 Secondary O2 tank > 3000 psi",
+              "isAutoVerifiable": false,
+              "location": "BIO",
+              "targetKey": "",
+              "targetValue": ""
+            },
+            {
+              "instructionText": "Close OXYGEN EMU-1",
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "o2_vent",
+              "targetValue": "0"
+            },
+            {
+              "instructionText": "Switch OXYGEN to Primary",
+              "isAutoVerifiable": true,
+              "location": "DCU",
+              "targetKey": "oxygen",
+              "targetValue": "1"
             }
           ]
         },
@@ -129,7 +157,7 @@
             {
               "instructionText": "Wait until SUIT PRESSURE and O2 Pressure = 4psi",
               "isAutoVerifiable": false,
-              "location": "HMD",
+              "location": "BIO",
               "targetKey": "",
               "targetValue": ""
             },
@@ -238,7 +266,7 @@
             {
               "instructionText": "Wait until both Primary and Secondary OXY tanks are < 10psi",
               "isAutoVerifiable": false,
-              "location": "HMD",
+              "location": "BIO",
               "targetKey": "",
               "targetValue": ""
             },
@@ -271,7 +299,7 @@
             {
               "instructionText": "Wait until water EV1 Coolant tank is < 5%",
               "isAutoVerifiable": false,
-              "location": "HMD",
+              "location": "COOLANT",
               "targetKey": "",
               "targetValue": ""
             },
