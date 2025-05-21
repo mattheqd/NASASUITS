@@ -7,6 +7,7 @@ public class NavigationSystem : MonoBehaviour
 {
     public enum PathType
     {
+        None,
         Safest,
         Recommended,
         Direct
@@ -67,7 +68,7 @@ public class NavigationSystem : MonoBehaviour
     private bool isHazardOverride = false;
     private Node lastSafeNode = null;
 
-    private PathType currentPathType = PathType.Safest;
+    private PathType currentPathType = PathType.None;
 
     // Predefined coordinates for movement
     private readonly Vector2[] movementCoordinates = new Vector2[]
@@ -277,8 +278,8 @@ public class NavigationSystem : MonoBehaviour
                     WebSocketClient.LatestImuData.eva1.position.y
                 );
                 CalculateAndDrawPath(currentPos);
+                shouldRecalculatePath = false; // Reset flag after calculation
             }
-            shouldRecalculatePath = false;
         }
 
         // Update agent position from IMU data every second
@@ -979,12 +980,28 @@ public class NavigationSystem : MonoBehaviour
         UpdateAgentUI(startPos);
     }
 
-    public void UpdatePathToLocation(Vector2 newEndLocation, PathType pathType = PathType.Safest)
+    public void UpdatePathToLocation(Vector2 newEndLocation, PathType pathType = PathType.None)
     {
         Debug.Log($"[NavigationSystem] Updating path to location ({newEndLocation.x}, {newEndLocation.y}) with path type: {pathType}");
         endLocation = newEndLocation;
         currentPathType = pathType;
-        shouldRecalculatePath = true;
+        
+        // Only calculate path if we're not in None mode
+        if (pathType != PathType.None)
+        {
+            shouldRecalculatePath = true;
+            // Force immediate recalculation
+            if (WebSocketClient.LatestImuData != null && 
+                WebSocketClient.LatestImuData.eva1 != null && 
+                WebSocketClient.LatestImuData.eva1.position != null)
+            {
+                Vector2 currentPos = new Vector2(
+                    WebSocketClient.LatestImuData.eva1.position.x,
+                    WebSocketClient.LatestImuData.eva1.position.y
+                );
+                CalculateAndDrawPath(currentPos);
+            }
+        }
     }
 
     public void ClearCurrentPath()
