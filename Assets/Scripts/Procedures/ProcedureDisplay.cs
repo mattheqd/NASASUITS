@@ -37,7 +37,6 @@ public class ProcedureDisplay : MonoBehaviour
     private int currentStepIndex = 0;
     private Coroutine autoVerificationCoroutine;
     private Dictionary<string, Sprite> uiaSpriteMap;
-    private Coroutine gaugeUpdateCoroutine;
 
     private void Awake()
     {
@@ -48,67 +47,6 @@ public class ProcedureDisplay : MonoBehaviour
             {
                 uiaSpriteMap[sprite.name] = sprite;
             }
-        }
-        StartGaugeUpdates();
-    }
-
-    private void OnDestroy()
-    {
-        StopGaugeUpdates();
-    }
-
-    private void StartGaugeUpdates()
-    {
-        Debug.Log("[ProcedureDisplay] Starting gauge updates");
-        StopGaugeUpdates();
-        gaugeUpdateCoroutine = StartCoroutine(UpdateGauges());
-        if (gaugeUpdateCoroutine == null)
-        {
-            Debug.LogError("[ProcedureDisplay] Failed to start gauge update coroutine");
-        }
-    }
-
-    private void StopGaugeUpdates()
-    {
-        if (gaugeUpdateCoroutine != null)
-        {
-            Debug.Log("[ProcedureDisplay] Stopping gauge updates");
-            StopCoroutine(gaugeUpdateCoroutine);
-            gaugeUpdateCoroutine = null;
-        }
-    }
-
-    private IEnumerator UpdateGauges()
-    {
-        Debug.Log("[ProcedureDisplay] Starting gauge update coroutine");
-        while (true)
-        {
-            var data = WebSocketClient.LatestEva1TelemetryData;
-            Debug.Log($"[ProcedureDisplay] Latest telemetry data: {(data != null ? "received" : "null")}");
-            
-            if (biometricsPanel != null && biometricsPanel.activeSelf)
-            {
-                Debug.Log("[ProcedureDisplay] Updating biometric gauges");
-                if (primaryO2Gauge != null)
-                    primaryO2Gauge.SetData("Primary O2", null, "%", data != null ? data.oxygenPrimaryStorage : 0f, 0f, 100f);
-                if (secondaryO2Gauge != null)
-                    secondaryO2Gauge.SetData("Secondary O2", null, "%", data != null ? data.oxygenSecondaryStorage : 0f, 0f, 100f);
-                if (suitPressureGauge != null)
-                    suitPressureGauge.SetData("Suit Pressure", null, "PSIa", data != null ? data.suitPressureTotal : 0f, 0f, 16f);
-                if (oxygenPressureGauge != null)
-                    oxygenPressureGauge.SetData("O2 Pressure", null, "PSI", data != null ? data.oxygenPrimaryPressure : 0f, 0f, 4000f);
-                if (heartRateGauge != null)
-                    heartRateGauge.SetData("Heart Rate", null, "BPM", data != null ? data.heartRate : 0f, 40f, 180f);
-            }
-
-            if (coolantPanel != null && coolantPanel.activeSelf)
-            {
-                Debug.Log("[ProcedureDisplay] Updating coolant gauge");
-                if (coolantGauge != null)
-                    coolantGauge.SetData("Coolant", null, "%", data != null ? data.coolantLevel : 0f, 0f, 100f);
-            }
-
-            yield return new WaitForSeconds(0.1f);
         }
     }
 
@@ -228,18 +166,46 @@ public class ProcedureDisplay : MonoBehaviour
         }
         if (biometricsPanel != null)
         {
-            biometricsPanel.SetActive(currentStep.location == "BIO");
+            if (currentStep.location == "BIO")
+            {
+                biometricsPanel.SetActive(true);
+                var data = WebSocketClient.LatestEva1TelemetryData;
+                if (primaryO2Gauge != null)
+                    primaryO2Gauge.SetData("Primary O2", null, "%", data != null ? data.oxygenPrimaryStorage : 0f, 0f, 100f);
+                if (secondaryO2Gauge != null)
+                    secondaryO2Gauge.SetData("Secondary O2", null, "%", data != null ? data.oxygenSecondaryStorage : 0f, 0f, 100f);
+                if (suitPressureGauge != null)
+                    suitPressureGauge.SetData("Suit Pressure", null, "PSIa", data != null ? data.suitPressureTotal : 0f, 0f, 16f);
+                if (oxygenPressureGauge != null)
+                    oxygenPressureGauge.SetData("O2 Pressure", null, "PSI", data != null ? data.oxygenPrimaryPressure : 0f, 0f, 4000f);
+                if (heartRateGauge != null)
+                    heartRateGauge.SetData("Heart Rate", null, "BPM", data != null ? data.heartRate : 0f, 40f, 180f);
+            }
+            else
+            {
+                biometricsPanel.SetActive(false);
+            }
         }
         if (coolantPanel != null)
         {
-            coolantPanel.SetActive(currentStep.location == "COOLANT");
+            if (currentStep.location == "COOLANT")
+            {
+                coolantPanel.SetActive(true);
+                var data = WebSocketClient.LatestEva1TelemetryData;
+                if (coolantGauge != null)
+                    coolantGauge.SetData("Coolant", null, "%", data != null ? data.coolantLevel : 0f, 0f, 100f);
+            }
+            else
+            {
+                coolantPanel.SetActive(false);
+            }
         }
     }
 
     private void CompleteProcedure()
     {
+        // Do not hide the panel here; let the manager handle UI reset
         StopAutoVerificationCoroutine();
-        StopGaugeUpdates();
         onProcedureCompleted?.Invoke();
     }
 
