@@ -323,7 +323,6 @@ public class WebSocketClient : MonoBehaviour
     private WebSocket ws;
     private Dictionary<string, List<Action<object>>> messageHandlers = new Dictionary<string, List<Action<object>>>();
     private string serverUrl = "wss://ae04-2600-100d-b034-1760-db5-4105-37b1-5cc6.ngrok-free.app/ws";
-
     
 
     private bool isConnected = false;

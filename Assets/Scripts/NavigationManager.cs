@@ -14,6 +14,7 @@ public class NavigationManager : MonoBehaviour
     public Button resetPathButton; // Button to clear the current path
     public Button dropPinButton; // Button to drop a pin at current location
     public TextMeshProUGUI selectedPathText; // Text field to show selected path type
+    public Image backgroundImage; // Reference to the background image
 
     [Header("Path Options")]
     public Button safestPathButton;
@@ -39,10 +40,28 @@ public class NavigationManager : MonoBehaviour
     private NavigationSystem.PathType currentPathType; // Store the current path type
     private float updateTimer = 0f; // Timer for updating path
     private const float UPDATE_INTERVAL = 1f; // Update every second
+    private Button lastSelectedButton = null; // Track the last selected button
 
     private void Start()
     {
         Debug.Log("[NavigationManager] Starting initialization...");
+
+        // Set up background image
+        if (backgroundImage != null)
+        {
+            // Ensure background is behind other elements
+            backgroundImage.transform.SetAsFirstSibling();
+            
+            // Set the RectTransform to stretch and fill
+            RectTransform rectTransform = backgroundImage.GetComponent<RectTransform>();
+            rectTransform.anchorMin = Vector2.zero;
+            rectTransform.anchorMax = Vector2.one;
+            rectTransform.offsetMin = Vector2.zero;
+            rectTransform.offsetMax = Vector2.zero;
+            
+            // Disable raycast target so it doesn't interfere with UI interactions
+            backgroundImage.raycastTarget = false;
+        }
 
         // Ensure panels are properly set up
         if (poiListPanel == null)
@@ -226,12 +245,20 @@ public class NavigationManager : MonoBehaviour
     {
         Debug.Log($"[NavigationManager] POI selected: {poi.name} at position ({poi.position.x}, {poi.position.y})");
         selectedPOI = poi;
+        currentPathType = NavigationSystem.PathType.None; // Set to None when POI is selected
         ShowPathOptionsPanel();
+
+        // Show the text field with maximum distance estimate
+        if (selectedPathText != null)
+        {
+            selectedPathText.gameObject.SetActive(true);
+            selectedPathText.text = "Estimated Max Distance: 573 meters";
+        }
     }
 
     private void Update()
     {
-        if (selectedPOI != null)
+        if (selectedPOI != null && currentPathType != NavigationSystem.PathType.None)
         {
             updateTimer += Time.deltaTime;
             if (updateTimer >= UPDATE_INTERVAL)
@@ -246,9 +273,23 @@ public class NavigationManager : MonoBehaviour
     {
         if (selectedPOI == null || navigationSystem == null) return;
 
-        // Update the path with current position
+        // Only update if we have a valid path type selected
+        if (currentPathType == NavigationSystem.PathType.None)
+        {
+            return;
+        }
+
+        // Force path recalculation with current position
         navigationSystem.UpdatePathToLocation(selectedPOI.position, currentPathType);
         
+        // Get the current path from navigation system
+        List<NavigationSystem.Node> currentPath = navigationSystem.GetCurrentPath();
+        if (currentPath == null || currentPath.Count < 2)
+        {
+            Debug.LogWarning("[NavigationManager] No valid path found for update");
+            return;
+        }
+
         // Calculate new distance and ETA
         float pathDistance = CalculatePathDistance(selectedPOI.position);
         float etaMinutes = CalculateETA(pathDistance);
@@ -261,7 +302,7 @@ public class NavigationManager : MonoBehaviour
         if (selectedPathText != null)
         {
             selectedPathText.gameObject.SetActive(true);
-            selectedPathText.text = $"{Mathf.Round(pathDistance)} meters away eta time: {minutes}:{seconds:D2}";
+            selectedPathText.text = $"Duratione: {minutes}:{seconds:D2} minutes";
         }
     }
 
@@ -283,9 +324,44 @@ public class NavigationManager : MonoBehaviour
         {
             selectedPathText.gameObject.SetActive(true);
         }
+
+        // Reset previous button's outline
+        if (lastSelectedButton != null)
+        {
+            var outline = lastSelectedButton.GetComponent<Outline>();
+            if (outline != null)
+            {
+                outline.effectColor = new Color(0.518f, 0.518f, 0.518f, 0.5f); // #848484 with 128 opacity
+            }
+        }
+
+        // Highlight the selected button
+        Button selectedButton = null;
+        switch (pathType)
+        {
+            case NavigationSystem.PathType.Safest:
+                selectedButton = safestPathButton;
+                break;
+            case NavigationSystem.PathType.Recommended:
+                selectedButton = recommendedPathButton;
+                break;
+            case NavigationSystem.PathType.Direct:
+                selectedButton = directPathButton;
+                break;
+        }
+
+        if (selectedButton != null)
+        {
+            var outline = selectedButton.GetComponent<Outline>();
+            if (outline != null)
+            {
+                outline.effectColor = Color.white; // Set outline to white
+            }
+            lastSelectedButton = selectedButton;
+        }
         
-        // Initial path update
-        UpdatePathAndETA();
+        // Only update path when a path type is explicitly selected
+        navigationSystem.UpdatePathToLocation(selectedPOI.position, pathType);
     }
 
     private float CalculatePathDistance(Vector2 destination)
@@ -327,18 +403,28 @@ public class NavigationManager : MonoBehaviour
         pathOptionsPanel.SetActive(false);
         poiListPanel.SetActive(true);
         
-        // Hide finish button when returning to POI selection
-        finishButton.gameObject.SetActive(false);
-        
-        // Hide the selected path text
+        // Reset and hide the selected path text
         if (selectedPathText != null)
         {
+            selectedPathText.text = "";
             selectedPathText.gameObject.SetActive(false);
         }
         
-        // Clear current POI and path type
+        // Reset button outline
+        if (lastSelectedButton != null)
+        {
+            var outline = lastSelectedButton.GetComponent<Outline>();
+            if (outline != null)
+            {
+                outline.effectColor = new Color(0.518f, 0.518f, 0.518f, 0.5f); // #848484 with 128 opacity
+            }
+            lastSelectedButton = null;
+        }
+        
+        // Clear current POI and path type to stop updates
         selectedPOI = null;
-        currentPathType = NavigationSystem.PathType.Safest;
+        currentPathType = NavigationSystem.PathType.None;
+        updateTimer = 0f; // Reset the update timer
     }
 
     private void OnDropPinClicked()
