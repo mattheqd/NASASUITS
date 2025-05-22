@@ -321,7 +321,7 @@ public class NavigationManager : MonoBehaviour
         if (distanceText != null)
         {
             distanceText.gameObject.SetActive(true);
-            distanceText.text = $"{Mathf.Round(pathDistance)}m";
+            distanceText.text = $"{Mathf.Round(pathDistance)}";
         }
     }
 
