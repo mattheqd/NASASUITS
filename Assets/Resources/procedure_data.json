@@ -155,7 +155,7 @@
           "taskName": "Determine Navigation Path",
           "instructionSteps": [
             {
-              "instructionText": "Drop pins and determine best path for each POI provided by LTV",
+              "instructionText": "Drop pins and determine best path for the POI",
               "isAutoVerifiable": false,
               "location": "",
               "targetKey": "",
@@ -283,6 +283,25 @@
               "location": "UIA",
               "targetKey": "ev1_waste",
               "targetValue": "0"
+            }
+          ]
+        },
+        {
+          "taskName": "Disconnect UIA from DCU",
+          "instructionSteps": [
+            {
+              "instructionText": "EV-1 EMU PWR – OFF",
+              "isAutoVerifiable": true,
+              "location": "UIA",
+              "targetKey": "emu1_power",
+              "targetValue": "0"
+            },
+            {
+              "instructionText": "EV1 disconnect umbilical",
+              "isAutoVerifiable": false,
+              "location": "DCU",
+              "targetKey": "",
+              "targetValue": ""
             }
           ]
         },
