@@ -9,11 +9,13 @@ public class NavigationManager : MonoBehaviour
     public GameObject poiListPanel; // Panel containing the list of POI buttons
     public GameObject navigationPanel; // Panel containing the minimap
     public GameObject pathOptionsPanel; // Panel containing path options
+    public GameObject toolbarPanel; // Panel containing the toolbar
     public Button poiButtonPrefab; // Prefab for POI buttons
     public Transform poiListContent; // Content transform for the POI buttons
     public Button resetPathButton; // Button to clear the current path
     public Button dropPinButton; // Button to drop a pin at current location
     public TextMeshProUGUI selectedPathText; // Text field to show selected path type
+    public TextMeshProUGUI distanceText; // Text field to show distance
     public Image backgroundImage; // Reference to the background image
 
     [Header("Path Options")]
@@ -77,6 +79,11 @@ public class NavigationManager : MonoBehaviour
         if (pathOptionsPanel == null)
         {
             Debug.LogError("[NavigationManager] Path Options Panel not assigned!");
+            return;
+        }
+        if (toolbarPanel == null)
+        {
+            Debug.LogError("[NavigationManager] Toolbar Panel not assigned!");
             return;
         }
         if (poiListContent == null)
@@ -157,6 +164,7 @@ public class NavigationManager : MonoBehaviour
         if (poiListPanel != null) poiListPanel.SetActive(true);
         if (navigationPanel != null) navigationPanel.SetActive(true);
         if (pathOptionsPanel != null) pathOptionsPanel.SetActive(false);
+        if (toolbarPanel != null) toolbarPanel.SetActive(true);
         if (selectedPathText != null) selectedPathText.gameObject.SetActive(false);
     }
 
@@ -164,6 +172,7 @@ public class NavigationManager : MonoBehaviour
     {
         Debug.Log("[NavigationManager] Showing path options panel");
         if (poiListPanel != null) poiListPanel.SetActive(false);
+        if (toolbarPanel != null) toolbarPanel.SetActive(false);
         if (pathOptionsPanel != null) pathOptionsPanel.SetActive(true);
     }
 
@@ -248,11 +257,16 @@ public class NavigationManager : MonoBehaviour
         currentPathType = NavigationSystem.PathType.None; // Set to None when POI is selected
         ShowPathOptionsPanel();
 
-        // Show the text field with maximum distance estimate
+        // Show the text fields
         if (selectedPathText != null)
         {
             selectedPathText.gameObject.SetActive(true);
-            selectedPathText.text = "Estimated Max Distance: 573 meters";
+            selectedPathText.text = "";
+        }
+        if (distanceText != null)
+        {
+            distanceText.gameObject.SetActive(true);
+            distanceText.text = "";
         }
     }
 
@@ -298,11 +312,16 @@ public class NavigationManager : MonoBehaviour
         int minutes = Mathf.FloorToInt(etaMinutes);
         int seconds = Mathf.FloorToInt((etaMinutes - minutes) * 60);
         
-        // Update the text field
+        // Update the text fields
         if (selectedPathText != null)
         {
             selectedPathText.gameObject.SetActive(true);
-            selectedPathText.text = $"Duration: {minutes}:{seconds:D2} minutes";
+            selectedPathText.text = $"{minutes}:{seconds:D2}";
+        }
+        if (distanceText != null)
+        {
+            distanceText.gameObject.SetActive(true);
+            distanceText.text = $"{Mathf.Round(pathDistance)}m";
         }
     }
 
@@ -399,15 +418,21 @@ public class NavigationManager : MonoBehaviour
         // Clear the current path
         navigationSystem.ClearCurrentPath();
         
-        // Hide path options and show POI list
+        // Hide path options and show POI list and toolbar
         pathOptionsPanel.SetActive(false);
         poiListPanel.SetActive(true);
+        if (toolbarPanel != null) toolbarPanel.SetActive(true);
         
-        // Reset and hide the selected path text
+        // Reset and hide the text fields
         if (selectedPathText != null)
         {
             selectedPathText.text = "";
             selectedPathText.gameObject.SetActive(false);
+        }
+        if (distanceText != null)
+        {
+            distanceText.text = "";
+            distanceText.gameObject.SetActive(false);
         }
         
         // Reset button outline
