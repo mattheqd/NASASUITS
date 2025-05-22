@@ -298,7 +298,16 @@ public class NavigationSystem : MonoBehaviour
                 
                 // Validate and smooth the position
                 Vector2 smoothedPos = ValidateAndSmoothPosition(rawPos);
-                UpdateAgentUI(smoothedPos);
+                
+                // Only update if the position change is reasonable
+                if (Vector2.Distance(smoothedPos, lastValidPosition) <= maxPositionChange)
+                {
+                    UpdateAgentUI(smoothedPos);
+                }
+                else
+                {
+                    Debug.LogWarning("[NavigationSystem] Skipping position update due to large change");
+                }
             }
         }
     }
@@ -370,8 +379,16 @@ public class NavigationSystem : MonoBehaviour
             return avgPos;
         }
 
-        // Smooth the position
-        Vector2 smoothedPos = Vector2.Lerp(lastValidPosition, newPos, smoothingFactor);
+        // Smooth the position with a stronger smoothing factor
+        Vector2 smoothedPos = Vector2.Lerp(lastValidPosition, avgPos, 0.3f); // Reduced from 0.5f to 0.3f for stronger smoothing
+        
+        // Additional check to prevent large jumps
+        float smoothedDistance = Vector2.Distance(smoothedPos, lastValidPosition);
+        if (smoothedDistance > maxPositionChange * 0.5f) // Allow only half the max change per frame
+        {
+            smoothedPos = Vector2.Lerp(lastValidPosition, smoothedPos, 0.5f);
+        }
+
         lastValidPosition = smoothedPos;
         return smoothedPos;
     }
@@ -936,7 +953,7 @@ public class NavigationSystem : MonoBehaviour
         {
             Debug.Log($"[NavigationSystem] Path found with {currentPath.Count} nodes");
             DrawPathUI(currentPath);
-            UpdateAgentUI(startPos);
+            // Don't update agent position here, let the normal update cycle handle it
         }
         else
         {
@@ -999,7 +1016,11 @@ public class NavigationSystem : MonoBehaviour
                     WebSocketClient.LatestImuData.eva1.position.x,
                     WebSocketClient.LatestImuData.eva1.position.y
                 );
+                // Store the current position before path calculation
+                Vector2 prePathPosition = lastValidPosition;
                 CalculateAndDrawPath(currentPos);
+                // Restore the last valid position to prevent jumps
+                lastValidPosition = prePathPosition;
             }
         }
     }

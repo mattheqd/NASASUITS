@@ -302,7 +302,7 @@ public class NavigationManager : MonoBehaviour
         if (selectedPathText != null)
         {
             selectedPathText.gameObject.SetActive(true);
-            selectedPathText.text = $"Duratione: {minutes}:{seconds:D2} minutes";
+            selectedPathText.text = $"Duration: {minutes}:{seconds:D2} minutes";
         }
     }
 
